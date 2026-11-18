@@ -35,13 +35,13 @@ func protectedReason(c *Component) string {
 	low := strings.ToLower(c.ExePath)
 	switch {
 	case c.System || strings.Contains(low, `\windows\`):
-		return "Part of Windows. Background Manager never changes Windows' own components."
+		return "Part of Windows. WinBGM never changes Windows' own components."
 	case c.Kind == "service" && criticalServices[strings.ToLower(c.Name)]:
 		return "Critical Windows service. Changing it can break sign-in, networking, updates or security."
 	case securityRe.MatchString(c.Name + " " + c.Display + " " + c.Product + " " + c.Publisher):
 		return "Security software. Changing it could leave this PC unprotected."
 	case low != "" && low == selfExe():
-		return "This is Background Manager itself."
+		return "This is WinBGM itself."
 	}
 	return ""
 }

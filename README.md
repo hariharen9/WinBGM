@@ -1,4 +1,4 @@
-# Background Manager
+# WinBGM
 
 Go + Wails desktop app: see what runs in the background on Windows, who owns it, and change it safely.
 
@@ -12,7 +12,7 @@ Go + Wails desktop app: see what runs in the background on Windows, who owns it,
 cd bgm-ui
 go mod tidy
 wails dev          # live window
-wails build        # -> build\bin\BackgroundManager.exe
+wails build        # -> build\bin\WinBGM.exe
 ```
 Open `frontend/dist/index.html` in a browser for a UI-only preview with sample data.
 
@@ -29,7 +29,7 @@ Processes and Store-app permissions are shown with "How to change" notes only.
 1. Windows components, critical services, antivirus/security software and the app itself are blocked.
 2. Services that deny reconfiguration are marked Locked and not touched (stop/start is still offered).
 3. The item is re-read live; if it differs from the last scan the change is refused.
-4. The original value is written to `%APPDATA%\BackgroundManager\history.json` BEFORE the change. If that fails, nothing changes.
+4. The original value is written to `%APPDATA%\WinBGM\history.json` BEFORE the change. If that fails, nothing changes.
 5. After the change it is read back; if it did not take effect the original is put back automatically.
 6. Stopping a service is refused while running services depend on it.
 7. Restore only runs if the item is still exactly as we left it, and restores the exact original bytes.

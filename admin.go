@@ -26,10 +26,13 @@ func getAppExePaths() []string {
 	if exe, err := os.Executable(); err == nil && exe != "" {
 		add(exe)
 		dir := filepath.Dir(exe)
+		add(filepath.Join(dir, "WinBGM.exe"))
 		add(filepath.Join(dir, "BackgroundManager.exe"))
+		add(filepath.Join(dir, "build", "bin", "WinBGM.exe"))
 		add(filepath.Join(dir, "build", "bin", "BackgroundManager.exe"))
 	}
 	if cwd, err := os.Getwd(); err == nil {
+		add(filepath.Join(cwd, "build", "bin", "WinBGM.exe"))
 		add(filepath.Join(cwd, "build", "bin", "BackgroundManager.exe"))
 	}
 	return paths

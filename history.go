@@ -33,7 +33,17 @@ func historyPath() string {
 	if err != nil {
 		d = os.TempDir()
 	}
-	return filepath.Join(d, "BackgroundManager", "history.json")
+	newPath := filepath.Join(d, "WinBGM", "history.json")
+	oldPath := filepath.Join(d, "BackgroundManager", "history.json")
+	if _, err := os.Stat(newPath); err == nil {
+		return newPath
+	}
+	if _, err := os.Stat(oldPath); err == nil {
+		_ = os.MkdirAll(filepath.Dir(newPath), 0755)
+		_ = os.Rename(oldPath, newPath)
+		return newPath
+	}
+	return newPath
 }
 
 func loadHistory() []HistoryEntry {

@@ -21,7 +21,7 @@ function navigate(p) {
     history: 'Change history',
     settings: 'Settings'
   };
-  $('commandbar-label').textContent = labels[p] || 'Background Manager';
+  $('commandbar-label').textContent = labels[p] || 'WinBGM';
   $('content-host').scrollTop = 0;
   if (p === 'history') loadHistory();
   if (p === 'overview') animateCounters();
@@ -118,7 +118,7 @@ if ($('set-always-admin')) {
         if (inv && !inv.elevated) {
           pending = null;
           $('modal-title').textContent = 'Restart as administrator?';
-          $('modal-body').innerHTML = '<p>Background Manager has been configured to always run with administrator rights.</p><p>Would you like to restart the app as administrator right now to unlock service and task management?</p>';
+          $('modal-body').innerHTML = '<p>WinBGM has been configured to always run with administrator rights.</p><p>Would you like to restart the app as administrator right now to unlock service and task management?</p>';
           $('modal-confirm').textContent = 'Restart as administrator';
           $('modal-confirm').onclick = async () => {
             closeModal();

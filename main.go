@@ -15,7 +15,7 @@ var assets embed.FS
 func main() {
 	app := NewApp()
 	err := wails.Run(&options.App{
-		Title:            "Background Manager",
+		Title:            "WinBGM",
 		Width:            1280,
 		Height:           820,
 		MinWidth:         900,

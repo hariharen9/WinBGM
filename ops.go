@@ -443,7 +443,7 @@ func (a *App) Apply(req ChangeRequest) ChangeResult {
 	return ChangeResult{OK: true, Message: "Done: " + e.Summary + ". You can undo it in Change history.", Entry: &e}
 }
 
-// Restore undoes one history entry, but only if the item is still exactly as Background Manager left it.
+// Restore undoes one history entry, but only if the item is still exactly as WinBGM left it.
 func (a *App) Restore(id string) ChangeResult {
 	opMu.Lock()
 	defer opMu.Unlock()
@@ -465,7 +465,7 @@ func (a *App) Restore(id string) ChangeResult {
 		return fail("Couldn't read the current setting: " + friendly(err))
 	}
 	if cur.State != e.After {
-		return fail("It was changed again after Background Manager's change (now: " + humanState(e.Target.Kind, cur.State) + "). Restore was skipped so nothing is overwritten.")
+		return fail("It was changed again after WinBGM's change (now: " + humanState(e.Target.Kind, cur.State) + "). Restore was skipped so nothing is overwritten.")
 	}
 	raw, _ := hex.DecodeString(e.BeforeRaw)
 	before := snapshot{State: e.Before, Raw: raw, Existed: e.BeforeExisted}
