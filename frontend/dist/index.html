@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Background Manager</title>
+<script src="lucide.min.js"></script>
+<script src="anime.min.js"></script>
+<script src="confetti.min.js"></script>
 <style>
 /* A desktop-first mock of a native Windows 11 / WinUI-style utility.
    All system information is illustrative. No Windows settings are changed. */
@@ -297,57 +300,137 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
 .loading{padding:60px 20px;text-align:center;color:#aaa;font-size:12px}
 .titlebar{padding-right:14px}
 .check-row{display:flex;align-items:center;gap:8px}
+
+/* --- Lucide & Micro-Animation System --- */
+.lucide{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;flex-shrink:0}
+.is-scanning .lucide-refresh-cw,
+.is-scanning svg,
+.spin-active{animation:spinCw 0.85s linear infinite !important}
+@keyframes spinCw{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+.win-btn, .command-btn, .nav-item, .segmented button{
+  transition:all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.win-btn:active, .command-btn:active, .segmented button:active{
+  transform:scale(0.96);
+}
+.win-btn.primary{
+  box-shadow:0 1px 3px rgba(0,0,0,0.3);
+}
+.win-btn.primary:hover{
+  box-shadow:0 2px 8px rgba(15,108,189,0.4);
+}
+
+.app-row{
+  transition:background 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
+.app-row:hover{
+  background:#1e242d !important;
+  transform:translateX(3px);
+}
+.app-row.selected{
+  background:#232d3a !important;
+  box-shadow:inset 3px 0 #60a5fa;
+}
+.app-row:active{
+  transform:scale(0.995);
+}
+
+.product-icon{
+  transition:transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s;
+  border-radius:8px;
+  font-weight:700;
+  letter-spacing:-0.2px;
+}
+.app-row:hover .product-icon{
+  transform:scale(1.08) rotate(-2deg);
+}
+
+.source-card{
+  transition:transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s, border-color 0.22s, background 0.22s;
+}
+.source-card:hover{
+  transform:translateY(-2px);
+  border-color:#3d4a57;
+  box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  background:#1a1e24 !important;
+}
+
+.overview-stat{
+  transition:background 0.18s ease;
+}
+.overview-stat:hover{
+  background:#1c2027;
+}
+
+@keyframes pulseLed{
+  0%, 100%{box-shadow:0 0 0 2px rgba(117,189,134,0.22)}
+  50%{box-shadow:0 0 0 5px rgba(117,189,134,0.45)}
+}
+.state-led, .status-dot{
+  animation:pulseLed 2.4s infinite ease-in-out;
+}
+
+.toggle{
+  transition:background .22s cubic-bezier(0.34, 1.56, 0.64, 1), border-color .22s;
+}
+.toggle:before{
+  transition:transform .25s cubic-bezier(0.34, 1.56, 0.64, 1), background .2s, width .15s;
+}
+.toggle:active:not(:disabled):before{
+  width:14px;
+}
+
+.quick-search{
+  transition:width .25s cubic-bezier(0.16, 1, 0.3, 1), border-color .2s, box-shadow .2s;
+}
+.quick-search:focus-within{
+  width:min(100%, 410px);
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(96, 165, 250, 0.22);
+}
+
+.page{
+  animation:pageFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes pageFadeIn{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
+}
 </style>
 </head>
 <body>
-<svg aria-hidden="true" width="0" height="0" style="position:absolute">
-<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.5-2.8 7.7-7 10-4.2-2.3-7-5.5-7-10V6l7-3Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
-<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
-<symbol id="i-apps" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 4v5" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
-<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m19.4 15 .1.1 1.4 1.1-1.5 2.6-1.7-.7a8 8 0 0 1-1.6.9l-.3 1.8h-3l-.3-1.8a8 8 0 0 1-1.6-.9l-1.7.7-1.5-2.6 1.4-1.1a7 7 0 0 1 0-1.9l-1.4-1.1 1.5-2.6 1.7.7a8 8 0 0 1 1.6-.9l.3-1.8h3l.3 1.8a8 8 0 0 1 1.6.9l1.7-.7 1.5 2.6-1.4 1.1a7 7 0 0 1-.1 1.8Z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
-<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 3v4M16.5 3v4M3.5 9.5h17M8 13h3m-3 4h3m3-4h2m-2 4h2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
-<symbol id="i-list" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="4.5" cy="5" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="19" r="1" fill="currentColor"/></symbol>
-<symbol id="i-history" viewBox="0 0 24 24"><path d="M3.5 11a8.5 8.5 0 1 1 2.3 6M3.5 4.5V11h6.5M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M5.7 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.3-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></symbol>
-<symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5h7l2 2H21v10H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
-<symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m7 9 3 3-3 3m5 0h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
-<symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 21h8m-4-4v4" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
-<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v5m0-8h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-</svg>
 <div class="app-window">
   <header class="titlebar">
-    <div class="app-identity"><div class="app-glyph"><svg><use href="#i-shield"/></svg></div><div class="titlebar-name">Background Manager</div></div>
-    <div class="titlebar-center"><label class="quick-search"><svg><use href="#i-search"/></svg><input id="global-search" type="search" placeholder="Search apps, services and tasks" aria-label="Search"><span class="search-shortcut">Ctrl+K</span></label></div>
+    <div class="app-identity"><div class="app-glyph"><i data-lucide="shield-check" style="width:13px;height:13px"></i></div><div class="titlebar-name">Background Manager</div></div>
+    <div class="titlebar-center"><label class="quick-search"><i data-lucide="search" style="width:14px;height:14px"></i><input id="global-search" type="search" placeholder="Search apps, services and tasks" aria-label="Search"><span class="search-shortcut">Ctrl+K</span></label></div>
     <div class="titlebar-spacer"></div>
-    <span class="readonly-pill">Safe mode</span>
+    <span class="readonly-pill"><i data-lucide="shield" style="width:11px;height:11px;margin-right:4px"></i>Safe mode</span>
   </header>
   <div class="app-body">
     <aside class="sidebar">
       <div class="nav-group-label">Manage</div>
       <nav class="nav-list" aria-label="Main navigation">
-        <button class="nav-item" data-page="overview"><svg><use href="#i-grid"/></svg><span>Overview</span></button>
-        <button class="nav-item active" data-page="applications"><svg><use href="#i-apps"/></svg><span>Applications</span><span class="nav-count" id="nav-apps"></span></button>
-        <button class="nav-item" data-page="services"><svg><use href="#i-gear"/></svg><span>Services</span><span class="nav-count" id="nav-services"></span></button>
-        <button class="nav-item" data-page="tasks"><svg><use href="#i-calendar"/></svg><span>Scheduled tasks</span><span class="nav-count" id="nav-tasks"></span></button>
-        <button class="nav-item" data-page="sources"><svg><use href="#i-list"/></svg><span>Startup locations</span></button>
+        <button class="nav-item" data-page="overview"><i data-lucide="layout-grid"></i><span>Overview</span></button>
+        <button class="nav-item active" data-page="applications"><i data-lucide="layers"></i><span>Applications</span><span class="nav-count" id="nav-apps"></span></button>
+        <button class="nav-item" data-page="services"><i data-lucide="cog"></i><span>Services</span><span class="nav-count" id="nav-services"></span></button>
+        <button class="nav-item" data-page="tasks"><i data-lucide="calendar-clock"></i><span>Scheduled tasks</span><span class="nav-count" id="nav-tasks"></span></button>
+        <button class="nav-item" data-page="sources"><i data-lucide="compass"></i><span>Startup locations</span></button>
       </nav>
       <div class="nav-divider"></div>
       <div class="nav-group-label">Other</div>
       <nav class="nav-list">
-        <button class="nav-item" data-page="history"><svg><use href="#i-history"/></svg><span>Change history</span></button>
-        <button class="nav-item" data-page="settings"><svg><use href="#i-gear"/></svg><span>Settings</span></button>
+        <button class="nav-item" data-page="history"><i data-lucide="history"></i><span>Change history</span></button>
+        <button class="nav-item" data-page="settings"><i data-lucide="sliders"></i><span>Settings</span></button>
       </nav>
-      <div class="sidebar-bottom"><div class="machine-card"><div class="machine-icon"><svg><use href="#i-monitor"/></svg></div><div class="machine-copy"><div class="machine-name" id="machine-name">This PC</div><div class="machine-meta" id="machine-meta">Scanning…</div></div></div></div>
+      <div class="sidebar-bottom"><div class="machine-card"><div class="machine-icon"><i data-lucide="monitor"></i></div><div class="machine-copy"><div class="machine-name" id="machine-name">This PC</div><div class="machine-meta" id="machine-meta">Scanning…</div></div></div></div>
     </aside>
     <main class="main-shell">
       <div class="commandbar">
         <span class="commandbar-label" id="commandbar-label">Applications</span><span class="commandbar-sep"></span>
-        <button class="command-btn" id="scan-btn" onclick="doScan()"><svg><use href="#i-refresh"/></svg>Scan now</button>
-        <button class="command-btn" onclick="doReveal()"><svg><use href="#i-folder"/></svg>Open location</button>
-        <button class="command-btn" onclick="doExport()"><svg><use href="#i-list"/></svg>Export</button>
+        <button class="command-btn btn-scan" id="scan-btn" onclick="doScan()"><i data-lucide="refresh-cw"></i>Scan now</button>
+        <button class="command-btn" onclick="doReveal()"><i data-lucide="folder-search"></i>Open location</button>
+        <button class="command-btn" onclick="doExport()"><i data-lucide="download"></i>Export</button>
         <div class="command-spacer"></div>
         <div class="command-state"><span class="state-led"></span><span id="scan-status">Scanning…</span></div>
       </div>
@@ -358,7 +441,7 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
           <div class="system-summary" id="app-summary"></div>
           <div class="content-toolbar">
             <div class="segmented" id="app-filters"></div><div class="toolbar-flex"></div>
-            <label class="filter-search"><svg><use href="#i-search"/></svg><input id="app-search" type="search" placeholder="Find an application"></label>
+            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="app-search" type="search" placeholder="Find an application"></label>
             <select class="select-control" id="app-sort" aria-label="Sort applications"><option value="name">Name A–Z</option><option value="running">Running first</option><option value="review">Needs review first</option></select>
           </div>
           <div class="split-view">
@@ -377,30 +460,30 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
         <section class="page" id="page-services">
           <div class="page-header"><div><h1>Services</h1><p class="page-subtitle">Background services, how they start, and whether Windows is running them now.</p></div></div>
           <div class="system-summary" id="svc-summary"></div>
-          <div class="content-toolbar"><label class="filter-search"><svg><use href="#i-search"/></svg><input id="svc-search" type="search" placeholder="Search services"></label>
+          <div class="content-toolbar"><label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="svc-search" type="search" placeholder="Search services"></label>
             <select class="select-control" id="svc-type"><option value="">All startup types</option><option>Automatic</option><option>Automatic (Delayed)</option><option>Manual</option><option>Disabled</option></select><div class="toolbar-flex"></div><span class="subtle-label" id="svc-count"></span></div>
           <div class="page-section"><div class="section-heading"><strong>Service inventory</strong><span>Click a row for details</span></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Service</th><th>Publisher</th><th>Startup type</th><th>State</th><th>Protection</th></tr></thead><tbody id="svc-body"></tbody></table></div></div>
-          <div class="notice-line" style="margin-top:12px"><svg><use href="#i-info"/></svg><span>"Locked" means Windows would not let this account change the service's settings (checked only when running as administrator). Stopping a locked service is often still allowed.</span></div>
+          <div class="notice-line" style="margin-top:12px"><i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i><span>"Locked" means Windows would not let this account change the service's settings (checked only when running as administrator). Stopping a locked service is often still allowed.</span></div>
         </section>
 
         <section class="page" id="page-tasks">
           <div class="page-header"><div><h1>Scheduled tasks</h1><p class="page-subtitle">Tasks can start programs at logon, at boot, on a timer or when something happens. Microsoft's own task library is not listed.</p></div></div>
           <div class="system-summary" id="task-summary"></div>
-          <div class="content-toolbar"><label class="filter-search"><svg><use href="#i-search"/></svg><input id="task-search" type="search" placeholder="Search tasks"></label><div class="toolbar-flex"></div><span class="subtle-label" id="task-count"></span></div>
+          <div class="content-toolbar"><label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="task-search" type="search" placeholder="Search tasks"></label><div class="toolbar-flex"></div><span class="subtle-label" id="task-count"></span></div>
           <div class="page-section"><div class="section-heading"><strong>Task inventory</strong><span>Click a row for details</span></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Task</th><th>Trigger</th><th>Publisher</th><th>Action</th><th>Last run</th><th>State</th></tr></thead><tbody id="task-body"></tbody></table></div></div>
         </section>
 
         <section class="page" id="page-sources">
           <div class="page-header"><div><h1>Startup locations</h1><p class="page-subtitle">The Windows mechanisms scanned to discover automatic and event-triggered launches.</p></div></div>
           <div class="source-grid" id="source-grid"></div>
-          <div class="notice-line" style="margin-top:13px"><svg><use href="#i-info"/></svg><span>This is an inventory of launch mechanisms plus a heuristic for windowless processes. A running process may have been started by another app, a service or a system event.</span></div>
+          <div class="notice-line" style="margin-top:13px"><i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i><span>This is an inventory of launch mechanisms plus a heuristic for windowless processes. A running process may have been started by another app, a service or a system event.</span></div>
         </section>
 
         <section class="page" id="page-history">
           <div class="page-header"><div><h1>Change history</h1><p class="page-subtitle">Every change is saved here before it is made, with the original value, so it can be restored.</p></div></div>
           <div class="system-summary" id="history-summary"></div>
           <div class="page-section"><div class="section-heading"><strong>Recent activity</strong><span>Newest first</span></div><div class="history-list" id="history-list"></div></div>
-          <div class="notice-line" style="margin-top:12px"><svg><use href="#i-info"/></svg><span>Restore only runs if the item is still exactly as Background Manager left it, so it never overwrites a newer change you made elsewhere.</span></div>
+          <div class="notice-line" style="margin-top:12px"><i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i><span>Restore only runs if the item is still exactly as Background Manager left it, so it never overwrites a newer change you made elsewhere.</span></div>
         </section>
 
         <section class="page" id="page-settings">
@@ -439,7 +522,8 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp
 const api = () => (window.go && window.go.main && window.go.main.App) ? window.go.main.App : null;
 
 const KIND = {service:'Windows service', run:'Registry Run entry', folder:'Startup folder item', task:'Scheduled task', process:'Background process', storeapp:'Store app permission'};
-const ICON = {service:'#i-gear', run:'#i-list', folder:'#i-folder', task:'#i-calendar', process:'#i-apps', storeapp:'#i-apps'};
+const KIND_ICON = {service:'cog', run:'zap', folder:'folder-open', task:'calendar-clock', process:'activity', storeapp:'package'};
+const SOURCE_ICONS = {run:'zap', folder:'folder-open', service:'cog', task:'calendar-clock', storeapp:'package', process:'activity', winlogon:'shield-alert', wmi:'terminal'};
 const HOWTO = {
   service:'Open Services (services.msc), find this service and change its startup type or stop it. Some packaged services are locked by their publisher.',
   run:'Task Manager → Startup apps, or the app\u2019s own \u201Claunch at sign-in\u201D setting.',
@@ -462,6 +546,95 @@ let uiScale = '100%';
 try { uiScale = localStorage.getItem('bgm.uiScale') || '100%'; } catch (e) {}
 document.documentElement.style.zoom = uiScale;
 
+function refreshIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    try { window.lucide.createIcons(); } catch (e) {}
+  }
+}
+
+function celebrateSuccess() {
+  if (typeof window.confetti === 'function') {
+    window.confetti({
+      particleCount: 55,
+      spread: 65,
+      origin: { y: 0.78 },
+      colors: ['#60a5fa', '#34d399', '#a78bfa', '#38bdf8', '#fbbf24']
+    });
+  }
+}
+
+function animateList(selector) {
+  if (!window.anime) return;
+  anime({
+    targets: selector,
+    opacity: [0, 1],
+    translateY: [7, 0],
+    delay: anime.stagger(15, {start: 20}),
+    duration: 280,
+    easing: 'easeOutCubic'
+  });
+}
+
+function animateCounters() {
+  if (!window.anime) return;
+  const A = apps(), svc = comps('service'), tasks = comps('task'), rev = A.filter(a => a.review);
+  const items = [
+    { el: '#stat-apps', val: A.length },
+    { el: '#stat-svc', val: svc.length },
+    { el: '#stat-tasks', val: tasks.length },
+    { el: '#stat-rev', val: rev.length }
+  ];
+  items.forEach(item => {
+    const el = document.querySelector(item.el);
+    if (!el) return;
+    const obj = { val: 0 };
+    anime({
+      targets: obj,
+      val: item.val,
+      round: 1,
+      duration: 650,
+      easing: 'easeOutQuart',
+      update: () => { el.textContent = obj.val; }
+    });
+  });
+}
+
+function openModal() {
+  const m = $('confirm-modal');
+  m.classList.add('show');
+  if (window.anime) {
+    anime({
+      targets: '#confirm-modal .modal',
+      scale: [0.93, 1],
+      opacity: [0, 1],
+      duration: 220,
+      easing: 'easeOutCubic'
+    });
+  }
+}
+
+function closeModal() {
+  const m = $('confirm-modal');
+  if (window.anime && m.classList.contains('show')) {
+    anime({
+      targets: '#confirm-modal .modal',
+      scale: [1, 0.93],
+      opacity: [1, 0],
+      duration: 160,
+      easing: 'easeInCubic',
+      complete: () => {
+        m.classList.remove('show');
+        pending = null;
+        if (inv) render();
+      }
+    });
+  } else {
+    m.classList.remove('show');
+    pending = null;
+    if (inv) render();
+  }
+}
+
 function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200); }
 function hue(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
 function iconStyle(name) { const h = hue(name); return `background:hsl(${h} 22% 22%);color:hsl(${h} 65% 78%);border-color:hsl(${h} 22% 34%)`; }
@@ -473,7 +646,9 @@ function cfgText(c) { return c.kind === 'service' ? c.startType : c.kind === 'pr
 function sigText(c) { return ({valid:'Valid digital signature', unsigned:'Signature not verified', missing:'File not found', 'n/a':'Not applicable'})[c.signature] || '\u2014'; }
 
 async function doScan() {
-  const b = $('scan-btn'); b.disabled = true; $('scan-status').textContent = 'Scanning\u2026';
+  const btns = document.querySelectorAll('.btn-scan, #scan-btn');
+  btns.forEach(b => { b.disabled = true; b.classList.add('is-scanning'); });
+  $('scan-status').textContent = 'Scanning\u2026';
   try {
     const a = api();
     inv = a ? await a.Scan() : DEMO;
@@ -482,7 +657,10 @@ async function doScan() {
     $('scan-status').textContent = 'Scanned ' + new Date(inv.scannedAt).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + (inv.durationMs ? ' \u00B7 ' + (inv.durationMs / 1000).toFixed(1) + 's' : '');
     render();
   } catch (e) { $('scan-status').textContent = 'Scan failed'; toast('Scan failed: ' + (e && e.message ? e.message : e)); }
-  b.disabled = false;
+  finally {
+    const btnsDone = document.querySelectorAll('.btn-scan, #scan-btn');
+    btnsDone.forEach(b => { b.disabled = false; b.classList.remove('is-scanning'); });
+  }
 }
 async function doExport() { const a = api(); if (!a) return toast('Export is available in the desktop app.'); try { const p = await a.Export(); toast(p ? 'Exported to ' + p : 'Export cancelled'); } catch (e) { toast('Export failed: ' + e); } }
 async function doReveal() {
@@ -499,6 +677,8 @@ function navigate(p) {
   $('commandbar-label').textContent = labels[p] || 'Background Manager';
   $('content-host').scrollTop = 0;
   if (p === 'history') loadHistory();
+  if (p === 'overview') animateCounters();
+  refreshIcons();
 }
 
 function render() {
@@ -510,6 +690,7 @@ function render() {
   if ($('set-ui-scale')) $('set-ui-scale').value = uiScale;
   if ($('set-always-admin')) $('set-always-admin').checked = !!inv.alwaysAdmin;
   renderBanners(); renderApps(); renderOverview(); renderServices(); renderTasks(); renderSources();
+  refreshIcons();
 }
 
 function renderBanners() {
@@ -517,7 +698,8 @@ function renderBanners() {
   if (!api()) w.push(['info', 'Preview with sample data \u2014 changes are only available in the desktop app.', '']);
   if (inv.elevated === false) w.push(['info', 'Running without administrator rights. Changing services and scheduled tasks needs them; Run-key and Startup-folder items for your account work without.', 'elevate']);
   (inv.warnings || []).filter(x => !/^Not running as administrator/.test(x)).forEach(x => w.push(['', x, '']));
-  $('app-banners').innerHTML = w.map(([k, t, a]) => `<div class="banner ${k}"><svg><use href="#i-info"/></svg><span>${esc(t)}</span>${a === 'elevate' && api() ? '<button class="win-btn" style="margin-left:auto;height:24px;flex:none" onclick="doElevate()">Restart as administrator</button>' : ''}</div>`).join('');
+  $('app-banners').innerHTML = w.map(([k, t, a]) => `<div class="banner ${k}"><i data-lucide="info" style="width:14px;height:14px;flex:none;margin-top:2px"></i><span>${esc(t)}</span>${a === 'elevate' && api() ? '<button class="win-btn" style="margin-left:auto;height:24px;flex:none" onclick="doElevate()">Restart as administrator</button>' : ''}</div>`).join('');
+  refreshIcons();
 }
 
 function renderApps() {
@@ -540,6 +722,7 @@ function renderApps() {
     <div class="app-cell"><span class="state-text ${a.review ? 'review' : a.running ? '' : 'stopped'}">${a.review ? 'Review' : a.running ? 'Running' : 'Not running'}</span></div>
     <div class="app-cell behavior">${esc(a.behavior)}<small>${esc(a.behaviorNote)}</small></div></button>`).join('') : '<div class="empty-state">No applications match this filter.</div>';
   renderDetail(list.find(a => a.id === sel));
+  animateList('#app-list .app-row');
 }
 
 function explain(a) {
@@ -558,9 +741,9 @@ function renderDetail(a) {
   const ver = a.signature === 'verified';
   h.innerHTML = `
   <div class="detail-head"><div class="product-icon detail-app-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="detail-app-name">${esc(a.name)}</div><div class="detail-publisher">${esc(a.publisher || 'Publisher unknown')}</div>
-   <div class="detail-tags"><span class="small-tag ${ver ? 'good' : ''}">${ver ? 'Verified publisher' : a.signature === 'unverified' ? 'Signature not verified' : 'Signature unknown'}</span><span class="small-tag">${a.components.length} component${a.components.length === 1 ? '' : 's'}</span>${a.review ? '<span class="small-tag">Review</span>' : ''}</div></div></div>
+   <div class="detail-tags"><span class="small-tag ${ver ? 'good' : ''}"><i data-lucide="${ver ? 'shield-check' : 'shield-alert'}" style="width:11px;height:11px;margin-right:4px"></i>${ver ? 'Verified publisher' : a.signature === 'unverified' ? 'Signature not verified' : 'Signature unknown'}</span><span class="small-tag">${a.components.length} component${a.components.length === 1 ? '' : 's'}</span>${a.review ? '<span class="small-tag">Review</span>' : ''}</div></div></div>
   <div class="detail-section"><div class="detail-section-title">Background components</div>
-   ${a.components.map(c => `<div class="component"><div class="component-head"><div class="component-symbol"><svg><use href="${ICON[c.kind] || '#i-apps'}"/></svg></div><div class="component-copy"><div class="component-name">${esc(c.display || c.name)}</div><div class="component-meta">${esc(KIND[c.kind])} \u00B7 ${esc(c.trigger)}</div></div></div>
+   ${a.components.map(c => `<div class="component"><div class="component-head"><div class="component-symbol"><i data-lucide="${KIND_ICON[c.kind] || 'layers'}" style="width:14px;height:14px"></i></div><div class="component-copy"><div class="component-name">${esc(c.display || c.name)}</div><div class="component-meta">${esc(KIND[c.kind])} \u00B7 ${esc(c.trigger)}</div></div></div>
     <div class="component-bottom"><span class="component-state">${c.running ? 'Running' : 'Not running'} \u00B7 ${esc(cfgText(c))}</span>${controlHtml(c)}</div>
     <details class="comp-more"><summary>Details</summary>
      <div class="detail-kv"><span>Source</span><span>${esc(c.source)}</span></div>
@@ -577,7 +760,18 @@ function renderDetail(a) {
    <div class="detail-kv"><span>Publisher</span><span>${esc(a.publisher || 'Unknown')}</span></div>
    <div class="detail-kv"><span>Launch</span><span>${esc(a.behavior)}</span></div>
    <div class="detail-kv"><span>Location</span><span>${esc(a.path || 'Unknown')}</span></div></div>
-  <div class="notice-line"><svg><use href="#i-info"/></svg><span>Changes are backed up first and can be undone from Change history. Protected components can't be changed here.</span></div>`;
+  <div class="notice-line"><i data-lucide="shield-check" style="width:13px;height:13px;flex:none;margin-top:1px"></i><span>Changes are backed up first and can be undone from Change history. Protected components can't be changed here.</span></div>`;
+  refreshIcons();
+  if (window.anime) {
+    anime({
+      targets: '#detail-content > *',
+      opacity: [0, 1],
+      translateY: [5, 0],
+      delay: anime.stagger(18),
+      duration: 220,
+      easing: 'easeOutQuad'
+    });
+  }
 }
 
 function stateBadge(c) { return `<span class="badge ${c.running ? 'green' : 'gray'}">${c.running ? 'Running' : 'Stopped'}</span>`; }
@@ -592,7 +786,9 @@ function renderServices() {
   const list = all.filter(c => (!t || c.startType === t) && (!q || (c.display + ' ' + c.name + ' ' + c.publisher).toLowerCase().includes(q))).sort((a, b) => (a.display || a.name).localeCompare(b.display || b.name));
   $('svc-summary').innerHTML = `<div class="summary-item"><strong>${all.length}</strong> services shown</div><span class="summary-separator"></span><div class="summary-item"><strong>${all.filter(c => c.autoStart).length}</strong> automatic or delayed</div><span class="summary-separator"></span><div class="summary-item"><strong>${all.filter(c => c.locked === 'yes').length}</strong> locked</div>`;
   $('svc-count').textContent = list.length + ' of ' + all.length;
-  $('svc-body').innerHTML = list.length ? list.map(c => `<tr class="clickable" data-id="${esc(c.id)}" data-t="svc"><td><div class="name-cell"><div class="service-icon"><svg><use href="#i-gear"/></svg></div><div><div class="name-primary">${esc(c.display || c.name)}</div><div class="name-secondary">${esc(c.name)}</div></div></div></td><td>${esc(c.publisher || '\u2014')}</td><td>${esc(c.startType)}</td><td>${stateBadge(c)}</td><td>${c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.system ? '<span class="badge blue">Protected</span>' : '<span class="badge gray">Standard</span>'}</td></tr>${expandRow(c, 5)}`).join('') : '<tr><td colspan="5"><div class="empty-state">No services match.</div></td></tr>';
+  $('svc-body').innerHTML = list.length ? list.map(c => `<tr class="clickable" data-id="${esc(c.id)}" data-t="svc"><td><div class="name-cell"><div class="service-icon"><i data-lucide="cog" style="width:14px;height:14px"></i></div><div><div class="name-primary">${esc(c.display || c.name)}</div><div class="name-secondary">${esc(c.name)}</div></div></div></td><td>${esc(c.publisher || '\u2014')}</td><td>${esc(c.startType)}</td><td>${stateBadge(c)}</td><td>${c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.system ? '<span class="badge blue">Protected</span>' : '<span class="badge gray">Standard</span>'}</td></tr>${expandRow(c, 5)}`).join('') : '<tr><td colspan="5"><div class="empty-state">No services match.</div></td></tr>';
+  refreshIcons();
+  animateList('#svc-body tr.clickable');
 }
 
 function renderTasks() {
@@ -601,12 +797,15 @@ function renderTasks() {
   $('task-summary').innerHTML = `<div class="summary-item"><strong>${all.length}</strong> tasks discovered</div><span class="summary-separator"></span><div class="summary-item"><strong>${all.filter(c => c.autoStart).length}</strong> start at logon or boot</div>`;
   $('task-count').textContent = list.length + ' of ' + all.length;
   $('task-body').innerHTML = list.length ? list.map(c => `<tr class="clickable" data-id="${esc(c.id)}" data-t="task"><td><div class="name-primary">${esc(c.display)}</div><div class="name-secondary">${esc(c.name.slice(0, c.name.length - c.display.length) || '\\')}</div></td><td>${esc(c.trigger)}</td><td>${c.review ? '<span style="color:var(--amber)">Unverified</span>' : esc(c.publisher || '\u2014')}</td><td>${esc(base(c.exePath) || '\u2014')}</td><td>${esc(fmtTime(c.lastRun))}</td><td><span class="badge ${c.review ? 'amber' : c.enabled ? 'green' : 'gray'}">${c.review ? 'Review' : c.enabled ? 'Enabled' : 'Disabled'}</span></td></tr>${expandRow(c, 6)}`).join('') : '<tr><td colspan="6"><div class="empty-state">No tasks match.</div></td></tr>';
+  refreshIcons();
+  animateList('#task-body tr.clickable');
 }
 
 function renderSources() {
   const badge = {scanned: ['green', 'Scanned'], partial: ['amber', 'Partial coverage'], notscanned: ['amber', 'Not scanned yet']};
-  const icons = {run:'#i-list', folder:'#i-folder', service:'#i-gear', task:'#i-calendar', storeapp:'#i-apps', process:'#i-monitor', winlogon:'#i-shield', wmi:'#i-terminal'};
-  $('source-grid').innerHTML = inv.sources.map(s => `<div class="source-card"><div class="source-card-icon"><svg><use href="${icons[s.id] || '#i-list'}"/></svg></div><div class="source-card-copy"><div class="source-card-title">${esc(s.title)}</div><div class="source-card-desc">${esc(s.desc)}</div><div class="source-card-foot"><span class="source-count">${s.status === 'notscanned' ? 'Advanced' : s.count + ' found'}</span><span class="badge ${badge[s.status][0]}">${badge[s.status][1]}</span></div></div></div>`).join('');
+  $('source-grid').innerHTML = inv.sources.map(s => `<div class="source-card"><div class="source-card-icon"><i data-lucide="${SOURCE_ICONS[s.id] || 'layers'}" style="width:16px;height:16px"></i></div><div class="source-card-copy"><div class="source-card-title">${esc(s.title)}</div><div class="source-card-desc">${esc(s.desc)}</div><div class="source-card-foot"><span class="source-count">${s.status === 'notscanned' ? 'Advanced' : s.count + ' found'}</span><span class="badge ${badge[s.status][0]}">${badge[s.status][1]}</span></div></div></div>`).join('');
+  refreshIcons();
+  animateList('#source-grid .source-card');
 }
 
 function renderOverview() {
@@ -616,20 +815,23 @@ function renderOverview() {
   const revRow = a => `<div class="overview-row"><div class="product-icon" style="background:#39332a;color:#e4c27e;border-color:#5b5030">!</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.components.filter(c => c.review).map(c => c.flags.map(f => ({missing:'Target file missing', temp:'Temp/Downloads folder', unsigned:'Unsigned, user folder'})[f] || f).join(', ')).join(' \u00B7 '))}</div></div><span class="badge amber">Review</span></div>`;
   const nonSys = A.filter(a => a.autoStart).length;
   $('overview-content').innerHTML = `
-  <div class="page-header"><div><h1>Overview</h1><p class="page-subtitle">A quick view of background activity detected on this PC.</p></div><div class="header-actions"><button class="win-btn primary" onclick="doScan()"><svg><use href="#i-refresh"/></svg>Scan now</button></div></div>
+  <div class="page-header"><div><h1>Overview</h1><p class="page-subtitle">A quick view of background activity detected on this PC.</p></div><div class="header-actions"><button class="win-btn primary btn-scan" onclick="doScan()"><i data-lucide="refresh-cw" style="width:13px;height:13px;margin-right:6px"></i>Scan now</button></div></div>
   <div class="overview-summary">
-   <div class="overview-stat"><div class="overview-stat-label">Applications</div><div class="overview-stat-value">${A.length}</div><div class="overview-stat-foot">${A.filter(a => a.running).length} currently active</div></div>
-   <div class="overview-stat"><div class="overview-stat-label">Services</div><div class="overview-stat-value">${svc.length}</div><div class="overview-stat-foot">${svc.filter(c => c.autoStart).length} automatic or delayed</div></div>
-   <div class="overview-stat"><div class="overview-stat-label">Scheduled tasks</div><div class="overview-stat-value">${tasks.length}</div><div class="overview-stat-foot">${tasks.filter(c => c.autoStart).length} at logon or startup</div></div>
-   <div class="overview-stat"><div class="overview-stat-label">Needs attention</div><div class="overview-stat-value">${rev.length}</div><div class="overview-stat-foot ${rev.length ? 'attention' : ''}">${rev.length ? 'Location or signature needs review' : 'Nothing flagged'}</div></div></div>
+   <div class="overview-stat"><div class="overview-stat-label">Applications</div><div class="overview-stat-value" id="stat-apps">${A.length}</div><div class="overview-stat-foot">${A.filter(a => a.running).length} currently active</div></div>
+   <div class="overview-stat"><div class="overview-stat-label">Services</div><div class="overview-stat-value" id="stat-svc">${svc.length}</div><div class="overview-stat-foot">${svc.filter(c => c.autoStart).length} automatic or delayed</div></div>
+   <div class="overview-stat"><div class="overview-stat-label">Scheduled tasks</div><div class="overview-stat-value" id="stat-tasks">${tasks.length}</div><div class="overview-stat-foot">${tasks.filter(c => c.autoStart).length} at logon or startup</div></div>
+   <div class="overview-stat"><div class="overview-stat-label">Needs attention</div><div class="overview-stat-value" id="stat-rev">${rev.length}</div><div class="overview-stat-foot ${rev.length ? 'attention' : ''}">${rev.length ? 'Location or signature needs review' : 'Nothing flagged'}</div></div></div>
   <p class="overview-intro">Background components can run without an app window. This inventory groups related entries so you can see what owns them and how they are launched. ${nonSys} application${nonSys === 1 ? '' : 's'} start automatically.</p>
   <div class="overview-grid">
    <div class="overview-block"><div class="overview-block-head"><strong>Active applications</strong><button onclick="navigate('applications')">View all applications \u2192</button></div>${running.length ? running.map(row).join('') : '<div class="empty-state">No running background apps found.</div>'}</div>
-   <div class="overview-block"><div class="overview-block-head"><strong>Review recommended</strong><button onclick="filter='review';navigate('applications');renderApps()">Review \u2192</button></div>${rev.length ? rev.slice(0, 4).map(revRow).join('') : '<div class="overview-row"><div class="service-icon"><svg><use href="#i-shield"/></svg></div><div class="overview-row-copy"><div class="overview-row-title">Nothing flagged</div><div class="overview-row-sub">No temp-folder launches, missing files or unsigned user-folder programs.</div></div></div>'}
-    <div class="overview-row"><div class="service-icon"><svg><use href="#i-info"/></svg></div><div class="overview-row-copy"><div class="overview-row-title">Changes are reversible</div><div class="overview-row-sub">Each one is backed up and can be undone from Change history.</div></div></div></div>
+   <div class="overview-block"><div class="overview-block-head"><strong>Review recommended</strong><button onclick="filter='review';navigate('applications');renderApps()">Review \u2192</button></div>${rev.length ? rev.slice(0, 4).map(revRow).join('') : '<div class="overview-row"><div class="service-icon"><i data-lucide="shield-check" style="width:14px;height:14px"></i></div><div class="overview-row-copy"><div class="overview-row-title">Nothing flagged</div><div class="overview-row-sub">No temp-folder launches, missing files or unsigned user-folder programs.</div></div></div>'}
+    <div class="overview-row"><div class="service-icon"><i data-lucide="info" style="width:14px;height:14px"></i></div><div class="overview-row-copy"><div class="overview-row-title">Changes are reversible</div><div class="overview-row-sub">Each one is backed up and can be undone from Change history.</div></div></div></div>
    <div class="overview-block"><div class="overview-block-head"><strong>Recent changes</strong><button onclick="navigate('history')">View history \u2192</button></div>${history.length ? history.slice(0, 3).map(h => `<div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">${esc(h.title)}</div><div class="overview-row-sub">${esc(h.summary)} \u00B7 ${esc(fmtTime(h.time))}</div></div><span class="badge ${h.status === 'applied' ? 'green' : h.status === 'restored' ? 'gray' : 'amber'}">${esc(h.status)}</span></div>`).join('') : '<div class="empty-state">No changes yet.</div>'}</div>
    <div class="overview-block"><div class="overview-block-head"><strong>Discovery coverage</strong><button onclick="navigate('sources')">View locations \u2192</button></div>${inv.sources.filter(s => s.status !== 'notscanned').slice(0, 5).map(s => `<div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">${esc(s.title)}</div></div><span class="source-count">${s.count}</span></div>`).join('')}</div>
   </div>`;
+  refreshIcons();
+  animateCounters();
+  animateList('.overview-block');
 }
 
 
@@ -678,15 +880,19 @@ function requestChange(id, action) {
   const d = describe(f.c, action); if (!d) return;
   pending = {id, action};
   $('modal-title').textContent = d.title; $('modal-body').innerHTML = d.body; $('modal-confirm').textContent = d.confirm;
-  $('confirm-modal').classList.add('show');
+  openModal();
 }
-function closeModal() { $('confirm-modal').classList.remove('show'); pending = null; if (inv) render(); }
 async function confirmChange() {
-  const p = pending; $('confirm-modal').classList.remove('show'); pending = null; if (!p) return;
+  const p = pending; closeModal(); if (!p) return;
   try {
     const r = await api().Apply(p);
     toast(r.message);
-    if (r.ok) await doScan(); else render();
+    if (r.ok) {
+      celebrateSuccess();
+      await doScan();
+    } else {
+      render();
+    }
     loadHistory();
   } catch (e) { toast('Change failed: ' + e); render(); }
 }
@@ -703,12 +909,22 @@ function renderHistory() {
   const ST = {applied: ['green', 'Applied'], restored: ['gray', 'Restored'], failed: ['red', 'Failed'], rolledback: ['amber', 'Rolled back'], pending: ['amber', 'Interrupted']};
   $('history-list').innerHTML = history.length ? history.map(h => {
     const st = ST[h.status] || ['gray', h.status];
-    return `<div class="history-row"><div class="history-symbol"><svg><use href="#i-history"/></svg></div><div class="history-copy"><div class="history-title">${esc(h.title)} <span class="badge ${st[0]}">${st[1]}</span></div><div class="history-meta">${esc(h.appName)} \u00B7 ${esc(h.summary)}${h.error ? ' \u00B7 ' + esc(h.error) : ''}</div></div><div class="history-time">${esc(fmtTime(h.time))}</div>${h.status === 'applied' && h.restorable ? `<button class="win-btn" data-hid="${esc(h.id)}" onclick="doRestore(this.dataset.hid)">Restore</button>` : ''}</div>`;
+    return `<div class="history-row"><div class="history-symbol"><i data-lucide="history" style="width:13px;height:13px"></i></div><div class="history-copy"><div class="history-title">${esc(h.title)} <span class="badge ${st[0]}">${st[1]}</span></div><div class="history-meta">${esc(h.appName)} \u00B7 ${esc(h.summary)}${h.error ? ' \u00B7 ' + esc(h.error) : ''}</div></div><div class="history-time">${esc(fmtTime(h.time))}</div>${h.status === 'applied' && h.restorable ? `<button class="win-btn" data-hid="${esc(h.id)}" onclick="doRestore(this.dataset.hid)"><i data-lucide="rotate-ccw" style="width:11px;height:11px;margin-right:4px"></i>Restore</button>` : ''}</div>`;
   }).join('') : '<div class="empty-state">No changes yet. Every change you make is saved here first, so you can undo it.</div>';
+  refreshIcons();
+  animateList('#history-list .history-row');
 }
 async function doRestore(id) {
   const a = api(); if (!a) return;
-  try { const r = await a.Restore(id); toast(r.message); if (r.ok) await doScan(); await loadHistory(); } catch (e) { toast('Restore failed: ' + e); }
+  try {
+    const r = await a.Restore(id);
+    toast(r.message);
+    if (r.ok) {
+      celebrateSuccess();
+      await doScan();
+    }
+    await loadHistory();
+  } catch (e) { toast('Restore failed: ' + e); }
 }
 
 // ---- events ----
@@ -769,7 +985,7 @@ $('set-always-admin').addEventListener('change', async e => {
           closeModal();
           await doElevate();
         };
-        $('confirm-modal').classList.add('show');
+        openModal();
       }
     } else {
       toast('Always start as administrator disabled.');
