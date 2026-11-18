@@ -271,6 +271,7 @@ export namespace main {
 	    machine: string;
 	    os: string;
 	    elevated: boolean;
+	    alwaysAdmin: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Inventory(source);
@@ -286,6 +287,7 @@ export namespace main {
 	        this.machine = source["machine"];
 	        this.os = source["os"];
 	        this.elevated = source["elevated"];
+	        this.alwaysAdmin = source["alwaysAdmin"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

@@ -404,11 +404,23 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
         </section>
 
         <section class="page" id="page-settings">
-          <div class="page-header"><div><h1>Settings</h1><p class="page-subtitle">How Background Manager shows what it finds.</p></div></div>
-          <div class="page-section"><div class="section-heading"><strong>Display</strong><span></span></div>
-            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Show Windows and Microsoft system components</div><div class="overview-row-sub">Includes Windows' own services and system packages. Hidden by default to keep the list about your apps.</div></div><input class="toggle" id="set-system" type="checkbox" aria-label="Show system components"></div>
+          <div class="page-header"><div><h1>Settings</h1><p class="page-subtitle">Display preferences, text readability, and administrator privileges.</p></div></div>
+          <div class="page-section"><div class="section-heading"><strong>Display & Readability</strong><span></span></div>
+            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Text size & UI scale</div><div class="overview-row-sub">Scale up the text and interface elements for easier reading. You can also press Ctrl + and Ctrl - anytime to zoom.</div></div>
+              <select class="select-control" id="set-ui-scale" aria-label="Text size & UI scale">
+                <option value="100%">Default (100%)</option>
+                <option value="110%">Medium (110%)</option>
+                <option value="120%">Large (120%)</option>
+                <option value="130%">Extra Large (130%)</option>
+                <option value="140%">Huge (140%)</option>
+              </select>
+            </div>
+            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Show Windows and Microsoft system components</div><div class="overview-row-sub">Includes Windows' own services and system packages. Hidden by default to keep the list focused on your apps.</div></div><input class="toggle" id="set-system" type="checkbox" aria-label="Show system components"></div>
           </div>
-          <div class="page-section" style="margin-top:13px"><div class="section-heading"><strong>Safety</strong><span>Always on</span></div>
+          <div class="page-section" style="margin-top:13px"><div class="section-heading"><strong>Privileges & Startup</strong><span></span></div>
+            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Always start as administrator</div><div class="overview-row-sub">Windows will prompt for administrator rights automatically whenever Background Manager is launched, giving you full process inspection and access to reconfigure services and tasks.</div></div><input class="toggle" id="set-always-admin" type="checkbox" aria-label="Always start as administrator"></div>
+          </div>
+          <div class="page-section" style="margin-top:13px"><div class="section-heading"><strong>Safety & Guardrails</strong><span>Always active</span></div>
             <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Backup before every change</div><div class="overview-row-sub">The original setting is saved to Change history first. If the backup can't be saved, nothing is changed.</div></div><input class="toggle" type="checkbox" checked disabled aria-label="Backup before every change"></div>
             <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Protect Windows and security software</div><div class="overview-row-sub">Windows' own components, critical services and antivirus can't be changed from here.</div></div><input class="toggle" type="checkbox" checked disabled aria-label="Protect system components"></div>
           </div>
@@ -446,6 +458,9 @@ let history = [], pending = null;
 let inv = null, sel = null, filter = 'all', query = '', sortMode = 'name', showSystem = false, page = 'applications', toastTimer = null;
 const expanded = new Set();
 try { showSystem = localStorage.getItem('bgm.showSystem') === '1'; } catch (e) {}
+let uiScale = '100%';
+try { uiScale = localStorage.getItem('bgm.uiScale') || '100%'; } catch (e) {}
+document.documentElement.style.zoom = uiScale;
 
 function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200); }
 function hue(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
@@ -492,6 +507,8 @@ function render() {
   $('status-admin').textContent = inv.elevated ? 'Administrator' : 'Standard user';
   $('nav-apps').textContent = apps().length; $('nav-services').textContent = comps('service').length; $('nav-tasks').textContent = comps('task').length;
   $('set-system').checked = showSystem;
+  if ($('set-ui-scale')) $('set-ui-scale').value = uiScale;
+  if ($('set-always-admin')) $('set-always-admin').checked = !!inv.alwaysAdmin;
   renderBanners(); renderApps(); renderOverview(); renderServices(); renderTasks(); renderSources();
 }
 
@@ -707,11 +724,84 @@ $('modal-confirm').addEventListener('click', confirmChange); $('modal-cancel').a
 $('confirm-modal').addEventListener('click', e => { if (e.target === $('confirm-modal')) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && pending) closeModal(); });
 $('set-system').addEventListener('change', e => { showSystem = e.target.checked; try { localStorage.setItem('bgm.showSystem', showSystem ? '1' : '0'); } catch (x) {} render(); });
+
+const SCALES = ['100%', '110%', '120%', '130%', '140%'];
+function applyScale(scale) {
+  if (!SCALES.includes(scale)) scale = '100%';
+  uiScale = scale;
+  document.documentElement.style.zoom = scale;
+  try { localStorage.setItem('bgm.uiScale', scale); } catch (e) {}
+  const el = $('set-ui-scale');
+  if (el && el.value !== scale) el.value = scale;
+}
+function stepScale(delta) {
+  let idx = SCALES.indexOf(uiScale);
+  if (idx === -1) idx = 0;
+  const next = Math.max(0, Math.min(SCALES.length - 1, idx + delta));
+  applyScale(SCALES[next]);
+  toast('Text size: ' + SCALES[next]);
+}
+
+$('set-ui-scale').addEventListener('change', e => {
+  applyScale(e.target.value);
+  toast('Text size: ' + e.target.value);
+});
+
+$('set-always-admin').addEventListener('change', async e => {
+  const on = e.target.checked;
+  const a = api();
+  if (!a) {
+    if (inv) inv.alwaysAdmin = on;
+    toast(on ? 'Always start as administrator enabled (sample preview).' : 'Always start as administrator disabled (sample preview).');
+    return;
+  }
+  try {
+    await a.SetAlwaysAdmin(on);
+    if (inv) inv.alwaysAdmin = on;
+    if (on) {
+      toast('Always start as administrator enabled.');
+      if (inv && !inv.elevated) {
+        pending = null;
+        $('modal-title').textContent = 'Restart as administrator?';
+        $('modal-body').innerHTML = '<p>Background Manager has been configured to always run with administrator rights.</p><p>Would you like to restart the app as administrator right now to unlock service and task management?</p>';
+        $('modal-confirm').textContent = 'Restart as administrator';
+        $('modal-confirm').onclick = async () => {
+          closeModal();
+          await doElevate();
+        };
+        $('confirm-modal').classList.add('show');
+      }
+    } else {
+      toast('Always start as administrator disabled.');
+    }
+  } catch (err) {
+    toast('Failed to change setting: ' + err);
+    e.target.checked = !on;
+  }
+});
+
 $('global-search').addEventListener('keydown', e => { if (e.key === 'Enter') { navigate('applications'); query = e.target.value; $('app-search').value = query; renderApps(); } });
-document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('global-search').focus(); } });
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      $('global-search').focus();
+    } else if (e.key === '=' || e.key === '+') {
+      e.preventDefault();
+      stepScale(1);
+    } else if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      stepScale(-1);
+    } else if (e.key === '0') {
+      e.preventDefault();
+      applyScale('100%');
+      toast('Text size reset to 100%');
+    }
+  }
+});
 
 // ---- sample data for previewing the page in a plain browser (derived from a real scan) ----
-const DEMO = {scannedAt: new Date().toISOString(), durationMs: 0, machine: 'PREVIEW-PC', os: 'Windows 11 \u00B7 build 26100', elevated: false, warnings: [], sources: [
+const DEMO = {scannedAt: new Date().toISOString(), durationMs: 0, machine: 'PREVIEW-PC', os: 'Windows 11 \u00B7 build 26100', elevated: false, alwaysAdmin: false, warnings: [], sources: [
   {id:'run', title:'Registry Run keys', desc:'HKCU and HKLM Run entries.', count:0, status:'scanned'}, {id:'service', title:'Windows services', desc:'Every service.', count:2, status:'scanned'},
   {id:'process', title:'Running processes without a window', desc:'Heuristic.', count:1, status:'partial'}, {id:'wmi', title:'WMI event subscriptions', desc:'Not scanned.', count:0, status:'notscanned'}],
  apps: [

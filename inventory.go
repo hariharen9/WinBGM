@@ -79,7 +79,7 @@ func buildInventory() Inventory {
 	return Inventory{
 		Apps: apps, Sources: sourceList(counts), Warnings: warns,
 		ScannedAt: time.Now().Format(time.RFC3339), DurationMs: time.Since(t0).Milliseconds(),
-		Machine: hostName(), OS: osName(), Elevated: elevated,
+		Machine: hostName(), OS: osName(), Elevated: elevated, AlwaysAdmin: checkAlwaysAdmin(),
 	}
 }
 

@@ -10,6 +10,10 @@ export function Export() {
   return window['go']['main']['App']['Export']();
 }
 
+export function GetAlwaysAdmin() {
+  return window['go']['main']['App']['GetAlwaysAdmin']();
+}
+
 export function History() {
   return window['go']['main']['App']['History']();
 }
@@ -28,4 +32,8 @@ export function Reveal(arg1) {
 
 export function Scan() {
   return window['go']['main']['App']['Scan']();
+}
+
+export function SetAlwaysAdmin(arg1) {
+  return window['go']['main']['App']['SetAlwaysAdmin'](arg1);
 }

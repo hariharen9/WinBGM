@@ -6,6 +6,8 @@ export function Apply(arg1:main.ChangeRequest):Promise<main.ChangeResult>;
 
 export function Export():Promise<string>;
 
+export function GetAlwaysAdmin():Promise<boolean>;
+
 export function History():Promise<Array<main.HistoryEntry>>;
 
 export function RestartAsAdmin():Promise<void>;
@@ -15,3 +17,5 @@ export function Restore(arg1:string):Promise<main.ChangeResult>;
 export function Reveal(arg1:string):Promise<void>;
 
 export function Scan():Promise<main.Inventory>;
+
+export function SetAlwaysAdmin(arg1:boolean):Promise<boolean>;

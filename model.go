@@ -63,6 +63,7 @@ type Inventory struct {
 	ScannedAt  string       `json:"scannedAt"`
 	DurationMs int64        `json:"durationMs"`
 	Machine    string       `json:"machine"`
-	OS         string       `json:"os"`
-	Elevated   bool         `json:"elevated"`
+	OS          string       `json:"os"`
+	Elevated    bool         `json:"elevated"`
+	AlwaysAdmin bool         `json:"alwaysAdmin"`
 }
