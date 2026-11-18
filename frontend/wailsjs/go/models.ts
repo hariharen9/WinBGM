@@ -22,6 +22,10 @@ export namespace main {
 	    system: boolean;
 	    review: boolean;
 	    flags: string[];
+	    control: string;
+	    controlNote: string;
+	    caution: string;
+	    canStop: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Component(source);
@@ -50,6 +54,10 @@ export namespace main {
 	        this.system = source["system"];
 	        this.review = source["review"];
 	        this.flags = source["flags"];
+	        this.control = source["control"];
+	        this.controlNote = source["controlNote"];
+	        this.caution = source["caution"];
+	        this.canStop = source["canStop"];
 	    }
 	}
 	export class AppGroup {
@@ -106,6 +114,133 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class ChangeRequest {
+	    id: string;
+	    action: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ChangeRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.action = source["action"];
+	    }
+	}
+	export class Target {
+	    kind: string;
+	    root: string;
+	    path: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Target(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.root = source["root"];
+	        this.path = source["path"];
+	        this.name = source["name"];
+	    }
+	}
+	export class HistoryEntry {
+	    id: string;
+	    time: string;
+	    title: string;
+	    appName: string;
+	    kind: string;
+	    action: string;
+	    summary: string;
+	    target: Target;
+	    before: string;
+	    after: string;
+	    beforeRaw: string;
+	    beforeExisted: boolean;
+	    status: string;
+	    restorable: boolean;
+	    restoredAt: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HistoryEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.time = source["time"];
+	        this.title = source["title"];
+	        this.appName = source["appName"];
+	        this.kind = source["kind"];
+	        this.action = source["action"];
+	        this.summary = source["summary"];
+	        this.target = this.convertValues(source["target"], Target);
+	        this.before = source["before"];
+	        this.after = source["after"];
+	        this.beforeRaw = source["beforeRaw"];
+	        this.beforeExisted = source["beforeExisted"];
+	        this.status = source["status"];
+	        this.restorable = source["restorable"];
+	        this.restoredAt = source["restoredAt"];
+	        this.error = source["error"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ChangeResult {
+	    ok: boolean;
+	    message: string;
+	    entry?: HistoryEntry;
+	
+	    static createFrom(source: any = {}) {
+	        return new ChangeResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.message = source["message"];
+	        this.entry = this.convertValues(source["entry"], HistoryEntry);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	
 	export class SourceInfo {
 	    id: string;
@@ -171,6 +306,7 @@ export namespace main {
 		    return a;
 		}
 	}
+	
 
 }
 

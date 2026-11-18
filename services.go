@@ -81,7 +81,7 @@ func scanServices(pt procTable, elevated bool) ([]Component, error) {
 		}
 		c := Component{
 			Kind: "service", Name: n, Display: cfg.DisplayName, Command: cfg.BinaryPathName,
-			Source: "Services", StartType: start, Trigger: trig,
+			Source: "Services", StartType: start, Trigger: trig, tgt: Target{Kind: "service", Name: n},
 			Enabled: cfg.StartType != mgr.StartDisabled, AutoStart: cfg.StartType == mgr.StartAutomatic,
 			Running: st.State == svc.Running,
 		}

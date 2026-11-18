@@ -22,7 +22,12 @@ type Component struct {
 	System    bool     `json:"system"`
 	Review    bool     `json:"review"`
 	Flags     []string `json:"flags"`
+	Control     string   `json:"control"`     // yes | admin | no  (can its startup setting be changed here?)
+	ControlNote string   `json:"controlNote"` // why not
+	Caution     string   `json:"caution"`
+	CanStop     bool     `json:"canStop"`
 
+	tgt                  Target
 	ownerKey, ownerLabel string
 	ownerSystem          bool
 }

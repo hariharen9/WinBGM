@@ -99,6 +99,7 @@ func scanTasks(pt procTable, _ bool) ([]Component, error) {
 			Command: t.Exec, ExePath: exe, Trigger: trig, Enabled: enabled,
 			AutoStart: enabled && atStart, Running: t.State == "Running" || len(pids) > 0,
 			PIDs: pids, LastRun: t.LastRun,
+			tgt: Target{Kind: "task", Path: t.Path, Name: t.Name},
 		})
 	}
 	return out, nil

@@ -67,6 +67,11 @@ func buildInventory() Inventory {
 
 	enrich(comps)
 	apps := group(comps)
+	for i := range apps {
+		for j := range apps[i].Components {
+			computeControl(&apps[i].Components[j], elevated)
+		}
+	}
 
 	if !elevated {
 		warns = append(warns, "Not running as administrator: some processes can't be inspected and service lock status is not checked.")

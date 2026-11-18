@@ -44,6 +44,7 @@ func scanRun(pt procTable, _ bool) ([]Component, error) {
 				Kind: "run", Name: n, Command: cmd, ExePath: exe, Source: l.label,
 				Trigger: "At sign-in", Enabled: on, AutoStart: on,
 				Running: len(pids) > 0, PIDs: pids,
+				tgt: Target{Kind: "run", Root: rootName(l.root), Path: l.approved, Name: n},
 			})
 		}
 		k.Close()
@@ -90,7 +91,8 @@ Get-ChildItem -LiteralPath %s,%s -Filter *.lnk -ErrorAction SilentlyContinue | F
 			full := filepath.Join(d.dir, n)
 			on := approved(d.root, approvedBase+"StartupFolder", n)
 			c := Component{Kind: "folder", Name: n, Command: full, Source: d.label,
-				Trigger: "At sign-in", Enabled: on, AutoStart: on}
+				Trigger: "At sign-in", Enabled: on, AutoStart: on,
+				tgt: Target{Kind: "folder", Root: rootName(d.root), Path: approvedBase + "StartupFolder", Name: n}}
 			if li, ok := targets[strings.ToLower(full)]; ok && li.Target != "" {
 				c.Command = strings.TrimSpace(li.Target + " " + li.Args)
 				c.ExePath = li.Target

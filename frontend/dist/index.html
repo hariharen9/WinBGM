@@ -9,22 +9,22 @@
    All system information is illustrative. No Windows settings are changed. */
 :root{
   color-scheme:dark;
-  --mica:#202020;
-  --surface:#242424;
-  --surface-1:#292929;
-  --surface-2:#2d2d2d;
-  --surface-3:#333333;
-  --surface-hover:#383838;
-  --surface-selected:#343434;
-  --border:#3b3b3b;
-  --border-soft:#303030;
+  --mica:#141414;
+  --surface:#161616;
+  --surface-1:#191919;
+  --surface-2:#1c1c1c;
+  --surface-3:#202020;
+  --surface-hover:#232323;
+  --surface-selected:#202020;
+  --border:#252525;
+  --border-soft:#1e1e1e;
   --text:#f5f5f5;
   --text-2:#d4d4d4;
   --muted:#a0a0a0;
   --muted-2:#777;
   --accent:#60a5fa;
   --accent-strong:#3794ff;
-  --accent-bg:#17324d;
+  --accent-bg:#0e1f30;
   --green:#8ccf9d;
   --amber:#e6bf75;
   --red:#ed9999;
@@ -33,113 +33,113 @@
 }
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden}
-body{background:#171717;color:var(--text);font:13px/1.45 var(--font);-webkit-font-smoothing:antialiased}
+body{background:#0e0e0e;color:var(--text);font:13px/1.45 var(--font);-webkit-font-smoothing:antialiased}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 svg{display:block}
 .app-window{height:100dvh;min-height:590px;display:flex;flex-direction:column;background:var(--mica);overflow:hidden}
-.titlebar{height:42px;flex:0 0 42px;display:flex;align-items:center;gap:12px;padding-left:14px;background:#202020;border-bottom:1px solid #2c2c2c;user-select:none}
+.titlebar{height:42px;flex:0 0 42px;display:flex;align-items:center;gap:12px;padding-left:14px;background:#141414;border-bottom:1px solid #1b1b1b;user-select:none}
 .app-identity{display:flex;align-items:center;gap:9px;min-width:220px}
 .app-glyph{width:19px;height:19px;border-radius:5px;background:#3b83ca;color:white;display:grid;place-items:center}
 .app-glyph svg{width:13px;height:13px}
 .titlebar-name{font-size:12px;color:#e6e6e6;letter-spacing:.05px}
 .titlebar-spacer{flex:1}
 .titlebar-center{display:flex;align-items:center;justify-content:center;flex:1;max-width:470px}
-.quick-search{height:29px;width:min(100%,360px);display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid #454545;border-radius:6px;background:#2a2a2a;color:#aaa}
+.quick-search{height:29px;width:min(100%,360px);display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid #2b2b2b;border-radius:6px;background:#1a1a1a;color:#aaa}
 .quick-search:focus-within{border-color:var(--accent)}
 .quick-search svg{width:14px;height:14px;flex:none}
 .quick-search input{border:0;outline:0;background:transparent;width:100%;font-size:12px}
 .quick-search input::placeholder{color:#a1a1a1}
-.search-shortcut{font-size:10px;border:1px solid #555;border-radius:3px;padding:0 4px;color:#aaa;white-space:nowrap}
+.search-shortcut{font-size:10px;border:1px solid #353535;border-radius:3px;padding:0 4px;color:#aaa;white-space:nowrap}
 .title-actions{display:flex;align-items:center;gap:6px;margin-right:8px}
 .title-action{width:30px;height:28px;border:0;border-radius:5px;background:transparent;color:#aaa;display:grid;place-items:center}
-.title-action:hover{background:#3a3a3a;color:white}
+.title-action:hover{background:#242424;color:white}
 .title-action svg{width:15px;height:15px}
 .window-controls{height:42px;display:flex;margin-left:2px}
 .window-control{width:46px;height:42px;border:0;background:transparent;color:#d4d4d4;display:grid;place-items:center}
 .window-control svg{width:10px;height:10px}
-.window-control:hover{background:#3b3b3b}
+.window-control:hover{background:#252525}
 .window-control.close:hover{background:#c42b1c;color:white}
 .app-body{display:flex;flex:1;min-height:0}
-.sidebar{width:238px;flex:0 0 238px;background:#202020;border-right:1px solid #303030;display:flex;flex-direction:column;padding:13px 8px 10px;min-height:0}
+.sidebar{width:238px;flex:0 0 238px;background:#141414;border-right:1px solid #1e1e1e;display:flex;flex-direction:column;padding:13px 8px 10px;min-height:0}
 .nav-group-label{font-size:10px;letter-spacing:.4px;color:#8c8c8c;padding:9px 12px 6px;text-transform:uppercase}
 .nav-list{display:grid;gap:3px}
 .nav-item{height:36px;width:100%;display:flex;align-items:center;gap:13px;text-align:left;padding:0 12px;border:0;border-radius:5px;background:transparent;color:#d2d2d2;font-size:12.5px;position:relative}
 .nav-item svg{width:16px;height:16px;color:#bcbcbc;flex:none}
-.nav-item:hover{background:#2b2b2b}
-.nav-item.active{background:#333;color:white}
+.nav-item:hover{background:#1b1b1b}
+.nav-item.active{background:#202020;color:white}
 .nav-item.active:before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;background:#60a5fa;border-radius:0 3px 3px 0}
 .nav-item.active svg{color:#8fc2fa}
 .nav-count{margin-left:auto;color:#999;font-size:11px}
-.nav-divider{height:1px;background:#383838;margin:13px 8px 8px}
+.nav-divider{height:1px;background:#232323;margin:13px 8px 8px}
 .sidebar-bottom{margin-top:auto}
-.machine-card{border-top:1px solid #383838;margin:8px 7px 0;padding:13px 5px 2px;display:flex;align-items:center;gap:10px}
-.machine-icon{width:29px;height:29px;border-radius:6px;background:#303942;color:#b8d6f5;display:grid;place-items:center;flex:none}
+.machine-card{border-top:1px solid #232323;margin:8px 7px 0;padding:13px 5px 2px;display:flex;align-items:center;gap:10px}
+.machine-icon{width:29px;height:29px;border-radius:6px;background:#1e2329;color:#b8d6f5;display:grid;place-items:center;flex:none}
 .machine-icon svg{width:16px;height:16px}
 .machine-name{font-size:11px;color:#e0e0e0}
 .machine-meta{font-size:10px;color:#929292;margin-top:2px}
 .main-shell{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--surface)}
-.commandbar{height:47px;flex:0 0 47px;background:#242424;border-bottom:1px solid #373737;display:flex;align-items:center;padding:0 23px;gap:9px}
+.commandbar{height:47px;flex:0 0 47px;background:#161616;border-bottom:1px solid #222222;display:flex;align-items:center;padding:0 23px;gap:9px}
 .commandbar-label{font-size:11px;color:#b5b5b5}
-.commandbar-sep{height:17px;width:1px;background:#464646;margin:0 5px}
+.commandbar-sep{height:17px;width:1px;background:#2b2b2b;margin:0 5px}
 .command-btn{height:29px;border:1px solid transparent;border-radius:5px;background:transparent;color:#d4d4d4;padding:0 9px;display:inline-flex;align-items:center;gap:7px;font-size:11.5px}
 .command-btn svg{width:14px;height:14px;color:#bdbdbd}
-.command-btn:hover{background:#353535;border-color:#414141}
+.command-btn:hover{background:#212121;border-color:#282828}
 .command-btn:disabled{opacity:.4;cursor:default}
 .command-spacer{flex:1}
 .command-state{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#aaa}
 .state-led{width:6px;height:6px;border-radius:50%;background:#75bd86;box-shadow:0 0 0 2px #75bd861c}
-.content-host{flex:1;min-height:0;overflow:auto;scrollbar-color:#555 transparent;scrollbar-width:thin}
+.content-host{flex:1;min-height:0;overflow:auto;scrollbar-color:#353535 transparent;scrollbar-width:thin}
 .page{display:none;min-height:100%;padding:27px 30px 32px;max-width:1600px;margin:0 auto}
 .page.active{display:block}
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin-bottom:21px}
 h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0;color:#f5f5f5}
 .page-subtitle{font-size:12px;color:#aaa;margin:7px 0 0;max-width:700px}
 .header-actions{display:flex;align-items:center;gap:8px;padding-top:2px}
-.win-btn{height:32px;border:1px solid #4a4a4a;border-radius:5px;background:#303030;color:#e7e7e7;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:11.5px;white-space:nowrap}
-.win-btn:hover{background:#3b3b3b;border-color:#5a5a5a}
+.win-btn{height:32px;border:1px solid #2e2e2e;border-radius:5px;background:#1e1e1e;color:#e7e7e7;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:11.5px;white-space:nowrap}
+.win-btn:hover{background:#252525;border-color:#383838}
 .win-btn.primary{background:#0f6cbd;border-color:#0f6cbd;color:white}
 .win-btn.primary:hover{background:#197bd1}
 .win-btn.subtle{background:transparent;border-color:transparent}
-.win-btn.subtle:hover{background:#353535}
+.win-btn.subtle:hover{background:#212121}
 .win-btn svg{width:14px;height:14px}
-.system-summary{height:39px;display:flex;align-items:center;gap:18px;border-top:1px solid #383838;border-bottom:1px solid #383838;margin-bottom:18px;color:#aaa;font-size:11px}
+.system-summary{height:39px;display:flex;align-items:center;gap:18px;border-top:1px solid #232323;border-bottom:1px solid #232323;margin-bottom:18px;color:#aaa;font-size:11px}
 .summary-item{display:flex;align-items:center;gap:7px}
 .summary-item strong{color:#e1e1e1;font-weight:600}
-.summary-separator{height:14px;width:1px;background:#444}
+.summary-separator{height:14px;width:1px;background:#2a2a2a}
 .summary-icon{width:13px;height:13px;color:#9dbde0}
 .content-toolbar{display:flex;align-items:center;gap:10px;margin:0 0 12px;min-height:34px}
-.segmented{display:inline-flex;align-items:center;gap:2px;background:#292929;padding:2px;border:1px solid #414141;border-radius:6px}
+.segmented{display:inline-flex;align-items:center;gap:2px;background:#191919;padding:2px;border:1px solid #282828;border-radius:6px}
 .segmented button{height:25px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:#bcbcbc;font-size:10.5px}
-.segmented button:hover{background:#353535;color:white}
-.segmented button.active{background:#414141;color:white;box-shadow:0 1px 2px #0005}
-.filter-search{height:31px;width:228px;border:1px solid #444;border-radius:5px;background:#292929;display:flex;align-items:center;gap:7px;padding:0 9px;color:#aaa}
+.segmented button:hover{background:#212121;color:white}
+.segmented button.active{background:#282828;color:white;box-shadow:0 1px 2px #0005}
+.filter-search{height:31px;width:228px;border:1px solid #2a2a2a;border-radius:5px;background:#191919;display:flex;align-items:center;gap:7px;padding:0 9px;color:#aaa}
 .filter-search:focus-within{border-color:#5597d6}
 .filter-search svg{width:13px;height:13px;flex:none}
 .filter-search input{width:100%;border:0;outline:0;background:transparent;color:#eee;font-size:11px}
 .filter-search input::placeholder{color:#999}
-.select-control{height:31px;border:1px solid #444;border-radius:5px;background:#292929;color:#d3d3d3;padding:0 25px 0 9px;font-size:11px;outline:0}
+.select-control{height:31px;border:1px solid #2a2a2a;border-radius:5px;background:#191919;color:#d3d3d3;padding:0 25px 0 9px;font-size:11px;outline:0}
 .toolbar-flex{flex:1}
 .subtle-label{font-size:10.5px;color:#949494}
-.split-view{display:grid;grid-template-columns:minmax(430px,1fr) 345px;min-height:480px;border:1px solid #3d3d3d;border-radius:7px;overflow:hidden;background:#252525}
+.split-view{display:grid;grid-template-columns:minmax(430px,1fr) 345px;min-height:480px;border:1px solid #262626;border-radius:7px;overflow:hidden;background:#171717}
 .list-pane{min-width:0;display:flex;flex-direction:column}
-.list-topline{height:37px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid #3b3b3b;color:#aaa;font-size:10.5px;background:#292929}
+.list-topline{height:37px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid #252525;color:#aaa;font-size:10.5px;background:#191919}
 .list-topline strong{font-weight:600;color:#dedede}
-.list-head{height:34px;display:grid;grid-template-columns:minmax(170px,1.9fr) minmax(72px,.7fr) minmax(90px,.9fr) minmax(105px,1fr);align-items:center;padding:0 13px;border-bottom:1px solid #3b3b3b;color:#999;font-size:9px;text-transform:uppercase;letter-spacing:.45px;background:#292929}
-.app-row{width:100%;min-height:57px;display:grid;grid-template-columns:minmax(170px,1.9fr) minmax(72px,.7fr) minmax(90px,.9fr) minmax(105px,1fr);align-items:center;gap:0;text-align:left;padding:0 13px;border:0;border-bottom:1px solid #343434;background:transparent;color:#ddd}
-.app-row:hover{background:#2e2e2e}
-.app-row.selected{background:#343b44;box-shadow:inset 2px 0 #60a5fa}
+.list-head{height:34px;display:grid;grid-template-columns:minmax(170px,1.9fr) minmax(72px,.7fr) minmax(90px,.9fr) minmax(105px,1fr);align-items:center;padding:0 13px;border-bottom:1px solid #252525;color:#999;font-size:9px;text-transform:uppercase;letter-spacing:.45px;background:#191919}
+.app-row{width:100%;min-height:57px;display:grid;grid-template-columns:minmax(170px,1.9fr) minmax(72px,.7fr) minmax(90px,.9fr) minmax(105px,1fr);align-items:center;gap:0;text-align:left;padding:0 13px;border:0;border-bottom:1px solid #202020;background:transparent;color:#ddd}
+.app-row:hover{background:#1d1d1d}
+.app-row.selected{background:#20252a;box-shadow:inset 2px 0 #60a5fa}
 .app-row:last-child{border-bottom:0}
 .app-cell{min-width:0;padding-right:9px;font-size:11px;color:#d5d5d5}
 .app-name-wrap{display:flex;align-items:center;gap:10px;min-width:0}
-.product-icon{width:30px;height:30px;border-radius:6px;background:#343b44;border:1px solid #4b535e;display:grid;place-items:center;flex:none;color:#e0e7f0;font-size:11px;font-weight:600;letter-spacing:-.3px}
-.product-icon.nvidia{background:#293b2b;color:#9fdb91;border-color:#3b5a3d}
-.product-icon.discord{background:#34324b;color:#bcb4f4;border-color:#504a73}
-.product-icon.adobe{background:#482c2c;color:#ff9a9a;border-color:#684040}
-.product-icon.drive{background:#273b31;color:#a6dcb8;border-color:#3c5d49}
-.product-icon.docker{background:#263a4c;color:#9ed0f5;border-color:#3c5871}
-.product-icon.steam{background:#313942;color:#c5d5e2;border-color:#4b5965}
-.product-icon.logi{background:#383629;color:#e4d58c;border-color:#5b5636}
+.product-icon{width:30px;height:30px;border-radius:6px;background:#20252a;border:1px solid #2e333a;display:grid;place-items:center;flex:none;color:#e0e7f0;font-size:11px;font-weight:600;letter-spacing:-.3px}
+.product-icon.nvidia{background:#19251b;color:#9fdb91;border-color:#253826}
+.product-icon.discord{background:#201f2e;color:#bcb4f4;border-color:#504a73}
+.product-icon.adobe{background:#2d1b1b;color:#ff9a9a;border-color:#684040}
+.product-icon.drive{background:#18251e;color:#a6dcb8;border-color:#253a2d}
+.product-icon.docker{background:#18242f;color:#9ed0f5;border-color:#3c5871}
+.product-icon.steam{background:#1e2329;color:#c5d5e2;border-color:#4b5965}
+.product-icon.logi{background:#232119;color:#e4d58c;border-color:#383521}
 .app-name{font-size:11.5px;font-weight:600;color:#f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .app-publisher{font-size:10px;color:#999;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cell-secondary{font-size:10.5px;color:#b7b7b7}
@@ -149,30 +149,30 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
 .state-text.review:before{background:#d4aa5c}
 .behavior{font-size:10.5px;color:#bcbcbc}
 .behavior small{font-size:9.5px;color:#858585;display:block;margin-top:3px}
-.pane-footer{margin-top:auto;padding:10px 13px;border-top:1px solid #393939;background:#282828;display:flex;align-items:center;justify-content:space-between;color:#909090;font-size:10px}
-.detail-pane{border-left:1px solid #414141;background:#292929;min-width:0;display:flex;flex-direction:column}
-.detail-inner{padding:17px 17px 15px;overflow:auto;scrollbar-width:thin;scrollbar-color:#555 transparent}
-.detail-head{display:flex;align-items:center;gap:11px;padding-bottom:14px;border-bottom:1px solid #424242}
+.pane-footer{margin-top:auto;padding:10px 13px;border-top:1px solid #232323;background:#191919;display:flex;align-items:center;justify-content:space-between;color:#909090;font-size:10px}
+.detail-pane{border-left:1px solid #282828;background:#191919;min-width:0;display:flex;flex-direction:column}
+.detail-inner{padding:17px 17px 15px;overflow:auto;scrollbar-width:thin;scrollbar-color:#353535 transparent}
+.detail-head{display:flex;align-items:center;gap:11px;padding-bottom:14px;border-bottom:1px solid #292929}
 .detail-app-icon{width:40px;height:40px;border-radius:9px;font-size:14px}
 .detail-app-name{font-size:15px;font-weight:600;color:white}
 .detail-publisher{font-size:10.5px;color:#aaa;margin-top:3px}
 .detail-tags{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
-.small-tag{font-size:9px;padding:3px 6px;border:1px solid #4a4a4a;border-radius:4px;color:#c3c3c3;background:#303030}
-.small-tag.good{color:#a8d8b0;border-color:#42644a;background:#26382b}
-.detail-section{padding:14px 0 12px;border-bottom:1px solid #414141}
+.small-tag{font-size:9px;padding:3px 6px;border:1px solid #2e2e2e;border-radius:4px;color:#c3c3c3;background:#1e1e1e}
+.small-tag.good{color:#a8d8b0;border-color:#42644a;background:#18231b}
+.detail-section{padding:14px 0 12px;border-bottom:1px solid #282828}
 .detail-section:last-child{border-bottom:0}
 .detail-section-title{font-size:9px;letter-spacing:.65px;text-transform:uppercase;color:#9b9b9b;font-weight:600;margin-bottom:10px}
-.component{padding:9px 0;border-top:1px solid #3a3a3a}
+.component{padding:9px 0;border-top:1px solid #242424}
 .component:first-of-type{border-top:0;padding-top:0}
 .component-head{display:flex;align-items:flex-start;gap:9px}
-.component-symbol{width:25px;height:25px;border-radius:5px;background:#383838;color:#c8d7e7;display:grid;place-items:center;flex:none}
+.component-symbol{width:25px;height:25px;border-radius:5px;background:#232323;color:#c8d7e7;display:grid;place-items:center;flex:none}
 .component-symbol svg{width:13px;height:13px}
 .component-copy{flex:1;min-width:0}
 .component-name{font-size:10.5px;color:#e4e4e4;font-weight:600}
 .component-meta{font-size:9.5px;color:#999;margin-top:3px}
 .component-bottom{display:flex;align-items:center;justify-content:space-between;padding-left:34px;margin-top:8px}
 .component-state{font-size:9.5px;color:#aaa}
-.toggle{appearance:none;width:31px;height:17px;border:1px solid #666;border-radius:20px;background:#4a4a4a;position:relative;outline:0;cursor:pointer;transition:background .15s,border-color .15s}
+.toggle{appearance:none;width:31px;height:17px;border:1px solid #666;border-radius:20px;background:#2e2e2e;position:relative;outline:0;cursor:pointer;transition:background .15s,border-color .15s}
 .toggle:before{content:"";position:absolute;width:11px;height:11px;border-radius:50%;left:2px;top:2px;background:#d7d7d7;transition:transform .15s}
 .toggle:checked{background:#0f6cbd;border-color:#0f6cbd}
 .toggle:checked:before{transform:translateX(14px);background:white}
@@ -181,34 +181,34 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
 .detail-kv{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;padding:5px 0;font-size:9.5px}
 .detail-kv span:first-child{color:#929292}
 .detail-kv span:last-child{color:#d0d0d0;overflow-wrap:anywhere}
-.detail-actions{display:flex;gap:7px;padding:12px 15px;border-top:1px solid #414141;margin-top:auto;background:#272727}
+.detail-actions{display:flex;gap:7px;padding:12px 15px;border-top:1px solid #282828;margin-top:auto;background:#181818}
 .detail-actions .win-btn{flex:1;padding:0 6px;font-size:10px}
-.notice-line{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;background:#2d3137;border:1px solid #474d55;border-radius:5px;color:#bdbdbd;font-size:10px;line-height:1.5;margin-top:11px}
+.notice-line{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;background:#1c1e22;border:1px solid #2c3035;border-radius:5px;color:#bdbdbd;font-size:10px;line-height:1.5;margin-top:11px}
 .notice-line svg{width:13px;height:13px;color:#9ccafa;flex:none;margin-top:1px}
-.page-section{border:1px solid #3b3b3b;border-radius:7px;background:#252525;overflow:hidden}
-.section-heading{min-height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 15px;border-bottom:1px solid #3b3b3b;background:#292929}
+.page-section{border:1px solid #252525;border-radius:7px;background:#171717;overflow:hidden}
+.section-heading{min-height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 15px;border-bottom:1px solid #252525;background:#191919}
 .section-heading strong{font-size:12px;font-weight:600}
 .section-heading span{font-size:10px;color:#999}
 .data-table{width:100%;border-collapse:collapse}
-.data-table th{height:33px;text-align:left;padding:0 14px;background:#292929;border-bottom:1px solid #3b3b3b;color:#999;font-size:9px;font-weight:600;letter-spacing:.45px;text-transform:uppercase;white-space:nowrap}
-.data-table td{height:52px;padding:7px 14px;border-bottom:1px solid #353535;color:#d4d4d4;font-size:10.5px;white-space:nowrap}
+.data-table th{height:33px;text-align:left;padding:0 14px;background:#191919;border-bottom:1px solid #252525;color:#999;font-size:9px;font-weight:600;letter-spacing:.45px;text-transform:uppercase;white-space:nowrap}
+.data-table td{height:52px;padding:7px 14px;border-bottom:1px solid #212121;color:#d4d4d4;font-size:10.5px;white-space:nowrap}
 .data-table tr:last-child td{border-bottom:0}
-.data-table tbody tr:hover{background:#2d2d2d}
-.data-table tbody tr.selected{background:#343b44}
+.data-table tbody tr:hover{background:#1c1c1c}
+.data-table tbody tr.selected{background:#20252a}
 .name-cell{display:flex;align-items:center;gap:9px;min-width:200px}
-.service-icon{width:27px;height:27px;border-radius:6px;border:1px solid #4a4a4a;background:#333;display:grid;place-items:center;color:#b8cee5;flex:none}
+.service-icon{width:27px;height:27px;border-radius:6px;border:1px solid #2e2e2e;background:#202020;display:grid;place-items:center;color:#b8cee5;flex:none}
 .service-icon svg{width:14px;height:14px}
 .name-primary{font-size:10.5px;font-weight:600;color:#e8e8e8}
 .name-secondary{font-size:9.5px;color:#959595;margin-top:2px}
-.badge{display:inline-flex;align-items:center;gap:5px;height:19px;padding:0 7px;border-radius:4px;border:1px solid #4a4a4a;color:#c9c9c9;background:#303030;font-size:9px}
-.badge.green{color:#a8d5ad;border-color:#45634a;background:#28362b}
-.badge.amber{color:#e6c27e;border-color:#675632;background:#3a3223}
-.badge.blue{color:#a6cbf4;border-color:#405875;background:#273748}
+.badge{display:inline-flex;align-items:center;gap:5px;height:19px;padding:0 7px;border-radius:4px;border:1px solid #2e2e2e;color:#c9c9c9;background:#1e1e1e;font-size:9px}
+.badge.green{color:#a8d5ad;border-color:#45634a;background:#19211b}
+.badge.amber{color:#e6c27e;border-color:#675632;background:#241f16}
+.badge.blue{color:#a6cbf4;border-color:#405875;background:#18222d}
 .badge.gray{color:#b8b8b8}
 .source-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.source-card{border:1px solid #414141;border-radius:6px;background:#292929;padding:14px;display:flex;gap:12px;min-height:112px}
-.source-card:hover{background:#303030;border-color:#565656}
-.source-card-icon{width:32px;height:32px;border:1px solid #4d5967;border-radius:7px;background:#303b48;color:#b6d5f4;display:grid;place-items:center;flex:none}
+.source-card{border:1px solid #282828;border-radius:6px;background:#191919;padding:14px;display:flex;gap:12px;min-height:112px}
+.source-card:hover{background:#1e1e1e;border-color:#353535}
+.source-card-icon{width:32px;height:32px;border:1px solid #4d5967;border-radius:7px;background:#1e252d;color:#b6d5f4;display:grid;place-items:center;flex:none}
 .source-card-icon svg{width:16px;height:16px}
 .source-card-copy{min-width:0;flex:1}
 .source-card-title{font-size:11.5px;font-weight:600;color:#e7e7e7}
@@ -216,44 +216,44 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
 .source-card-foot{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:9.5px;color:#b8b8b8}
 .source-count{font-size:10px;color:#e0e0e0;font-weight:600}
 .history-list{padding:0 16px}
-.history-row{min-height:67px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #383838}
+.history-row{min-height:67px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #232323}
 .history-row:last-child{border-bottom:0}
-.history-symbol{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#29392d;color:#9dd8a8;flex:none}
+.history-symbol{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#19231c;color:#9dd8a8;flex:none}
 .history-symbol svg{width:13px;height:13px}
 .history-copy{flex:1;min-width:0}
 .history-title{font-size:10.5px;font-weight:600;color:#e1e1e1}
 .history-meta{font-size:9.5px;color:#999;margin-top:3px}
 .history-time{font-size:9.5px;color:#999;white-space:nowrap}
 .overview-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(290px,.75fr);gap:13px}
-.overview-block{border:1px solid #3b3b3b;border-radius:7px;background:#252525;overflow:hidden}
-.overview-block-head{min-height:48px;padding:0 15px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #3b3b3b;background:#292929}
+.overview-block{border:1px solid #252525;border-radius:7px;background:#171717;overflow:hidden}
+.overview-block-head{min-height:48px;padding:0 15px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #252525;background:#191919}
 .overview-block-head strong{font-size:11.5px;font-weight:600}
 .overview-block-head button{font-size:10px;color:#9fc9f2;border:0;background:transparent}
-.overview-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #383838}
+.overview-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #232323}
 .overview-row:last-child{border-bottom:0}
 .overview-row-copy{min-width:0;flex:1}
 .overview-row-title{font-size:10.5px;color:#e2e2e2;font-weight:600}
 .overview-row-sub{font-size:9.5px;color:#999;margin-top:3px}
 .overview-row-end{font-size:9.5px;color:#aaa;white-space:nowrap}
-.overview-summary{display:flex;align-items:center;gap:0;border:1px solid #3d3d3d;border-radius:7px;background:#252525;margin-bottom:14px}
+.overview-summary{display:flex;align-items:center;gap:0;border:1px solid #262626;border-radius:7px;background:#171717;margin-bottom:14px}
 .overview-stat{flex:1;padding:13px 16px;min-width:0}
-.overview-stat+.overview-stat{border-left:1px solid #3d3d3d}
+.overview-stat+.overview-stat{border-left:1px solid #262626}
 .overview-stat-label{font-size:10px;color:#a2a2a2}
 .overview-stat-value{font-size:21px;line-height:1.25;font-weight:600;letter-spacing:-.3px;margin-top:5px}
 .overview-stat-foot{font-size:9px;color:#929292;margin-top:3px}
 .overview-stat-foot.attention{color:#dcb66f}
 .overview-intro{margin:0 0 15px;color:#aaa;font-size:11px}
 .empty-filter{display:none;padding:35px 15px;text-align:center;color:#999;font-size:11px}
-.statusbar{height:25px;flex:0 0 25px;border-top:1px solid #363636;background:#202020;display:flex;align-items:center;justify-content:space-between;padding:0 12px;color:#888;font-size:9.5px}
+.statusbar{height:25px;flex:0 0 25px;border-top:1px solid #212121;background:#141414;display:flex;align-items:center;justify-content:space-between;padding:0 12px;color:#888;font-size:9.5px}
 .status-left,.status-right{display:flex;align-items:center;gap:13px}
 .status-dot{width:5px;height:5px;border-radius:50%;background:#7abf88;display:inline-block;margin-right:5px}
 .modal-backdrop{position:fixed;inset:0;background:#0009;z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-backdrop.show{display:flex}
-.modal{width:min(440px,100%);border:1px solid #555;border-radius:8px;background:#2a2a2a;box-shadow:0 18px 55px #000a;padding:20px}
+.modal{width:min(440px,100%);border:1px solid #353535;border-radius:8px;background:#1a1a1a;box-shadow:0 18px 55px #000a;padding:20px}
 .modal-title{font-size:15px;font-weight:600;margin:0 0 8px}
 .modal-body{font-size:11px;color:#c0c0c0;line-height:1.6}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:21px}
-.toast{position:fixed;right:24px;bottom:42px;max-width:360px;padding:11px 14px;background:#303030;border:1px solid #555;border-radius:6px;color:#eee;font-size:11px;box-shadow:0 8px 26px #0008;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s;z-index:60}
+.toast{position:fixed;right:24px;bottom:42px;max-width:360px;padding:11px 14px;background:#1e1e1e;border:1px solid #353535;border-radius:6px;color:#eee;font-size:11px;box-shadow:0 8px 26px #0008;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s;z-index:60}
 .toast.show{opacity:1;transform:translateY(0)}
 .hidden{display:none!important}
 @media(max-width:1120px){
@@ -268,22 +268,22 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
  .nav-group-label,.nav-item span,.nav-count,.machine-card .machine-copy{display:none}
  .nav-item{justify-content:center;padding:0}.nav-item svg{width:17px;height:17px}
  .machine-card{justify-content:center;margin:8px 0 0;padding:12px 0 0}
- .split-view{grid-template-columns:1fr}.detail-pane{border-left:0;border-top:1px solid #444}
+ .split-view{grid-template-columns:1fr}.detail-pane{border-left:0;border-top:1px solid #2a2a2a}
  .detail-inner{max-height:360px}
 }
 @media(max-width:650px){
  .titlebar-center{display:none}.page{padding:18px 13px}.page-header{display:block}.header-actions{margin-top:14px}
  .overview-grid,.source-grid{grid-template-columns:1fr}
- .overview-summary{flex-wrap:wrap}.overview-stat{flex-basis:50%}.overview-stat:nth-child(3){border-left:0;border-top:1px solid #3d3d3d}.overview-stat:nth-child(4){border-top:1px solid #3d3d3d}
+ .overview-summary{flex-wrap:wrap}.overview-stat{flex-basis:50%}.overview-stat:nth-child(3){border-left:0;border-top:1px solid #262626}.overview-stat:nth-child(4){border-top:1px solid #262626}
  .content-toolbar{flex-wrap:wrap}.filter-search{width:100%}
  .list-head,.app-row{grid-template-columns:minmax(150px,1.5fr) 70px 90px}.list-head>*:nth-child(4),.app-row>*:nth-child(4){display:none}
  .commandbar{padding:0 12px}.command-state{display:none}
 }
 /* --- additions for the live (read-only) build --- */
-.badge.red{color:#f0a6a6;border-color:#6d3b3b;background:#3a2626}
-.readonly-pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:11px;border:1px solid #42644a;background:#26382b;color:#a8d8b0;font-size:10px}
-.banner{display:flex;gap:9px;align-items:flex-start;padding:9px 12px;margin:0 0 14px;border:1px solid #675632;background:#3a3223;color:#e6c27e;border-radius:6px;font-size:10.5px;line-height:1.5}
-.banner.info{border-color:#405875;background:#273748;color:#a6cbf4}
+.badge.red{color:#f0a6a6;border-color:#6d3b3b;background:#241818}
+.readonly-pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:11px;border:1px solid #42644a;background:#18231b;color:#a8d8b0;font-size:10px}
+.banner{display:flex;gap:9px;align-items:flex-start;padding:9px 12px;margin:0 0 14px;border:1px solid #675632;background:#241f16;color:#e6c27e;border-radius:6px;font-size:10.5px;line-height:1.5}
+.banner.info{border-color:#405875;background:#18222d;color:#a6cbf4}
 .banner svg{width:13px;height:13px;flex:none;margin-top:2px}
 .comp-more{margin:8px 0 0 34px;font-size:9.5px;color:#aaa}
 .comp-more summary{cursor:pointer;color:#9fc9f2;list-style:none}
@@ -291,7 +291,7 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
 .comp-more .detail-kv{grid-template-columns:70px minmax(0,1fr)}
 .howto{margin-top:6px;color:#b9b9b9;line-height:1.5}
 .data-table tbody tr.clickable{cursor:pointer}
-.data-table tr.expand td{height:auto;white-space:normal;background:#2a2a2a;padding:12px 16px 14px 52px}
+.data-table tr.expand td{height:auto;white-space:normal;background:#1a1a1a;padding:12px 16px 14px 52px}
 .data-table tr.expand .detail-kv{grid-template-columns:110px minmax(0,1fr);font-size:10.5px}
 .empty-state{padding:38px 18px;text-align:center;color:#999;font-size:11.5px;line-height:1.6}
 .loading{padding:60px 20px;text-align:center;color:#aaa;font-size:12px}
@@ -322,7 +322,7 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
     <div class="app-identity"><div class="app-glyph"><svg><use href="#i-shield"/></svg></div><div class="titlebar-name">Background Manager</div></div>
     <div class="titlebar-center"><label class="quick-search"><svg><use href="#i-search"/></svg><input id="global-search" type="search" placeholder="Search apps, services and tasks" aria-label="Search"><span class="search-shortcut">Ctrl+K</span></label></div>
     <div class="titlebar-spacer"></div>
-    <span class="readonly-pill">Read-only</span>
+    <span class="readonly-pill">Safe mode</span>
   </header>
   <div class="app-body">
     <aside class="sidebar">
@@ -353,7 +353,7 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
       </div>
       <div class="content-host" id="content-host">
         <section class="page active" id="page-applications">
-          <div class="page-header"><div><h1>Applications</h1><p class="page-subtitle">Background components found on this PC, grouped by the application that owns them. Nothing here changes your system.</p></div><div class="header-actions"><button class="win-btn" onclick="doExport()">Export list</button></div></div>
+          <div class="page-header"><div><h1>Applications</h1><p class="page-subtitle">Background components found on this PC, grouped by the application that owns them. Every change is backed up first and can be undone.</p></div><div class="header-actions"><button class="win-btn" onclick="doExport()">Export list</button></div></div>
           <div id="app-banners"></div>
           <div class="system-summary" id="app-summary"></div>
           <div class="content-toolbar">
@@ -366,7 +366,7 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
               <div class="list-topline"><strong>Detected applications</strong><span style="margin-left:auto" id="visible-count"></span></div>
               <div class="list-head"><div>Name</div><div>Components</div><div>Activity</div><div>Launch behavior</div></div>
               <div id="app-list"><div class="loading">Scanning this PC…</div></div>
-              <div class="pane-footer"><span id="list-foot"></span><span>Read-only</span></div>
+              <div class="pane-footer"><span id="list-foot"></span><span>Changes are backed up</span></div>
             </div>
             <aside class="detail-pane"><div class="detail-inner" id="detail-content"></div></aside>
           </div>
@@ -397,8 +397,10 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
         </section>
 
         <section class="page" id="page-history">
-          <div class="page-header"><div><h1>Change history</h1><p class="page-subtitle">Changes made through Background Manager, with the original value so they can be restored.</p></div></div>
-          <div class="page-section"><div class="empty-state">No changes yet.<br>This version is read-only: it inspects your PC but never modifies it.<br>History and restore arrive together with the first editing features.</div></div>
+          <div class="page-header"><div><h1>Change history</h1><p class="page-subtitle">Every change is saved here before it is made, with the original value, so it can be restored.</p></div></div>
+          <div class="system-summary" id="history-summary"></div>
+          <div class="page-section"><div class="section-heading"><strong>Recent activity</strong><span>Newest first</span></div><div class="history-list" id="history-list"></div></div>
+          <div class="notice-line" style="margin-top:12px"><svg><use href="#i-info"/></svg><span>Restore only runs if the item is still exactly as Background Manager left it, so it never overwrites a newer change you made elsewhere.</span></div>
         </section>
 
         <section class="page" id="page-settings">
@@ -406,15 +408,17 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
           <div class="page-section"><div class="section-heading"><strong>Display</strong><span></span></div>
             <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Show Windows and Microsoft system components</div><div class="overview-row-sub">Includes Windows' own services and system packages. Hidden by default to keep the list about your apps.</div></div><input class="toggle" id="set-system" type="checkbox" aria-label="Show system components"></div>
           </div>
-          <div class="page-section" style="margin-top:13px"><div class="section-heading"><strong>Safety</strong><span>Fixed in this version</span></div>
-            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Read-only mode</div><div class="overview-row-sub">Background Manager does not start, stop, enable or disable anything yet.</div></div><input class="toggle" type="checkbox" checked disabled aria-label="Read-only mode"></div>
+          <div class="page-section" style="margin-top:13px"><div class="section-heading"><strong>Safety</strong><span>Always on</span></div>
+            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Backup before every change</div><div class="overview-row-sub">The original setting is saved to Change history first. If the backup can't be saved, nothing is changed.</div></div><input class="toggle" type="checkbox" checked disabled aria-label="Backup before every change"></div>
+            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Protect Windows and security software</div><div class="overview-row-sub">Windows' own components, critical services and antivirus can't be changed from here.</div></div><input class="toggle" type="checkbox" checked disabled aria-label="Protect system components"></div>
           </div>
         </section>
       </div>
-      <footer class="statusbar"><div class="status-left"><span><i class="status-dot"></i><span id="status-text">Ready</span></span><span id="status-admin"></span></div><div class="status-right"><span>Read-only · No system changes</span></div></footer>
+      <footer class="statusbar"><div class="status-left"><span><i class="status-dot"></i><span id="status-text">Ready</span></span><span id="status-admin"></span></div><div class="status-right"><span>Every change is backed up · System components protected</span></div></footer>
     </main>
   </div>
 </div>
+<div class="modal-backdrop" id="confirm-modal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><h2 class="modal-title" id="modal-title"></h2><div class="modal-body" id="modal-body"></div><div class="modal-actions"><button class="win-btn" id="modal-cancel">Cancel</button><button class="win-btn primary" id="modal-confirm">Confirm</button></div></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -438,6 +442,7 @@ const KNOWN = [
   {m:/codex|chatgpt|openai/i, t:'This looks like the sandbox service used by the ChatGPT/Codex desktop app and starts automatically with Windows. If it is marked Locked, its startup type cannot be changed from here or from Services.'}
 ];
 
+let history = [], pending = null;
 let inv = null, sel = null, filter = 'all', query = '', sortMode = 'name', showSystem = false, page = 'applications', toastTimer = null;
 const expanded = new Set();
 try { showSystem = localStorage.getItem('bgm.showSystem') === '1'; } catch (e) {}
@@ -478,6 +483,7 @@ function navigate(p) {
   const labels = {overview:'Overview', applications:'Applications', services:'Services', tasks:'Scheduled tasks', sources:'Startup locations', history:'Change history', settings:'Settings'};
   $('commandbar-label').textContent = labels[p] || 'Background Manager';
   $('content-host').scrollTop = 0;
+  if (p === 'history') loadHistory();
 }
 
 function render() {
@@ -491,9 +497,10 @@ function render() {
 
 function renderBanners() {
   const w = [];
-  if (!api()) w.push(['info', 'Preview with sample data \u2014 this page is not running inside Background Manager.']);
-  (inv.warnings || []).forEach(x => w.push(['', x]));
-  $('app-banners').innerHTML = w.map(([k, t]) => `<div class="banner ${k}"><svg><use href="#i-info"/></svg><span>${esc(t)}</span></div>`).join('');
+  if (!api()) w.push(['info', 'Preview with sample data \u2014 changes are only available in the desktop app.', '']);
+  if (inv.elevated === false) w.push(['info', 'Running without administrator rights. Changing services and scheduled tasks needs them; Run-key and Startup-folder items for your account work without.', 'elevate']);
+  (inv.warnings || []).filter(x => !/^Not running as administrator/.test(x)).forEach(x => w.push(['', x, '']));
+  $('app-banners').innerHTML = w.map(([k, t, a]) => `<div class="banner ${k}"><svg><use href="#i-info"/></svg><span>${esc(t)}</span>${a === 'elevate' && api() ? '<button class="win-btn" style="margin-left:auto;height:24px;flex:none" onclick="doElevate()">Restart as administrator</button>' : ''}</div>`).join('');
 }
 
 function renderApps() {
@@ -537,14 +544,14 @@ function renderDetail(a) {
    <div class="detail-tags"><span class="small-tag ${ver ? 'good' : ''}">${ver ? 'Verified publisher' : a.signature === 'unverified' ? 'Signature not verified' : 'Signature unknown'}</span><span class="small-tag">${a.components.length} component${a.components.length === 1 ? '' : 's'}</span>${a.review ? '<span class="small-tag">Review</span>' : ''}</div></div></div>
   <div class="detail-section"><div class="detail-section-title">Background components</div>
    ${a.components.map(c => `<div class="component"><div class="component-head"><div class="component-symbol"><svg><use href="${ICON[c.kind] || '#i-apps'}"/></svg></div><div class="component-copy"><div class="component-name">${esc(c.display || c.name)}</div><div class="component-meta">${esc(KIND[c.kind])} \u00B7 ${esc(c.trigger)}</div></div></div>
-    <div class="component-bottom"><span class="component-state">${c.running ? 'Running' : 'Not running'} \u00B7 ${esc(cfgText(c))}</span>${c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.review ? '<span class="badge amber">Review</span>' : ''}</div>
+    <div class="component-bottom"><span class="component-state">${c.running ? 'Running' : 'Not running'} \u00B7 ${esc(cfgText(c))}</span>${controlHtml(c)}</div>
     <details class="comp-more"><summary>Details</summary>
      <div class="detail-kv"><span>Source</span><span>${esc(c.source)}</span></div>
      ${c.command ? `<div class="detail-kv"><span>Command</span><span>${esc(c.command)}</span></div>` : ''}
      <div class="detail-kv"><span>Signature</span><span>${esc(sigText(c))}</span></div>
      ${c.pids.length ? `<div class="detail-kv"><span>Process ID</span><span>${esc(c.pids.slice(0, 6).join(', '))}</span></div>` : ''}
      ${c.lastRun ? `<div class="detail-kv"><span>Last run</span><span>${esc(fmtTime(c.lastRun))}</span></div>` : ''}
-     ${c.locked === 'yes' ? '<div class="howto">Locked: this account is not allowed to change this service\u2019s settings. You may still be able to stop it.</div>' : ''}
+     ${actionButtons(c)}
      ${c.flags.length ? `<div class="howto">Flags: ${esc(c.flags.map(f => ({missing:'target file missing', temp:'runs from a temp/downloads folder', unsigned:'unsigned file in a user folder'})[f] || f).join('; '))}.</div>` : ''}
      <div class="howto">How to change: ${esc(HOWTO[c.kind])}</div></details></div>`).join('')}
   </div>
@@ -553,14 +560,14 @@ function renderDetail(a) {
    <div class="detail-kv"><span>Publisher</span><span>${esc(a.publisher || 'Unknown')}</span></div>
    <div class="detail-kv"><span>Launch</span><span>${esc(a.behavior)}</span></div>
    <div class="detail-kv"><span>Location</span><span>${esc(a.path || 'Unknown')}</span></div></div>
-  <div class="notice-line"><svg><use href="#i-info"/></svg><span>Read-only view. Use the \u201CHow to change\u201D notes under Details to adjust a component with Windows' own tools.</span></div>`;
+  <div class="notice-line"><svg><use href="#i-info"/></svg><span>Changes are backed up first and can be undone from Change history. Protected components can't be changed here.</span></div>`;
 }
 
 function stateBadge(c) { return `<span class="badge ${c.running ? 'green' : 'gray'}">${c.running ? 'Running' : 'Stopped'}</span>`; }
 function kvRow(a, b) { return `<div class="detail-kv"><span>${a}</span><span>${esc(b)}</span></div>`; }
 function expandRow(c, cols) {
   if (!expanded.has(c.id)) return '';
-  return `<tr class="expand"><td colspan="${cols}">${kvRow('Command', c.command || '\u2014')}${kvRow('Owner app', c.appName)}${kvRow('Signature', sigText(c))}${kvRow('Source', c.source)}${c.pids.length ? kvRow('Process ID', c.pids.slice(0, 6).join(', ')) : ''}${c.locked === 'yes' ? kvRow('Locked', 'This account cannot change its settings; stopping may still work.') : ''}${kvRow('How to change', HOWTO[c.kind])}</td></tr>`;
+  return `<tr class="expand"><td colspan="${cols}">${kvRow('Command', c.command || '\u2014')}${kvRow('Owner app', c.appName)}${kvRow('Signature', sigText(c))}${kvRow('Source', c.source)}${c.pids.length ? kvRow('Process ID', c.pids.slice(0, 6).join(', ')) : ''}${c.locked === 'yes' ? kvRow('Locked', 'This account cannot change its settings; stopping may still work.') : ''}${kvRow('How to change', HOWTO[c.kind])}${actionButtons(c)}</td></tr>`;
 }
 
 function renderServices() {
@@ -602,9 +609,89 @@ function renderOverview() {
   <div class="overview-grid">
    <div class="overview-block"><div class="overview-block-head"><strong>Active applications</strong><button onclick="navigate('applications')">View all applications \u2192</button></div>${running.length ? running.map(row).join('') : '<div class="empty-state">No running background apps found.</div>'}</div>
    <div class="overview-block"><div class="overview-block-head"><strong>Review recommended</strong><button onclick="filter='review';navigate('applications');renderApps()">Review \u2192</button></div>${rev.length ? rev.slice(0, 4).map(revRow).join('') : '<div class="overview-row"><div class="service-icon"><svg><use href="#i-shield"/></svg></div><div class="overview-row-copy"><div class="overview-row-title">Nothing flagged</div><div class="overview-row-sub">No temp-folder launches, missing files or unsigned user-folder programs.</div></div></div>'}
-    <div class="overview-row"><div class="service-icon"><svg><use href="#i-info"/></svg></div><div class="overview-row-copy"><div class="overview-row-title">Nothing has been changed</div><div class="overview-row-sub">This version only reads your system.</div></div></div></div>
+    <div class="overview-row"><div class="service-icon"><svg><use href="#i-info"/></svg></div><div class="overview-row-copy"><div class="overview-row-title">Changes are reversible</div><div class="overview-row-sub">Each one is backed up and can be undone from Change history.</div></div></div></div>
+   <div class="overview-block"><div class="overview-block-head"><strong>Recent changes</strong><button onclick="navigate('history')">View history \u2192</button></div>${history.length ? history.slice(0, 3).map(h => `<div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">${esc(h.title)}</div><div class="overview-row-sub">${esc(h.summary)} \u00B7 ${esc(fmtTime(h.time))}</div></div><span class="badge ${h.status === 'applied' ? 'green' : h.status === 'restored' ? 'gray' : 'amber'}">${esc(h.status)}</span></div>`).join('') : '<div class="empty-state">No changes yet.</div>'}</div>
    <div class="overview-block"><div class="overview-block-head"><strong>Discovery coverage</strong><button onclick="navigate('sources')">View locations \u2192</button></div>${inv.sources.filter(s => s.status !== 'notscanned').slice(0, 5).map(s => `<div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">${esc(s.title)}</div></div><span class="source-count">${s.count}</span></div>`).join('')}</div>
   </div>`;
+}
+
+
+// ---- safe changes ----
+function toggleOn(c) { return c.kind === 'service' ? c.autoStart : c.enabled; }
+const CHANGEABLE = ['service', 'run', 'folder', 'task'];
+function controlHtml(c) {
+  const badge = c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.review ? '<span class="badge amber">Review</span>' : '';
+  if (!CHANGEABLE.includes(c.kind)) return badge;
+  const dis = c.control !== 'yes';
+  return `<span style="display:flex;gap:8px;align-items:center">${badge}<input class="toggle" type="checkbox" data-cid="${esc(c.id)}" ${toggleOn(c) ? 'checked' : ''} ${dis ? 'disabled' : ''} title="${esc(dis ? (c.controlNote || '') : 'Starts automatically')}" aria-label="Start automatically" onchange="requestChange(this.dataset.cid, this.checked ? 'enable' : 'disable')"></span>`;
+}
+function actionButtons(c) {
+  if (!CHANGEABLE.includes(c.kind)) return '';
+  const b = (a, t) => `<button class="win-btn" style="height:26px;font-size:10px" data-cid="${esc(c.id)}" onclick="requestChange(this.dataset.cid,'${a}')">${t}</button>`;
+  let out = '';
+  if (c.control === 'yes') {
+    if (c.kind === 'service') out += c.autoStart ? b('disable', 'Set to Manual') : b('enable', 'Set to Automatic');
+    else out += toggleOn(c) ? b('disable', c.kind === 'task' ? 'Disable task' : 'Disable at sign-in') : b('enable', c.kind === 'task' ? 'Enable task' : 'Enable at sign-in');
+  }
+  if (c.kind === 'service' && c.canStop) out += c.running ? b('stop', 'Stop now') : b('start', 'Start now');
+  const note = c.control !== 'yes' && c.controlNote ? `<div class="howto">${esc(c.controlNote)}</div>` : '';
+  const caution = c.control === 'yes' && c.caution ? `<div class="howto" style="color:#e6c27e">${esc(c.caution)}</div>` : '';
+  return note + caution + (out ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${out}</div>` : '');
+}
+function findComp(id) { for (const a of inv.apps) for (const c of a.components) if (c.id === id) return {c, a}; return null; }
+function describe(c, action) {
+  const n = c.display || c.name;
+  const startup = {
+    disable: ['Stop ' + n + ' starting at sign-in?', 'It will no longer launch by itself when you sign in. You can still open it yourself. This is the same switch Task Manager\u2019s Startup apps uses.', 'Disable at sign-in'],
+    enable: ['Let ' + n + ' start at sign-in?', 'It will launch automatically every time you sign in.', 'Enable at sign-in']};
+  const T = {
+    run: startup, folder: startup,
+    task: {disable: ['Disable the task \u201C' + n + '\u201D?', 'It will stop running on its schedule or triggers. The task is kept, not deleted. Some updaters recreate their tasks.', 'Disable task'], enable: ['Enable the task \u201C' + n + '\u201D?', 'It will run again on its schedule or triggers.', 'Enable task']},
+    service: {disable: ['Set ' + n + ' to Manual start?', 'It will no longer start automatically with Windows. Windows or the app can still start it when needed. It is not stopped now.', 'Set to Manual'], enable: ['Set ' + n + ' to Automatic start?', 'It will start automatically with Windows.', 'Set to Automatic'],
+      stop: ['Stop ' + n + ' now?', 'The service stops until it is started again. If it is set to Automatic it starts again at the next boot. Apps that need it may stop working meanwhile.', 'Stop service'], start: ['Start ' + n + ' now?', 'The service starts and keeps running until stopped or Windows restarts.', 'Start service']}
+  };
+  const t = (T[c.kind] || {})[action];
+  if (!t) return null;
+  const caution = c.caution && c.control === 'yes' ? `<p style="color:#e6c27e">${esc(c.caution)}</p>` : '';
+  return {title: t[0], confirm: t[2], body: `<p>${esc(t[1])}</p>${caution}<p>The current setting is saved first. You can undo this from <strong>Change history</strong>.</p>`};
+}
+function requestChange(id, action) {
+  if (!api()) { toast('Changes are only available in the desktop app.'); render(); return; }
+  const f = findComp(id); if (!f) return;
+  const d = describe(f.c, action); if (!d) return;
+  pending = {id, action};
+  $('modal-title').textContent = d.title; $('modal-body').innerHTML = d.body; $('modal-confirm').textContent = d.confirm;
+  $('confirm-modal').classList.add('show');
+}
+function closeModal() { $('confirm-modal').classList.remove('show'); pending = null; if (inv) render(); }
+async function confirmChange() {
+  const p = pending; $('confirm-modal').classList.remove('show'); pending = null; if (!p) return;
+  try {
+    const r = await api().Apply(p);
+    toast(r.message);
+    if (r.ok) await doScan(); else render();
+    loadHistory();
+  } catch (e) { toast('Change failed: ' + e); render(); }
+}
+async function doElevate() { try { await api().RestartAsAdmin(); } catch (e) { toast('Could not restart: ' + e); } }
+
+async function loadHistory() {
+  const a = api();
+  try { history = a ? ((await a.History()) || []) : []; } catch (e) { history = []; }
+  renderHistory(); if (inv) renderOverview();
+}
+function renderHistory() {
+  const ok = history.filter(h => h.status === 'applied' && h.restorable).length;
+  $('history-summary').innerHTML = `<div class="summary-item"><strong>${history.length}</strong> changes recorded</div><span class="summary-separator"></span><div class="summary-item"><strong>${ok}</strong> can be restored</div>`;
+  const ST = {applied: ['green', 'Applied'], restored: ['gray', 'Restored'], failed: ['red', 'Failed'], rolledback: ['amber', 'Rolled back'], pending: ['amber', 'Interrupted']};
+  $('history-list').innerHTML = history.length ? history.map(h => {
+    const st = ST[h.status] || ['gray', h.status];
+    return `<div class="history-row"><div class="history-symbol"><svg><use href="#i-history"/></svg></div><div class="history-copy"><div class="history-title">${esc(h.title)} <span class="badge ${st[0]}">${st[1]}</span></div><div class="history-meta">${esc(h.appName)} \u00B7 ${esc(h.summary)}${h.error ? ' \u00B7 ' + esc(h.error) : ''}</div></div><div class="history-time">${esc(fmtTime(h.time))}</div>${h.status === 'applied' && h.restorable ? `<button class="win-btn" data-hid="${esc(h.id)}" onclick="doRestore(this.dataset.hid)">Restore</button>` : ''}</div>`;
+  }).join('') : '<div class="empty-state">No changes yet. Every change you make is saved here first, so you can undo it.</div>';
+}
+async function doRestore(id) {
+  const a = api(); if (!a) return;
+  try { const r = await a.Restore(id); toast(r.message); if (r.ok) await doScan(); await loadHistory(); } catch (e) { toast('Restore failed: ' + e); }
 }
 
 // ---- events ----
@@ -616,6 +703,9 @@ $('app-sort').addEventListener('change', e => { sortMode = e.target.value; rende
 $('svc-search').addEventListener('input', renderServices); $('svc-type').addEventListener('change', renderServices); $('task-search').addEventListener('input', renderTasks);
 function rowToggle(e, fn) { const r = e.target.closest('tr.clickable'); if (!r) return; const id = r.dataset.id; expanded.has(id) ? expanded.delete(id) : expanded.add(id); fn(); }
 $('svc-body').addEventListener('click', e => rowToggle(e, renderServices)); $('task-body').addEventListener('click', e => rowToggle(e, renderTasks));
+$('modal-confirm').addEventListener('click', confirmChange); $('modal-cancel').addEventListener('click', closeModal);
+$('confirm-modal').addEventListener('click', e => { if (e.target === $('confirm-modal')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && pending) closeModal(); });
 $('set-system').addEventListener('change', e => { showSystem = e.target.checked; try { localStorage.setItem('bgm.showSystem', showSystem ? '1' : '0'); } catch (x) {} render(); });
 $('global-search').addEventListener('keydown', e => { if (e.key === 'Enter') { navigate('applications'); query = e.target.value; $('app-search').value = query; renderApps(); } });
 document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('global-search').focus(); } });
@@ -633,7 +723,10 @@ const DEMO = {scannedAt: new Date().toISOString(), durationMs: 0, machine: 'PREV
    {id:'s2', kind:'service', name:'CodexSandboxService.OpenAI.Codex', display:'ChatGPT', command:'"C:\\Program Files\\WindowsApps\\OpenAI.Codex\\app\\resources\\codex-windows-sandbox-service.exe"', exePath:'C:\\Program Files\\WindowsApps\\OpenAI.Codex\\app\\resources\\codex-windows-sandbox-service.exe', source:'Services', trigger:'Automatic service', startType:'Automatic', enabled:true, autoStart:true, running:true, pids:[4188], lastRun:'', publisher:'OpenAI', product:'ChatGPT', signature:'valid', locked:'yes', system:false, review:false, flags:[]}]}
  ]};
 
-doScan();
+DEMO.apps.push({id:'dir:discord', name:'Discord', publisher:'Discord Inc.', letter:'D', signature:'verified', path:'C:\\Users\\you\\AppData\\Local\\Discord', running:true, autoStart:true, review:false, system:false, behavior:'At sign-in', behaviorNote:'1 enabled entry', components:[
+ {id:'r1', kind:'run', name:'Discord', display:'', command:'"C:\\Users\\you\\AppData\\Local\\Discord\\Update.exe" --processStart Discord.exe', exePath:'C:\\Users\\you\\AppData\\Local\\Discord\\Update.exe', source:'HKCU Run', trigger:'At sign-in', startType:'', enabled:true, autoStart:true, running:true, pids:[2210], lastRun:'', publisher:'Discord Inc.', product:'Discord', signature:'valid', locked:'', system:false, review:false, flags:[], control:'yes', controlNote:'', caution:'', canStop:false}]});
+DEMO.apps.forEach(a => a.components.forEach(c => { if (!c.control) { c.control = 'no'; c.controlNote = c.locked === 'yes' ? 'Locked by its publisher: Windows doesn\u2019t let this account change its startup type. You can still stop or start it.' : 'This can\u2019t be changed safely from here.'; c.canStop = c.kind === 'service'; } }));
+doScan().then(loadHistory);
 
 </script>
 </body>
