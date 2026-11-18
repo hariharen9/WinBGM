@@ -1,412 +1,39 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Background Manager</title>
-<script src="lucide.min.js"></script>
-<script src="anime.min.js"></script>
-<script src="confetti.min.js"></script>
-<style>
-/* A desktop-first mock of a native Windows 11 / WinUI-style utility.
-   All system information is illustrative. No Windows settings are changed. */
-:root{
-  color-scheme:dark;
-  --mica:#141414;
-  --surface:#161616;
-  --surface-1:#191919;
-  --surface-2:#1c1c1c;
-  --surface-3:#202020;
-  --surface-hover:#232323;
-  --surface-selected:#202020;
-  --border:#252525;
-  --border-soft:#1e1e1e;
-  --text:#f5f5f5;
-  --text-2:#d4d4d4;
-  --muted:#a0a0a0;
-  --muted-2:#777;
-  --accent:#60a5fa;
-  --accent-strong:#3794ff;
-  --accent-bg:#0e1f30;
-  --green:#8ccf9d;
-  --amber:#e6bf75;
-  --red:#ed9999;
-  --radius:8px;
-  --font:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
-}
-*{box-sizing:border-box}
-html,body{width:100%;height:100%;margin:0;overflow:hidden}
-body{background:#0e0e0e;color:var(--text);font:13px/1.45 var(--font);-webkit-font-smoothing:antialiased}
-button,input,select{font:inherit;color:inherit}
-button{cursor:pointer}
-svg{display:block}
-.app-window{height:100dvh;min-height:590px;display:flex;flex-direction:column;background:var(--mica);overflow:hidden}
-.titlebar{height:42px;flex:0 0 42px;display:flex;align-items:center;gap:12px;padding-left:14px;background:#141414;border-bottom:1px solid #1b1b1b;user-select:none}
-.app-identity{display:flex;align-items:center;gap:9px;min-width:220px}
-.app-glyph{width:19px;height:19px;border-radius:5px;background:#3b83ca;color:white;display:grid;place-items:center}
-.app-glyph svg{width:13px;height:13px}
-.titlebar-name{font-size:12px;color:#e6e6e6;letter-spacing:.05px}
-.titlebar-spacer{flex:1}
-.titlebar-center{display:flex;align-items:center;justify-content:center;flex:1;max-width:470px}
-.quick-search{height:29px;width:min(100%,360px);display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid #2b2b2b;border-radius:6px;background:#1a1a1a;color:#aaa}
-.quick-search:focus-within{border-color:var(--accent)}
-.quick-search svg{width:14px;height:14px;flex:none}
-.quick-search input{border:0;outline:0;background:transparent;width:100%;font-size:12px}
-.quick-search input::placeholder{color:#a1a1a1}
-.search-shortcut{font-size:10px;border:1px solid #353535;border-radius:3px;padding:0 4px;color:#aaa;white-space:nowrap}
-.title-actions{display:flex;align-items:center;gap:6px;margin-right:8px}
-.title-action{width:30px;height:28px;border:0;border-radius:5px;background:transparent;color:#aaa;display:grid;place-items:center}
-.title-action:hover{background:#242424;color:white}
-.title-action svg{width:15px;height:15px}
-.window-controls{height:42px;display:flex;margin-left:2px}
-.window-control{width:46px;height:42px;border:0;background:transparent;color:#d4d4d4;display:grid;place-items:center}
-.window-control svg{width:10px;height:10px}
-.window-control:hover{background:#252525}
-.window-control.close:hover{background:#c42b1c;color:white}
-.app-body{display:flex;flex:1;min-height:0}
-.sidebar{width:238px;flex:0 0 238px;background:#141414;border-right:1px solid #1e1e1e;display:flex;flex-direction:column;padding:13px 8px 10px;min-height:0}
-.nav-group-label{font-size:10px;letter-spacing:.4px;color:#8c8c8c;padding:9px 12px 6px;text-transform:uppercase}
-.nav-list{display:grid;gap:3px}
-.nav-item{height:36px;width:100%;display:flex;align-items:center;gap:13px;text-align:left;padding:0 12px;border:0;border-radius:5px;background:transparent;color:#d2d2d2;font-size:12.5px;position:relative}
-.nav-item svg{width:16px;height:16px;color:#bcbcbc;flex:none}
-.nav-item:hover{background:#1b1b1b}
-.nav-item.active{background:#202020;color:white}
-.nav-item.active:before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;background:#60a5fa;border-radius:0 3px 3px 0}
-.nav-item.active svg{color:#8fc2fa}
-.nav-count{margin-left:auto;color:#999;font-size:11px}
-.nav-divider{height:1px;background:#232323;margin:13px 8px 8px}
-.sidebar-bottom{margin-top:auto}
-.machine-card{border-top:1px solid #232323;margin:8px 7px 0;padding:13px 5px 2px;display:flex;align-items:center;gap:10px}
-.machine-icon{width:29px;height:29px;border-radius:6px;background:#1e2329;color:#b8d6f5;display:grid;place-items:center;flex:none}
-.machine-icon svg{width:16px;height:16px}
-.machine-name{font-size:11px;color:#e0e0e0}
-.machine-meta{font-size:10px;color:#929292;margin-top:2px}
-.main-shell{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--surface)}
-.commandbar{height:47px;flex:0 0 47px;background:#161616;border-bottom:1px solid #222222;display:flex;align-items:center;padding:0 23px;gap:9px}
-.commandbar-label{font-size:11px;color:#b5b5b5}
-.commandbar-sep{height:17px;width:1px;background:#2b2b2b;margin:0 5px}
-.command-btn{height:29px;border:1px solid transparent;border-radius:5px;background:transparent;color:#d4d4d4;padding:0 9px;display:inline-flex;align-items:center;gap:7px;font-size:11.5px}
-.command-btn svg{width:14px;height:14px;color:#bdbdbd}
-.command-btn:hover{background:#212121;border-color:#282828}
-.command-btn:disabled{opacity:.4;cursor:default}
-.command-spacer{flex:1}
-.command-state{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#aaa}
-.state-led{width:6px;height:6px;border-radius:50%;background:#75bd86;box-shadow:0 0 0 2px #75bd861c}
-.content-host{flex:1;min-height:0;overflow:auto;scrollbar-color:#353535 transparent;scrollbar-width:thin}
-.page{display:none;min-height:100%;padding:27px 30px 32px;max-width:1600px;margin:0 auto}
-.page.active{display:block}
-.page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin-bottom:21px}
-h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0;color:#f5f5f5}
-.page-subtitle{font-size:12px;color:#aaa;margin:7px 0 0;max-width:700px}
-.header-actions{display:flex;align-items:center;gap:8px;padding-top:2px}
-.win-btn{height:32px;border:1px solid #2e2e2e;border-radius:5px;background:#1e1e1e;color:#e7e7e7;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:11.5px;white-space:nowrap}
-.win-btn:hover{background:#252525;border-color:#383838}
-.win-btn.primary{background:#0f6cbd;border-color:#0f6cbd;color:white}
-.win-btn.primary:hover{background:#197bd1}
-.win-btn.subtle{background:transparent;border-color:transparent}
-.win-btn.subtle:hover{background:#212121}
-.win-btn svg{width:14px;height:14px}
-.system-summary{height:39px;display:flex;align-items:center;gap:18px;border-top:1px solid #232323;border-bottom:1px solid #232323;margin-bottom:18px;color:#aaa;font-size:11px}
-.summary-item{display:flex;align-items:center;gap:7px}
-.summary-item strong{color:#e1e1e1;font-weight:600}
-.summary-separator{height:14px;width:1px;background:#2a2a2a}
-.summary-icon{width:13px;height:13px;color:#9dbde0}
-.content-toolbar{display:flex;align-items:center;gap:10px;margin:0 0 12px;min-height:34px}
-.segmented{display:inline-flex;align-items:center;gap:2px;background:#191919;padding:2px;border:1px solid #282828;border-radius:6px}
-.segmented button{height:25px;padding:0 10px;border:0;border-radius:4px;background:transparent;color:#bcbcbc;font-size:10.5px}
-.segmented button:hover{background:#212121;color:white}
-.segmented button.active{background:#282828;color:white;box-shadow:0 1px 2px #0005}
-.filter-search{height:31px;width:228px;border:1px solid #2a2a2a;border-radius:5px;background:#191919;display:flex;align-items:center;gap:7px;padding:0 9px;color:#aaa}
-.filter-search:focus-within{border-color:#5597d6}
-.filter-search svg{width:13px;height:13px;flex:none}
-.filter-search input{width:100%;border:0;outline:0;background:transparent;color:#eee;font-size:11px}
-.filter-search input::placeholder{color:#999}
-.select-control{height:31px;border:1px solid #2a2a2a;border-radius:5px;background:#191919;color:#d3d3d3;padding:0 25px 0 9px;font-size:11px;outline:0}
-.toolbar-flex{flex:1}
-.subtle-label{font-size:10.5px;color:#949494}
-.split-view{display:grid;grid-template-columns:minmax(430px,1fr) 345px;min-height:480px;border:1px solid #262626;border-radius:7px;overflow:hidden;background:#171717}
-.list-pane{min-width:0;display:flex;flex-direction:column}
-.list-topline{height:37px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid #252525;color:#aaa;font-size:10.5px;background:#191919}
-.list-topline strong{font-weight:600;color:#dedede}
-.list-head{height:34px;display:grid;grid-template-columns:minmax(170px,1.9fr) minmax(72px,.7fr) minmax(90px,.9fr) minmax(105px,1fr);align-items:center;padding:0 13px;border-bottom:1px solid #252525;color:#999;font-size:9px;text-transform:uppercase;letter-spacing:.45px;background:#191919}
-.app-row{width:100%;min-height:57px;display:grid;grid-template-columns:minmax(170px,1.9fr) minmax(72px,.7fr) minmax(90px,.9fr) minmax(105px,1fr);align-items:center;gap:0;text-align:left;padding:0 13px;border:0;border-bottom:1px solid #202020;background:transparent;color:#ddd}
-.app-row:hover{background:#1d1d1d}
-.app-row.selected{background:#20252a;box-shadow:inset 2px 0 #60a5fa}
-.app-row:last-child{border-bottom:0}
-.app-cell{min-width:0;padding-right:9px;font-size:11px;color:#d5d5d5}
-.app-name-wrap{display:flex;align-items:center;gap:10px;min-width:0}
-.product-icon{width:30px;height:30px;border-radius:6px;background:#20252a;border:1px solid #2e333a;display:grid;place-items:center;flex:none;color:#e0e7f0;font-size:11px;font-weight:600;letter-spacing:-.3px}
-.product-icon.nvidia{background:#19251b;color:#9fdb91;border-color:#253826}
-.product-icon.discord{background:#201f2e;color:#bcb4f4;border-color:#504a73}
-.product-icon.adobe{background:#2d1b1b;color:#ff9a9a;border-color:#684040}
-.product-icon.drive{background:#18251e;color:#a6dcb8;border-color:#253a2d}
-.product-icon.docker{background:#18242f;color:#9ed0f5;border-color:#3c5871}
-.product-icon.steam{background:#1e2329;color:#c5d5e2;border-color:#4b5965}
-.product-icon.logi{background:#232119;color:#e4d58c;border-color:#383521}
-.app-name{font-size:11.5px;font-weight:600;color:#f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.app-publisher{font-size:10px;color:#999;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cell-secondary{font-size:10.5px;color:#b7b7b7}
-.state-text{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:#c9c9c9}
-.state-text:before{content:"";width:6px;height:6px;border-radius:50%;background:#75bd86}
-.state-text.stopped:before{background:#858585}
-.state-text.review:before{background:#d4aa5c}
-.behavior{font-size:10.5px;color:#bcbcbc}
-.behavior small{font-size:9.5px;color:#858585;display:block;margin-top:3px}
-.pane-footer{margin-top:auto;padding:10px 13px;border-top:1px solid #232323;background:#191919;display:flex;align-items:center;justify-content:space-between;color:#909090;font-size:10px}
-.detail-pane{border-left:1px solid #282828;background:#191919;min-width:0;display:flex;flex-direction:column}
-.detail-inner{padding:17px 17px 15px;overflow:auto;scrollbar-width:thin;scrollbar-color:#353535 transparent}
-.detail-head{display:flex;align-items:center;gap:11px;padding-bottom:14px;border-bottom:1px solid #292929}
-.detail-app-icon{width:40px;height:40px;border-radius:9px;font-size:14px}
-.detail-app-name{font-size:15px;font-weight:600;color:white}
-.detail-publisher{font-size:10.5px;color:#aaa;margin-top:3px}
-.detail-tags{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
-.small-tag{font-size:9px;padding:3px 6px;border:1px solid #2e2e2e;border-radius:4px;color:#c3c3c3;background:#1e1e1e}
-.small-tag.good{color:#a8d8b0;border-color:#42644a;background:#18231b}
-.detail-section{padding:14px 0 12px;border-bottom:1px solid #282828}
-.detail-section:last-child{border-bottom:0}
-.detail-section-title{font-size:9px;letter-spacing:.65px;text-transform:uppercase;color:#9b9b9b;font-weight:600;margin-bottom:10px}
-.component{padding:9px 0;border-top:1px solid #242424}
-.component:first-of-type{border-top:0;padding-top:0}
-.component-head{display:flex;align-items:flex-start;gap:9px}
-.component-symbol{width:25px;height:25px;border-radius:5px;background:#232323;color:#c8d7e7;display:grid;place-items:center;flex:none}
-.component-symbol svg{width:13px;height:13px}
-.component-copy{flex:1;min-width:0}
-.component-name{font-size:10.5px;color:#e4e4e4;font-weight:600}
-.component-meta{font-size:9.5px;color:#999;margin-top:3px}
-.component-bottom{display:flex;align-items:center;justify-content:space-between;padding-left:34px;margin-top:8px}
-.component-state{font-size:9.5px;color:#aaa}
-.toggle{appearance:none;width:31px;height:17px;border:1px solid #666;border-radius:20px;background:#2e2e2e;position:relative;outline:0;cursor:pointer;transition:background .15s,border-color .15s}
-.toggle:before{content:"";position:absolute;width:11px;height:11px;border-radius:50%;left:2px;top:2px;background:#d7d7d7;transition:transform .15s}
-.toggle:checked{background:#0f6cbd;border-color:#0f6cbd}
-.toggle:checked:before{transform:translateX(14px);background:white}
-.toggle:disabled{opacity:.45;cursor:not-allowed}
-.detail-explain{font-size:10px;color:#aaa;line-height:1.55}
-.detail-kv{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;padding:5px 0;font-size:9.5px}
-.detail-kv span:first-child{color:#929292}
-.detail-kv span:last-child{color:#d0d0d0;overflow-wrap:anywhere}
-.detail-actions{display:flex;gap:7px;padding:12px 15px;border-top:1px solid #282828;margin-top:auto;background:#181818}
-.detail-actions .win-btn{flex:1;padding:0 6px;font-size:10px}
-.notice-line{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;background:#1c1e22;border:1px solid #2c3035;border-radius:5px;color:#bdbdbd;font-size:10px;line-height:1.5;margin-top:11px}
-.notice-line svg{width:13px;height:13px;color:#9ccafa;flex:none;margin-top:1px}
-.page-section{border:1px solid #252525;border-radius:7px;background:#171717;overflow:hidden}
-.section-heading{min-height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 15px;border-bottom:1px solid #252525;background:#191919}
-.section-heading strong{font-size:12px;font-weight:600}
-.section-heading span{font-size:10px;color:#999}
-.data-table{width:100%;border-collapse:collapse}
-.data-table th{height:33px;text-align:left;padding:0 14px;background:#191919;border-bottom:1px solid #252525;color:#999;font-size:9px;font-weight:600;letter-spacing:.45px;text-transform:uppercase;white-space:nowrap}
-.data-table td{height:52px;padding:7px 14px;border-bottom:1px solid #212121;color:#d4d4d4;font-size:10.5px;white-space:nowrap}
-.data-table tr:last-child td{border-bottom:0}
-.data-table tbody tr:hover{background:#1c1c1c}
-.data-table tbody tr.selected{background:#20252a}
-.name-cell{display:flex;align-items:center;gap:9px;min-width:200px}
-.service-icon{width:27px;height:27px;border-radius:6px;border:1px solid #2e2e2e;background:#202020;display:grid;place-items:center;color:#b8cee5;flex:none}
-.service-icon svg{width:14px;height:14px}
-.name-primary{font-size:10.5px;font-weight:600;color:#e8e8e8}
-.name-secondary{font-size:9.5px;color:#959595;margin-top:2px}
-.badge{display:inline-flex;align-items:center;gap:5px;height:19px;padding:0 7px;border-radius:4px;border:1px solid #2e2e2e;color:#c9c9c9;background:#1e1e1e;font-size:9px}
-.badge.green{color:#a8d5ad;border-color:#45634a;background:#19211b}
-.badge.amber{color:#e6c27e;border-color:#675632;background:#241f16}
-.badge.blue{color:#a6cbf4;border-color:#405875;background:#18222d}
-.badge.gray{color:#b8b8b8}
-.source-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.source-card{border:1px solid #282828;border-radius:6px;background:#191919;padding:14px;display:flex;gap:12px;min-height:112px}
-.source-card:hover{background:#1e1e1e;border-color:#353535}
-.source-card-icon{width:32px;height:32px;border:1px solid #4d5967;border-radius:7px;background:#1e252d;color:#b6d5f4;display:grid;place-items:center;flex:none}
-.source-card-icon svg{width:16px;height:16px}
-.source-card-copy{min-width:0;flex:1}
-.source-card-title{font-size:11.5px;font-weight:600;color:#e7e7e7}
-.source-card-desc{font-size:10px;color:#9c9c9c;line-height:1.5;margin-top:4px}
-.source-card-foot{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:9.5px;color:#b8b8b8}
-.source-count{font-size:10px;color:#e0e0e0;font-weight:600}
-.history-list{padding:0 16px}
-.history-row{min-height:67px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #232323}
-.history-row:last-child{border-bottom:0}
-.history-symbol{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#19231c;color:#9dd8a8;flex:none}
-.history-symbol svg{width:13px;height:13px}
-.history-copy{flex:1;min-width:0}
-.history-title{font-size:10.5px;font-weight:600;color:#e1e1e1}
-.history-meta{font-size:9.5px;color:#999;margin-top:3px}
-.history-time{font-size:9.5px;color:#999;white-space:nowrap}
-.overview-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(290px,.75fr);gap:13px}
-.overview-block{border:1px solid #252525;border-radius:7px;background:#171717;overflow:hidden}
-.overview-block-head{min-height:48px;padding:0 15px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #252525;background:#191919}
-.overview-block-head strong{font-size:11.5px;font-weight:600}
-.overview-block-head button{font-size:10px;color:#9fc9f2;border:0;background:transparent}
-.overview-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #232323}
-.overview-row:last-child{border-bottom:0}
-.overview-row-copy{min-width:0;flex:1}
-.overview-row-title{font-size:10.5px;color:#e2e2e2;font-weight:600}
-.overview-row-sub{font-size:9.5px;color:#999;margin-top:3px}
-.overview-row-end{font-size:9.5px;color:#aaa;white-space:nowrap}
-.overview-summary{display:flex;align-items:center;gap:0;border:1px solid #262626;border-radius:7px;background:#171717;margin-bottom:14px}
-.overview-stat{flex:1;padding:13px 16px;min-width:0}
-.overview-stat+.overview-stat{border-left:1px solid #262626}
-.overview-stat-label{font-size:10px;color:#a2a2a2}
-.overview-stat-value{font-size:21px;line-height:1.25;font-weight:600;letter-spacing:-.3px;margin-top:5px}
-.overview-stat-foot{font-size:9px;color:#929292;margin-top:3px}
-.overview-stat-foot.attention{color:#dcb66f}
-.overview-intro{margin:0 0 15px;color:#aaa;font-size:11px}
-.empty-filter{display:none;padding:35px 15px;text-align:center;color:#999;font-size:11px}
-.statusbar{height:25px;flex:0 0 25px;border-top:1px solid #212121;background:#141414;display:flex;align-items:center;justify-content:space-between;padding:0 12px;color:#888;font-size:9.5px}
-.status-left,.status-right{display:flex;align-items:center;gap:13px}
-.status-dot{width:5px;height:5px;border-radius:50%;background:#7abf88;display:inline-block;margin-right:5px}
-.modal-backdrop{position:fixed;inset:0;background:#0009;z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
-.modal-backdrop.show{display:flex}
-.modal{width:min(440px,100%);border:1px solid #353535;border-radius:8px;background:#1a1a1a;box-shadow:0 18px 55px #000a;padding:20px}
-.modal-title{font-size:15px;font-weight:600;margin:0 0 8px}
-.modal-body{font-size:11px;color:#c0c0c0;line-height:1.6}
-.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:21px}
-.toast{position:fixed;right:24px;bottom:42px;max-width:360px;padding:11px 14px;background:#1e1e1e;border:1px solid #353535;border-radius:6px;color:#eee;font-size:11px;box-shadow:0 8px 26px #0008;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s;z-index:60}
-.toast.show{opacity:1;transform:translateY(0)}
-.hidden{display:none!important}
-@media(max-width:1120px){
- .sidebar{width:204px;flex-basis:204px}
- .page{padding:23px 22px}
- .split-view{grid-template-columns:minmax(390px,1fr) 315px}
- .list-head,.app-row{grid-template-columns:minmax(150px,1.8fr) minmax(63px,.65fr) minmax(80px,.85fr) minmax(90px,.95fr);padding-left:10px;padding-right:10px}
-}
-@media(max-width:900px){
- .sidebar{width:58px;flex-basis:58px;padding-left:6px;padding-right:6px}
- .app-identity{min-width:auto}.app-identity .titlebar-name{display:none}
- .nav-group-label,.nav-item span,.nav-count,.machine-card .machine-copy{display:none}
- .nav-item{justify-content:center;padding:0}.nav-item svg{width:17px;height:17px}
- .machine-card{justify-content:center;margin:8px 0 0;padding:12px 0 0}
- .split-view{grid-template-columns:1fr}.detail-pane{border-left:0;border-top:1px solid #2a2a2a}
- .detail-inner{max-height:360px}
-}
-@media(max-width:650px){
- .titlebar-center{display:none}.page{padding:18px 13px}.page-header{display:block}.header-actions{margin-top:14px}
- .overview-grid,.source-grid{grid-template-columns:1fr}
- .overview-summary{flex-wrap:wrap}.overview-stat{flex-basis:50%}.overview-stat:nth-child(3){border-left:0;border-top:1px solid #262626}.overview-stat:nth-child(4){border-top:1px solid #262626}
- .content-toolbar{flex-wrap:wrap}.filter-search{width:100%}
- .list-head,.app-row{grid-template-columns:minmax(150px,1.5fr) 70px 90px}.list-head>*:nth-child(4),.app-row>*:nth-child(4){display:none}
- .commandbar{padding:0 12px}.command-state{display:none}
-}
-/* --- additions for the live (read-only) build --- */
-.badge.red{color:#f0a6a6;border-color:#6d3b3b;background:#241818}
-.readonly-pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:11px;border:1px solid #42644a;background:#18231b;color:#a8d8b0;font-size:10px}
-.banner{display:flex;gap:9px;align-items:flex-start;padding:9px 12px;margin:0 0 14px;border:1px solid #675632;background:#241f16;color:#e6c27e;border-radius:6px;font-size:10.5px;line-height:1.5}
-.banner.info{border-color:#405875;background:#18222d;color:#a6cbf4}
-.banner svg{width:13px;height:13px;flex:none;margin-top:2px}
-.comp-more{margin:8px 0 0 34px;font-size:9.5px;color:#aaa}
-.comp-more summary{cursor:pointer;color:#9fc9f2;list-style:none}
-.comp-more summary::-webkit-details-marker{display:none}
-.comp-more .detail-kv{grid-template-columns:70px minmax(0,1fr)}
-.howto{margin-top:6px;color:#b9b9b9;line-height:1.5}
-.data-table tbody tr.clickable{cursor:pointer}
-.data-table tr.expand td{height:auto;white-space:normal;background:#1a1a1a;padding:12px 16px 14px 52px}
-.data-table tr.expand .detail-kv{grid-template-columns:110px minmax(0,1fr);font-size:10.5px}
-.empty-state{padding:38px 18px;text-align:center;color:#999;font-size:11.5px;line-height:1.6}
-.loading{padding:60px 20px;text-align:center;color:#aaa;font-size:12px}
-.titlebar{padding-right:14px}
-.check-row{display:flex;align-items:center;gap:8px}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Background Manager</title>
 
-/* --- Lucide & Micro-Animation System --- */
-.lucide{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;flex-shrink:0}
-.is-scanning .lucide-refresh-cw,
-.is-scanning svg,
-.spin-active{animation:spinCw 0.85s linear infinite !important}
-@keyframes spinCw{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  <!-- Libraries -->
+  <script src="lucide.min.js"></script>
+  <script src="anime.min.js"></script>
+  <script src="confetti.min.js"></script>
 
-.win-btn, .command-btn, .nav-item, .segmented button{
-  transition:all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.win-btn:active, .command-btn:active, .segmented button:active{
-  transform:scale(0.96);
-}
-.win-btn.primary{
-  box-shadow:0 1px 3px rgba(0,0,0,0.3);
-}
-.win-btn.primary:hover{
-  box-shadow:0 2px 8px rgba(15,108,189,0.4);
-}
-
-.app-row{
-  transition:background 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
-}
-.app-row:hover{
-  background:#1e242d !important;
-  transform:translateX(3px);
-}
-.app-row.selected{
-  background:#232d3a !important;
-  box-shadow:inset 3px 0 #60a5fa;
-}
-.app-row:active{
-  transform:scale(0.995);
-}
-
-.product-icon{
-  transition:transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s;
-  border-radius:8px;
-  font-weight:700;
-  letter-spacing:-0.2px;
-}
-.app-row:hover .product-icon{
-  transform:scale(1.08) rotate(-2deg);
-}
-
-.source-card{
-  transition:transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s, border-color 0.22s, background 0.22s;
-}
-.source-card:hover{
-  transform:translateY(-2px);
-  border-color:#3d4a57;
-  box-shadow:0 8px 24px rgba(0,0,0,0.35);
-  background:#1a1e24 !important;
-}
-
-.overview-stat{
-  transition:background 0.18s ease;
-}
-.overview-stat:hover{
-  background:#1c2027;
-}
-
-@keyframes pulseLed{
-  0%, 100%{box-shadow:0 0 0 2px rgba(117,189,134,0.22)}
-  50%{box-shadow:0 0 0 5px rgba(117,189,134,0.45)}
-}
-.state-led, .status-dot{
-  animation:pulseLed 2.4s infinite ease-in-out;
-}
-
-.toggle{
-  transition:background .22s cubic-bezier(0.34, 1.56, 0.64, 1), border-color .22s;
-}
-.toggle:before{
-  transition:transform .25s cubic-bezier(0.34, 1.56, 0.64, 1), background .2s, width .15s;
-}
-.toggle:active:not(:disabled):before{
-  width:14px;
-}
-
-.quick-search{
-  transition:width .25s cubic-bezier(0.16, 1, 0.3, 1), border-color .2s, box-shadow .2s;
-}
-.quick-search:focus-within{
-  width:min(100%, 410px);
-  border-color:var(--accent);
-  box-shadow:0 0 0 2px rgba(96, 165, 250, 0.22);
-}
-
-.page{
-  animation:pageFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes pageFadeIn{
-  from{opacity:0;transform:translateY(6px)}
-  to{opacity:1;transform:translateY(0)}
-}
-</style>
+  <!-- Modular Styles -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
 <div class="app-window">
   <header class="titlebar">
-    <div class="app-identity"><div class="app-glyph"><i data-lucide="shield-check" style="width:13px;height:13px"></i></div><div class="titlebar-name">Background Manager</div></div>
-    <div class="titlebar-center"><label class="quick-search"><i data-lucide="search" style="width:14px;height:14px"></i><input id="global-search" type="search" placeholder="Search apps, services and tasks" aria-label="Search"><span class="search-shortcut">Ctrl+K</span></label></div>
+    <div class="app-identity">
+      <div class="app-glyph"><i data-lucide="shield-check" style="width:13px;height:13px"></i></div>
+      <div class="titlebar-name">Background Manager</div>
+    </div>
+    <div class="titlebar-center">
+      <label class="quick-search">
+        <i data-lucide="search" style="width:14px;height:14px"></i>
+        <input id="global-search" type="search" placeholder="Search apps, services and tasks" aria-label="Search">
+        <span class="search-shortcut">Ctrl+K</span>
+      </label>
+    </div>
     <div class="titlebar-spacer"></div>
     <span class="readonly-pill"><i data-lucide="shield" style="width:11px;height:11px;margin-right:4px"></i>Safe mode</span>
   </header>
+
   <div class="app-body">
     <aside class="sidebar">
       <div class="nav-group-label">Manage</div>
@@ -423,26 +50,51 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
         <button class="nav-item" data-page="history"><i data-lucide="history"></i><span>Change history</span></button>
         <button class="nav-item" data-page="settings"><i data-lucide="sliders"></i><span>Settings</span></button>
       </nav>
-      <div class="sidebar-bottom"><div class="machine-card"><div class="machine-icon"><i data-lucide="monitor"></i></div><div class="machine-copy"><div class="machine-name" id="machine-name">This PC</div><div class="machine-meta" id="machine-meta">Scanning…</div></div></div></div>
+      <div class="sidebar-bottom">
+        <div class="machine-card">
+          <div class="machine-icon"><i data-lucide="monitor"></i></div>
+          <div class="machine-copy">
+            <div class="machine-name" id="machine-name">This PC</div>
+            <div class="machine-meta" id="machine-meta">Scanning…</div>
+          </div>
+        </div>
+      </div>
     </aside>
+
     <main class="main-shell">
       <div class="commandbar">
-        <span class="commandbar-label" id="commandbar-label">Applications</span><span class="commandbar-sep"></span>
+        <span class="commandbar-label" id="commandbar-label">Applications</span>
+        <span class="commandbar-sep"></span>
         <button class="command-btn btn-scan" id="scan-btn" onclick="doScan()"><i data-lucide="refresh-cw"></i>Scan now</button>
         <button class="command-btn" onclick="doReveal()"><i data-lucide="folder-search"></i>Open location</button>
         <button class="command-btn" onclick="doExport()"><i data-lucide="download"></i>Export</button>
         <div class="command-spacer"></div>
         <div class="command-state"><span class="state-led"></span><span id="scan-status">Scanning…</span></div>
       </div>
+
       <div class="content-host" id="content-host">
+        <!-- Applications Page -->
         <section class="page active" id="page-applications">
-          <div class="page-header"><div><h1>Applications</h1><p class="page-subtitle">Background components found on this PC, grouped by the application that owns them. Every change is backed up first and can be undone.</p></div><div class="header-actions"><button class="win-btn" onclick="doExport()">Export list</button></div></div>
+          <div class="page-header">
+            <div>
+              <h1>Applications</h1>
+              <p class="page-subtitle">Background components found on this PC, grouped by the application that owns them. Every change is backed up first and can be undone.</p>
+            </div>
+            <div class="header-actions">
+              <button class="win-btn" onclick="doExport()">Export list</button>
+            </div>
+          </div>
           <div id="app-banners"></div>
           <div class="system-summary" id="app-summary"></div>
           <div class="content-toolbar">
-            <div class="segmented" id="app-filters"></div><div class="toolbar-flex"></div>
+            <div class="segmented" id="app-filters"></div>
+            <div class="toolbar-flex"></div>
             <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="app-search" type="search" placeholder="Find an application"></label>
-            <select class="select-control" id="app-sort" aria-label="Sort applications"><option value="name">Name A–Z</option><option value="running">Running first</option><option value="review">Needs review first</option></select>
+            <select class="select-control" id="app-sort" aria-label="Sort applications">
+              <option value="name">Name A–Z</option>
+              <option value="running">Running first</option>
+              <option value="review">Needs review first</option>
+            </select>
           </div>
           <div class="split-view">
             <div class="list-pane">
@@ -451,45 +103,131 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
               <div id="app-list"><div class="loading">Scanning this PC…</div></div>
               <div class="pane-footer"><span id="list-foot"></span><span>Changes are backed up</span></div>
             </div>
-            <aside class="detail-pane"><div class="detail-inner" id="detail-content"></div></aside>
+            <aside class="detail-pane">
+              <div class="detail-inner" id="detail-content"></div>
+            </aside>
           </div>
         </section>
 
-        <section class="page" id="page-overview"><div id="overview-content"><div class="loading">Scanning this PC…</div></div></section>
+        <!-- Overview Page -->
+        <section class="page" id="page-overview">
+          <div id="overview-content"><div class="loading">Scanning this PC…</div></div>
+        </section>
 
+        <!-- Services Page -->
         <section class="page" id="page-services">
-          <div class="page-header"><div><h1>Services</h1><p class="page-subtitle">Background services, how they start, and whether Windows is running them now.</p></div></div>
+          <div class="page-header">
+            <div>
+              <h1>Services</h1>
+              <p class="page-subtitle">Background services, how they start, and whether Windows is running them now.</p>
+            </div>
+          </div>
           <div class="system-summary" id="svc-summary"></div>
-          <div class="content-toolbar"><label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="svc-search" type="search" placeholder="Search services"></label>
-            <select class="select-control" id="svc-type"><option value="">All startup types</option><option>Automatic</option><option>Automatic (Delayed)</option><option>Manual</option><option>Disabled</option></select><div class="toolbar-flex"></div><span class="subtle-label" id="svc-count"></span></div>
-          <div class="page-section"><div class="section-heading"><strong>Service inventory</strong><span>Click a row for details</span></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Service</th><th>Publisher</th><th>Startup type</th><th>State</th><th>Protection</th></tr></thead><tbody id="svc-body"></tbody></table></div></div>
-          <div class="notice-line" style="margin-top:12px"><i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i><span>"Locked" means Windows would not let this account change the service's settings (checked only when running as administrator). Stopping a locked service is often still allowed.</span></div>
+          <div class="content-toolbar">
+            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="svc-search" type="search" placeholder="Search services"></label>
+            <select class="select-control" id="svc-type">
+              <option value="">All startup types</option>
+              <option>Automatic</option>
+              <option>Automatic (Delayed)</option>
+              <option>Manual</option>
+              <option>Disabled</option>
+            </select>
+            <div class="toolbar-flex"></div>
+            <span class="subtle-label" id="svc-count"></span>
+          </div>
+          <div class="page-section">
+            <div class="section-heading"><strong>Service inventory</strong><span>Click a row for details</span></div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Service</th><th>Publisher</th><th>Startup type</th><th>State</th><th>Protection</th></tr>
+                </thead>
+                <tbody id="svc-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="notice-line" style="margin-top:12px">
+            <i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i>
+            <span>"Locked" means Windows would not let this account change the service's settings (checked only when running as administrator). Stopping a locked service is often still allowed.</span>
+          </div>
         </section>
 
+        <!-- Tasks Page -->
         <section class="page" id="page-tasks">
-          <div class="page-header"><div><h1>Scheduled tasks</h1><p class="page-subtitle">Tasks can start programs at logon, at boot, on a timer or when something happens. Microsoft's own task library is not listed.</p></div></div>
+          <div class="page-header">
+            <div>
+              <h1>Scheduled tasks</h1>
+              <p class="page-subtitle">Tasks can start programs at logon, at boot, on a timer or when something happens. Microsoft's own task library is not listed.</p>
+            </div>
+          </div>
           <div class="system-summary" id="task-summary"></div>
-          <div class="content-toolbar"><label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="task-search" type="search" placeholder="Search tasks"></label><div class="toolbar-flex"></div><span class="subtle-label" id="task-count"></span></div>
-          <div class="page-section"><div class="section-heading"><strong>Task inventory</strong><span>Click a row for details</span></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Task</th><th>Trigger</th><th>Publisher</th><th>Action</th><th>Last run</th><th>State</th></tr></thead><tbody id="task-body"></tbody></table></div></div>
+          <div class="content-toolbar">
+            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="task-search" type="search" placeholder="Search tasks"></label>
+            <div class="toolbar-flex"></div>
+            <span class="subtle-label" id="task-count"></span>
+          </div>
+          <div class="page-section">
+            <div class="section-heading"><strong>Task inventory</strong><span>Click a row for details</span></div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Task</th><th>Trigger</th><th>Publisher</th><th>Action</th><th>Last run</th><th>State</th></tr>
+                </thead>
+                <tbody id="task-body"></tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
+        <!-- Sources Page -->
         <section class="page" id="page-sources">
-          <div class="page-header"><div><h1>Startup locations</h1><p class="page-subtitle">The Windows mechanisms scanned to discover automatic and event-triggered launches.</p></div></div>
+          <div class="page-header">
+            <div>
+              <h1>Startup locations</h1>
+              <p class="page-subtitle">The Windows mechanisms scanned to discover automatic and event-triggered launches.</p>
+            </div>
+          </div>
           <div class="source-grid" id="source-grid"></div>
-          <div class="notice-line" style="margin-top:13px"><i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i><span>This is an inventory of launch mechanisms plus a heuristic for windowless processes. A running process may have been started by another app, a service or a system event.</span></div>
+          <div class="notice-line" style="margin-top:13px">
+            <i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i>
+            <span>This is an inventory of launch mechanisms plus a heuristic for windowless processes. A running process may have been started by another app, a service or a system event.</span>
+          </div>
         </section>
 
+        <!-- History Page -->
         <section class="page" id="page-history">
-          <div class="page-header"><div><h1>Change history</h1><p class="page-subtitle">Every change is saved here before it is made, with the original value, so it can be restored.</p></div></div>
+          <div class="page-header">
+            <div>
+              <h1>Change history</h1>
+              <p class="page-subtitle">Every change is saved here before it is made, with the original value, so it can be restored.</p>
+            </div>
+          </div>
           <div class="system-summary" id="history-summary"></div>
-          <div class="page-section"><div class="section-heading"><strong>Recent activity</strong><span>Newest first</span></div><div class="history-list" id="history-list"></div></div>
-          <div class="notice-line" style="margin-top:12px"><i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i><span>Restore only runs if the item is still exactly as Background Manager left it, so it never overwrites a newer change you made elsewhere.</span></div>
+          <div class="page-section">
+            <div class="section-heading"><strong>Recent activity</strong><span>Newest first</span></div>
+            <div class="history-list" id="history-list"></div>
+          </div>
+          <div class="notice-line" style="margin-top:12px">
+            <i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i>
+            <span>Restore only runs if the item is still exactly as Background Manager left it, so it never overwrites a newer change you made elsewhere.</span>
+          </div>
         </section>
 
+        <!-- Settings Page -->
         <section class="page" id="page-settings">
-          <div class="page-header"><div><h1>Settings</h1><p class="page-subtitle">Display preferences, text readability, and administrator privileges.</p></div></div>
-          <div class="page-section"><div class="section-heading"><strong>Display & Readability</strong><span></span></div>
-            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Text size & UI scale</div><div class="overview-row-sub">Scale up the text and interface elements for easier reading. You can also press Ctrl + and Ctrl - anytime to zoom.</div></div>
+          <div class="page-header">
+            <div>
+              <h1>Settings</h1>
+              <p class="page-subtitle">Display preferences, text readability, and administrator privileges.</p>
+            </div>
+          </div>
+          <div class="page-section">
+            <div class="section-heading"><strong>Display & Readability</strong><span></span></div>
+            <div class="overview-row">
+              <div class="overview-row-copy">
+                <div class="overview-row-title">Text size & UI scale</div>
+                <div class="overview-row-sub">Scale up the text and interface elements for easier reading. You can also press Ctrl + and Ctrl - anytime to zoom.</div>
+              </div>
               <select class="select-control" id="set-ui-scale" aria-label="Text size & UI scale">
                 <option value="100%">Default (100%)</option>
                 <option value="110%">Medium (110%)</option>
@@ -498,542 +236,79 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:-.55px;margin:0
                 <option value="140%">Huge (140%)</option>
               </select>
             </div>
-            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Show Windows and Microsoft system components</div><div class="overview-row-sub">Includes Windows' own services and system packages. Hidden by default to keep the list focused on your apps.</div></div><input class="toggle" id="set-system" type="checkbox" aria-label="Show system components"></div>
+            <div class="overview-row">
+              <div class="overview-row-copy">
+                <div class="overview-row-title">Show Windows and Microsoft system components</div>
+                <div class="overview-row-sub">Includes Windows' own services and system packages. Hidden by default to keep the list focused on your apps.</div>
+              </div>
+              <input class="toggle" id="set-system" type="checkbox" aria-label="Show system components">
+            </div>
           </div>
-          <div class="page-section" style="margin-top:13px"><div class="section-heading"><strong>Privileges & Startup</strong><span></span></div>
-            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Always start as administrator</div><div class="overview-row-sub">Windows will prompt for administrator rights automatically whenever Background Manager is launched, giving you full process inspection and access to reconfigure services and tasks.</div></div><input class="toggle" id="set-always-admin" type="checkbox" aria-label="Always start as administrator"></div>
+
+          <div class="page-section" style="margin-top:13px">
+            <div class="section-heading"><strong>Privileges & Startup</strong><span></span></div>
+            <div class="overview-row">
+              <div class="overview-row-copy">
+                <div class="overview-row-title">Always start as administrator</div>
+                <div class="overview-row-sub">Windows will prompt for administrator rights automatically whenever Background Manager is launched, giving you full process inspection and access to reconfigure services and tasks.</div>
+              </div>
+              <input class="toggle" id="set-always-admin" type="checkbox" aria-label="Always start as administrator">
+            </div>
           </div>
-          <div class="page-section" style="margin-top:13px"><div class="section-heading"><strong>Safety & Guardrails</strong><span>Always active</span></div>
-            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Backup before every change</div><div class="overview-row-sub">The original setting is saved to Change history first. If the backup can't be saved, nothing is changed.</div></div><input class="toggle" type="checkbox" checked disabled aria-label="Backup before every change"></div>
-            <div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">Protect Windows and security software</div><div class="overview-row-sub">Windows' own components, critical services and antivirus can't be changed from here.</div></div><input class="toggle" type="checkbox" checked disabled aria-label="Protect system components"></div>
+
+          <div class="page-section" style="margin-top:13px">
+            <div class="section-heading"><strong>Safety & Guardrails</strong><span>Always active</span></div>
+            <div class="overview-row">
+              <div class="overview-row-copy">
+                <div class="overview-row-title">Backup before every change</div>
+                <div class="overview-row-sub">The original setting is saved to Change history first. If the backup can't be saved, nothing is changed.</div>
+              </div>
+              <input class="toggle" type="checkbox" checked disabled aria-label="Backup before every change">
+            </div>
+            <div class="overview-row">
+              <div class="overview-row-copy">
+                <div class="overview-row-title">Protect Windows and security software</div>
+                <div class="overview-row-sub">Windows' own components, critical services and antivirus can't be changed from here.</div>
+              </div>
+              <input class="toggle" type="checkbox" checked disabled aria-label="Protect system components">
+            </div>
           </div>
         </section>
       </div>
-      <footer class="statusbar"><div class="status-left"><span><i class="status-dot"></i><span id="status-text">Ready</span></span><span id="status-admin"></span></div><div class="status-right"><span>Every change is backed up · System components protected</span></div></footer>
+
+      <footer class="statusbar">
+        <div class="status-left">
+          <span><i class="status-dot"></i><span id="status-text">Ready</span></span>
+          <span id="status-admin"></span>
+        </div>
+        <div class="status-right">
+          <span>Every change is backed up · System components protected</span>
+        </div>
+      </footer>
     </main>
   </div>
 </div>
-<div class="modal-backdrop" id="confirm-modal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><h2 class="modal-title" id="modal-title"></h2><div class="modal-body" id="modal-body"></div><div class="modal-actions"><button class="win-btn" id="modal-cancel">Cancel</button><button class="win-btn primary" id="modal-confirm">Confirm</button></div></div></div>
+
+<!-- Modal Dialog -->
+<div class="modal-backdrop" id="confirm-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h2 class="modal-title" id="modal-title"></h2>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="win-btn" id="modal-cancel">Cancel</button>
+      <button class="win-btn primary" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notifications -->
 <div class="toast" id="toast"></div>
 
-<script>
-const $ = id => document.getElementById(id);
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const api = () => (window.go && window.go.main && window.go.main.App) ? window.go.main.App : null;
-
-const KIND = {service:'Windows service', run:'Registry Run entry', folder:'Startup folder item', task:'Scheduled task', process:'Background process', storeapp:'Store app permission'};
-const KIND_ICON = {service:'cog', run:'zap', folder:'folder-open', task:'calendar-clock', process:'activity', storeapp:'package'};
-const SOURCE_ICONS = {run:'zap', folder:'folder-open', service:'cog', task:'calendar-clock', storeapp:'package', process:'activity', winlogon:'shield-alert', wmi:'terminal'};
-const HOWTO = {
-  service:'Open Services (services.msc), find this service and change its startup type or stop it. Some packaged services are locked by their publisher.',
-  run:'Task Manager → Startup apps, or the app\u2019s own \u201Claunch at sign-in\u201D setting.',
-  folder:'Task Manager → Startup apps, or remove the shortcut from the Startup folder.',
-  task:'Open Task Scheduler (taskschd.msc) and disable the task. Updates may recreate it.',
-  process:'Close it from Task Manager, or look for a \u201Crun in background\u201D / \u201Cclose to tray\u201D option in the app. Windows may also start it for notifications.',
-  storeapp:'Settings → Apps → Installed apps → the app → Advanced options → Background apps permissions.'
-};
-const KNOWN = [
-  {m:/whatsapp/i, t:'Windows can start WhatsApp in the background to receive push notifications, even when it is not at sign-in. For Store apps this is controlled under Settings → Apps → Installed apps → WhatsApp → Advanced options → Background apps permissions.'},
-  {m:/claude|cowork/i, t:'The Cowork service appears to support Claude\u2019s sandboxed environment and starts automatically with Windows. If it is marked Locked, its startup type cannot be changed from here or from Services.'},
-  {m:/codex|chatgpt|openai/i, t:'This looks like the sandbox service used by the ChatGPT/Codex desktop app and starts automatically with Windows. If it is marked Locked, its startup type cannot be changed from here or from Services.'}
-];
-
-let history = [], pending = null;
-let inv = null, sel = null, filter = 'all', query = '', sortMode = 'name', showSystem = false, page = 'applications', toastTimer = null;
-const expanded = new Set();
-try { showSystem = localStorage.getItem('bgm.showSystem') === '1'; } catch (e) {}
-let uiScale = '100%';
-try { uiScale = localStorage.getItem('bgm.uiScale') || '100%'; } catch (e) {}
-document.documentElement.style.zoom = uiScale;
-
-function refreshIcons() {
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    try { window.lucide.createIcons(); } catch (e) {}
-  }
-}
-
-function celebrateSuccess() {
-  if (typeof window.confetti === 'function') {
-    window.confetti({
-      particleCount: 55,
-      spread: 65,
-      origin: { y: 0.78 },
-      colors: ['#60a5fa', '#34d399', '#a78bfa', '#38bdf8', '#fbbf24']
-    });
-  }
-}
-
-function animateList(selector) {
-  if (!window.anime) return;
-  anime({
-    targets: selector,
-    opacity: [0, 1],
-    translateY: [7, 0],
-    delay: anime.stagger(15, {start: 20}),
-    duration: 280,
-    easing: 'easeOutCubic'
-  });
-}
-
-function animateCounters() {
-  if (!window.anime) return;
-  const A = apps(), svc = comps('service'), tasks = comps('task'), rev = A.filter(a => a.review);
-  const items = [
-    { el: '#stat-apps', val: A.length },
-    { el: '#stat-svc', val: svc.length },
-    { el: '#stat-tasks', val: tasks.length },
-    { el: '#stat-rev', val: rev.length }
-  ];
-  items.forEach(item => {
-    const el = document.querySelector(item.el);
-    if (!el) return;
-    const obj = { val: 0 };
-    anime({
-      targets: obj,
-      val: item.val,
-      round: 1,
-      duration: 650,
-      easing: 'easeOutQuart',
-      update: () => { el.textContent = obj.val; }
-    });
-  });
-}
-
-function openModal() {
-  const m = $('confirm-modal');
-  m.classList.add('show');
-  if (window.anime) {
-    anime({
-      targets: '#confirm-modal .modal',
-      scale: [0.93, 1],
-      opacity: [0, 1],
-      duration: 220,
-      easing: 'easeOutCubic'
-    });
-  }
-}
-
-function closeModal() {
-  const m = $('confirm-modal');
-  if (window.anime && m.classList.contains('show')) {
-    anime({
-      targets: '#confirm-modal .modal',
-      scale: [1, 0.93],
-      opacity: [1, 0],
-      duration: 160,
-      easing: 'easeInCubic',
-      complete: () => {
-        m.classList.remove('show');
-        pending = null;
-        if (inv) render();
-      }
-    });
-  } else {
-    m.classList.remove('show');
-    pending = null;
-    if (inv) render();
-  }
-}
-
-function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200); }
-function hue(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
-function iconStyle(name) { const h = hue(name); return `background:hsl(${h} 22% 22%);color:hsl(${h} 65% 78%);border-color:hsl(${h} 22% 34%)`; }
-function apps() { return inv ? inv.apps.filter(a => showSystem || !a.system) : []; }
-function comps(kind) { return apps().flatMap(a => a.components.map(c => Object.assign({}, c, {appId: a.id, appName: a.name}))).filter(c => c.kind === kind && (showSystem || !c.system)); }
-function base(p) { return String(p || '').split('\\').pop(); }
-function fmtTime(iso) { if (!iso) return '\u2014'; const d = new Date(iso); return isNaN(d) ? '\u2014' : d.toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }
-function cfgText(c) { return c.kind === 'service' ? c.startType : c.kind === 'process' ? 'Running now' : c.kind === 'storeapp' ? (c.enabled ? 'Allowed' : 'Blocked') : (c.enabled ? 'Enabled' : 'Disabled'); }
-function sigText(c) { return ({valid:'Valid digital signature', unsigned:'Signature not verified', missing:'File not found', 'n/a':'Not applicable'})[c.signature] || '\u2014'; }
-
-async function doScan() {
-  const btns = document.querySelectorAll('.btn-scan, #scan-btn');
-  btns.forEach(b => { b.disabled = true; b.classList.add('is-scanning'); });
-  $('scan-status').textContent = 'Scanning\u2026';
-  try {
-    const a = api();
-    inv = a ? await a.Scan() : DEMO;
-    if (!inv.apps) inv.apps = [];
-    inv.apps.forEach(x => { x.components = x.components || []; x.components.forEach(c => { c.flags = c.flags || []; c.pids = c.pids || []; }); });
-    $('scan-status').textContent = 'Scanned ' + new Date(inv.scannedAt).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + (inv.durationMs ? ' \u00B7 ' + (inv.durationMs / 1000).toFixed(1) + 's' : '');
-    render();
-  } catch (e) { $('scan-status').textContent = 'Scan failed'; toast('Scan failed: ' + (e && e.message ? e.message : e)); }
-  finally {
-    const btnsDone = document.querySelectorAll('.btn-scan, #scan-btn');
-    btnsDone.forEach(b => { b.disabled = false; b.classList.remove('is-scanning'); });
-  }
-}
-async function doExport() { const a = api(); if (!a) return toast('Export is available in the desktop app.'); try { const p = await a.Export(); toast(p ? 'Exported to ' + p : 'Export cancelled'); } catch (e) { toast('Export failed: ' + e); } }
-async function doReveal() {
-  const a = api(); const app = apps().find(x => x.id === sel); if (!a || !app) return toast('Select an application first.');
-  const c = app.components.find(x => x.exePath); if (!c) return toast('No file location known for this app.');
-  try { await a.Reveal(c.exePath); } catch (e) { toast(String(e)); }
-}
-
-function navigate(p) {
-  page = p;
-  document.querySelectorAll('.page').forEach(x => x.classList.toggle('active', x.id === 'page-' + p));
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === p));
-  const labels = {overview:'Overview', applications:'Applications', services:'Services', tasks:'Scheduled tasks', sources:'Startup locations', history:'Change history', settings:'Settings'};
-  $('commandbar-label').textContent = labels[p] || 'Background Manager';
-  $('content-host').scrollTop = 0;
-  if (p === 'history') loadHistory();
-  if (p === 'overview') animateCounters();
-  refreshIcons();
-}
-
-function render() {
-  if (!inv) return;
-  $('machine-name').textContent = inv.machine || 'This PC'; $('machine-meta').textContent = inv.os || '';
-  $('status-admin').textContent = inv.elevated ? 'Administrator' : 'Standard user';
-  $('nav-apps').textContent = apps().length; $('nav-services').textContent = comps('service').length; $('nav-tasks').textContent = comps('task').length;
-  $('set-system').checked = showSystem;
-  if ($('set-ui-scale')) $('set-ui-scale').value = uiScale;
-  if ($('set-always-admin')) $('set-always-admin').checked = !!inv.alwaysAdmin;
-  renderBanners(); renderApps(); renderOverview(); renderServices(); renderTasks(); renderSources();
-  refreshIcons();
-}
-
-function renderBanners() {
-  const w = [];
-  if (!api()) w.push(['info', 'Preview with sample data \u2014 changes are only available in the desktop app.', '']);
-  if (inv.elevated === false) w.push(['info', 'Running without administrator rights. Changing services and scheduled tasks needs them; Run-key and Startup-folder items for your account work without.', 'elevate']);
-  (inv.warnings || []).filter(x => !/^Not running as administrator/.test(x)).forEach(x => w.push(['', x, '']));
-  $('app-banners').innerHTML = w.map(([k, t, a]) => `<div class="banner ${k}"><i data-lucide="info" style="width:14px;height:14px;flex:none;margin-top:2px"></i><span>${esc(t)}</span>${a === 'elevate' && api() ? '<button class="win-btn" style="margin-left:auto;height:24px;flex:none" onclick="doElevate()">Restart as administrator</button>' : ''}</div>`).join('');
-  refreshIcons();
-}
-
-function renderApps() {
-  const all = apps();
-  const cnt = {all: all.length, running: all.filter(a => a.running).length, enabled: all.filter(a => a.autoStart).length, review: all.filter(a => a.review).length};
-  $('app-filters').innerHTML = [['all','All apps'],['running','Running'],['enabled','Auto-start'],['review','Needs review']].map(([k, l]) => `<button data-filter="${k}" class="${filter === k ? 'active' : ''}">${l} <span>${cnt[k]}</span></button>`).join('');
-  const nComp = all.reduce((n, a) => n + a.components.length, 0);
-  $('app-summary').innerHTML = `<div class="summary-item"><strong>${all.length}</strong> applications detected</div><span class="summary-separator"></span><div class="summary-item"><strong>${nComp}</strong> background components</div><span class="summary-separator"></span><div class="summary-item"><span class="state-led"></span>Scanned <strong>${esc(new Date(inv.scannedAt).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}))}</strong></div>`;
-  const q = query.toLowerCase();
-  let list = all.filter(a => (filter === 'all' || (filter === 'running' && a.running) || (filter === 'enabled' && a.autoStart) || (filter === 'review' && a.review)) &&
-    (!q || (a.name + ' ' + a.publisher + ' ' + a.components.map(c => c.name + ' ' + c.display).join(' ')).toLowerCase().includes(q)));
-  const by = {name: (a, b) => a.name.localeCompare(b.name), running: (a, b) => Number(b.running) - Number(a.running) || a.name.localeCompare(b.name), review: (a, b) => Number(b.review) - Number(a.review) || a.name.localeCompare(b.name)}[sortMode];
-  list = list.slice().sort(by);
-  if (!list.find(a => a.id === sel)) sel = list.length ? list[0].id : null;
-  $('visible-count').textContent = list.length + ' items shown';
-  $('list-foot').textContent = 'Showing ' + list.length + ' of ' + all.length + ' detected apps';
-  $('app-list').innerHTML = list.length ? list.map(a => `<button class="app-row ${a.id === sel ? 'selected' : ''}" data-id="${esc(a.id)}">
-    <div class="app-cell"><div class="app-name-wrap"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="app-name">${esc(a.name)}</div><div class="app-publisher">${esc(a.publisher || 'Publisher unknown')}</div></div></div></div>
-    <div class="app-cell cell-secondary">${a.components.length}</div>
-    <div class="app-cell"><span class="state-text ${a.review ? 'review' : a.running ? '' : 'stopped'}">${a.review ? 'Review' : a.running ? 'Running' : 'Not running'}</span></div>
-    <div class="app-cell behavior">${esc(a.behavior)}<small>${esc(a.behaviorNote)}</small></div></button>`).join('') : '<div class="empty-state">No applications match this filter.</div>';
-  renderDetail(list.find(a => a.id === sel));
-  animateList('#app-list .app-row');
-}
-
-function explain(a) {
-  for (const k of KNOWN) if (k.m.test(a.name + ' ' + a.components.map(c => c.name + ' ' + c.display).join(' '))) return k.t;
-  const kinds = {}; a.components.forEach(c => kinds[c.kind] = (kinds[c.kind] || 0) + 1);
-  const parts = Object.keys(kinds).map(k => kinds[k] + ' ' + KIND[k].toLowerCase() + (kinds[k] > 1 ? 's' : ''));
-  let t = a.name + ' has ' + parts.join(', ') + '. ';
-  t += a.autoStart ? 'At least one component starts by itself when Windows boots or you sign in.' : 'None of its components is set to start by itself at boot or sign-in.';
-  if (a.review) t += ' Something about its location or signature is worth a closer look; that does not mean it is harmful.';
-  return t;
-}
-
-function renderDetail(a) {
-  const h = $('detail-content');
-  if (!a) { h.innerHTML = '<div class="empty-state">Select an application to see its background components.</div>'; return; }
-  const ver = a.signature === 'verified';
-  h.innerHTML = `
-  <div class="detail-head"><div class="product-icon detail-app-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="detail-app-name">${esc(a.name)}</div><div class="detail-publisher">${esc(a.publisher || 'Publisher unknown')}</div>
-   <div class="detail-tags"><span class="small-tag ${ver ? 'good' : ''}"><i data-lucide="${ver ? 'shield-check' : 'shield-alert'}" style="width:11px;height:11px;margin-right:4px"></i>${ver ? 'Verified publisher' : a.signature === 'unverified' ? 'Signature not verified' : 'Signature unknown'}</span><span class="small-tag">${a.components.length} component${a.components.length === 1 ? '' : 's'}</span>${a.review ? '<span class="small-tag">Review</span>' : ''}</div></div></div>
-  <div class="detail-section"><div class="detail-section-title">Background components</div>
-   ${a.components.map(c => `<div class="component"><div class="component-head"><div class="component-symbol"><i data-lucide="${KIND_ICON[c.kind] || 'layers'}" style="width:14px;height:14px"></i></div><div class="component-copy"><div class="component-name">${esc(c.display || c.name)}</div><div class="component-meta">${esc(KIND[c.kind])} \u00B7 ${esc(c.trigger)}</div></div></div>
-    <div class="component-bottom"><span class="component-state">${c.running ? 'Running' : 'Not running'} \u00B7 ${esc(cfgText(c))}</span>${controlHtml(c)}</div>
-    <details class="comp-more"><summary>Details</summary>
-     <div class="detail-kv"><span>Source</span><span>${esc(c.source)}</span></div>
-     ${c.command ? `<div class="detail-kv"><span>Command</span><span>${esc(c.command)}</span></div>` : ''}
-     <div class="detail-kv"><span>Signature</span><span>${esc(sigText(c))}</span></div>
-     ${c.pids.length ? `<div class="detail-kv"><span>Process ID</span><span>${esc(c.pids.slice(0, 6).join(', '))}</span></div>` : ''}
-     ${c.lastRun ? `<div class="detail-kv"><span>Last run</span><span>${esc(fmtTime(c.lastRun))}</span></div>` : ''}
-     ${actionButtons(c)}
-     ${c.flags.length ? `<div class="howto">Flags: ${esc(c.flags.map(f => ({missing:'target file missing', temp:'runs from a temp/downloads folder', unsigned:'unsigned file in a user folder'})[f] || f).join('; '))}.</div>` : ''}
-     <div class="howto">How to change: ${esc(HOWTO[c.kind])}</div></details></div>`).join('')}
-  </div>
-  <div class="detail-section"><div class="detail-section-title">About this application</div><div class="detail-explain">${esc(explain(a))}</div></div>
-  <div class="detail-section"><div class="detail-section-title">Application details</div>
-   <div class="detail-kv"><span>Publisher</span><span>${esc(a.publisher || 'Unknown')}</span></div>
-   <div class="detail-kv"><span>Launch</span><span>${esc(a.behavior)}</span></div>
-   <div class="detail-kv"><span>Location</span><span>${esc(a.path || 'Unknown')}</span></div></div>
-  <div class="notice-line"><i data-lucide="shield-check" style="width:13px;height:13px;flex:none;margin-top:1px"></i><span>Changes are backed up first and can be undone from Change history. Protected components can't be changed here.</span></div>`;
-  refreshIcons();
-  if (window.anime) {
-    anime({
-      targets: '#detail-content > *',
-      opacity: [0, 1],
-      translateY: [5, 0],
-      delay: anime.stagger(18),
-      duration: 220,
-      easing: 'easeOutQuad'
-    });
-  }
-}
-
-function stateBadge(c) { return `<span class="badge ${c.running ? 'green' : 'gray'}">${c.running ? 'Running' : 'Stopped'}</span>`; }
-function kvRow(a, b) { return `<div class="detail-kv"><span>${a}</span><span>${esc(b)}</span></div>`; }
-function expandRow(c, cols) {
-  if (!expanded.has(c.id)) return '';
-  return `<tr class="expand"><td colspan="${cols}">${kvRow('Command', c.command || '\u2014')}${kvRow('Owner app', c.appName)}${kvRow('Signature', sigText(c))}${kvRow('Source', c.source)}${c.pids.length ? kvRow('Process ID', c.pids.slice(0, 6).join(', ')) : ''}${c.locked === 'yes' ? kvRow('Locked', 'This account cannot change its settings; stopping may still work.') : ''}${kvRow('How to change', HOWTO[c.kind])}${actionButtons(c)}</td></tr>`;
-}
-
-function renderServices() {
-  const all = comps('service'), q = $('svc-search').value.toLowerCase(), t = $('svc-type').value;
-  const list = all.filter(c => (!t || c.startType === t) && (!q || (c.display + ' ' + c.name + ' ' + c.publisher).toLowerCase().includes(q))).sort((a, b) => (a.display || a.name).localeCompare(b.display || b.name));
-  $('svc-summary').innerHTML = `<div class="summary-item"><strong>${all.length}</strong> services shown</div><span class="summary-separator"></span><div class="summary-item"><strong>${all.filter(c => c.autoStart).length}</strong> automatic or delayed</div><span class="summary-separator"></span><div class="summary-item"><strong>${all.filter(c => c.locked === 'yes').length}</strong> locked</div>`;
-  $('svc-count').textContent = list.length + ' of ' + all.length;
-  $('svc-body').innerHTML = list.length ? list.map(c => `<tr class="clickable" data-id="${esc(c.id)}" data-t="svc"><td><div class="name-cell"><div class="service-icon"><i data-lucide="cog" style="width:14px;height:14px"></i></div><div><div class="name-primary">${esc(c.display || c.name)}</div><div class="name-secondary">${esc(c.name)}</div></div></div></td><td>${esc(c.publisher || '\u2014')}</td><td>${esc(c.startType)}</td><td>${stateBadge(c)}</td><td>${c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.system ? '<span class="badge blue">Protected</span>' : '<span class="badge gray">Standard</span>'}</td></tr>${expandRow(c, 5)}`).join('') : '<tr><td colspan="5"><div class="empty-state">No services match.</div></td></tr>';
-  refreshIcons();
-  animateList('#svc-body tr.clickable');
-}
-
-function renderTasks() {
-  const all = comps('task'), q = $('task-search').value.toLowerCase();
-  const list = all.filter(c => !q || (c.display + ' ' + c.command + ' ' + c.publisher + ' ' + c.source).toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
-  $('task-summary').innerHTML = `<div class="summary-item"><strong>${all.length}</strong> tasks discovered</div><span class="summary-separator"></span><div class="summary-item"><strong>${all.filter(c => c.autoStart).length}</strong> start at logon or boot</div>`;
-  $('task-count').textContent = list.length + ' of ' + all.length;
-  $('task-body').innerHTML = list.length ? list.map(c => `<tr class="clickable" data-id="${esc(c.id)}" data-t="task"><td><div class="name-primary">${esc(c.display)}</div><div class="name-secondary">${esc(c.name.slice(0, c.name.length - c.display.length) || '\\')}</div></td><td>${esc(c.trigger)}</td><td>${c.review ? '<span style="color:var(--amber)">Unverified</span>' : esc(c.publisher || '\u2014')}</td><td>${esc(base(c.exePath) || '\u2014')}</td><td>${esc(fmtTime(c.lastRun))}</td><td><span class="badge ${c.review ? 'amber' : c.enabled ? 'green' : 'gray'}">${c.review ? 'Review' : c.enabled ? 'Enabled' : 'Disabled'}</span></td></tr>${expandRow(c, 6)}`).join('') : '<tr><td colspan="6"><div class="empty-state">No tasks match.</div></td></tr>';
-  refreshIcons();
-  animateList('#task-body tr.clickable');
-}
-
-function renderSources() {
-  const badge = {scanned: ['green', 'Scanned'], partial: ['amber', 'Partial coverage'], notscanned: ['amber', 'Not scanned yet']};
-  $('source-grid').innerHTML = inv.sources.map(s => `<div class="source-card"><div class="source-card-icon"><i data-lucide="${SOURCE_ICONS[s.id] || 'layers'}" style="width:16px;height:16px"></i></div><div class="source-card-copy"><div class="source-card-title">${esc(s.title)}</div><div class="source-card-desc">${esc(s.desc)}</div><div class="source-card-foot"><span class="source-count">${s.status === 'notscanned' ? 'Advanced' : s.count + ' found'}</span><span class="badge ${badge[s.status][0]}">${badge[s.status][1]}</span></div></div></div>`).join('');
-  refreshIcons();
-  animateList('#source-grid .source-card');
-}
-
-function renderOverview() {
-  const A = apps(), svc = comps('service'), tasks = comps('task'), rev = A.filter(a => a.review);
-  const running = A.filter(a => a.running).sort((a, b) => b.components.length - a.components.length).slice(0, 4);
-  const row = a => `<div class="overview-row"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.publisher || 'Publisher unknown')} \u00B7 ${a.components.length} component${a.components.length === 1 ? '' : 's'}</div></div><div class="overview-row-end"><span class="state-text ${a.running ? '' : 'stopped'}">${a.running ? 'Running' : 'Not running'}</span></div></div>`;
-  const revRow = a => `<div class="overview-row"><div class="product-icon" style="background:#39332a;color:#e4c27e;border-color:#5b5030">!</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.components.filter(c => c.review).map(c => c.flags.map(f => ({missing:'Target file missing', temp:'Temp/Downloads folder', unsigned:'Unsigned, user folder'})[f] || f).join(', ')).join(' \u00B7 '))}</div></div><span class="badge amber">Review</span></div>`;
-  const nonSys = A.filter(a => a.autoStart).length;
-  $('overview-content').innerHTML = `
-  <div class="page-header"><div><h1>Overview</h1><p class="page-subtitle">A quick view of background activity detected on this PC.</p></div><div class="header-actions"><button class="win-btn primary btn-scan" onclick="doScan()"><i data-lucide="refresh-cw" style="width:13px;height:13px;margin-right:6px"></i>Scan now</button></div></div>
-  <div class="overview-summary">
-   <div class="overview-stat"><div class="overview-stat-label">Applications</div><div class="overview-stat-value" id="stat-apps">${A.length}</div><div class="overview-stat-foot">${A.filter(a => a.running).length} currently active</div></div>
-   <div class="overview-stat"><div class="overview-stat-label">Services</div><div class="overview-stat-value" id="stat-svc">${svc.length}</div><div class="overview-stat-foot">${svc.filter(c => c.autoStart).length} automatic or delayed</div></div>
-   <div class="overview-stat"><div class="overview-stat-label">Scheduled tasks</div><div class="overview-stat-value" id="stat-tasks">${tasks.length}</div><div class="overview-stat-foot">${tasks.filter(c => c.autoStart).length} at logon or startup</div></div>
-   <div class="overview-stat"><div class="overview-stat-label">Needs attention</div><div class="overview-stat-value" id="stat-rev">${rev.length}</div><div class="overview-stat-foot ${rev.length ? 'attention' : ''}">${rev.length ? 'Location or signature needs review' : 'Nothing flagged'}</div></div></div>
-  <p class="overview-intro">Background components can run without an app window. This inventory groups related entries so you can see what owns them and how they are launched. ${nonSys} application${nonSys === 1 ? '' : 's'} start automatically.</p>
-  <div class="overview-grid">
-   <div class="overview-block"><div class="overview-block-head"><strong>Active applications</strong><button onclick="navigate('applications')">View all applications \u2192</button></div>${running.length ? running.map(row).join('') : '<div class="empty-state">No running background apps found.</div>'}</div>
-   <div class="overview-block"><div class="overview-block-head"><strong>Review recommended</strong><button onclick="filter='review';navigate('applications');renderApps()">Review \u2192</button></div>${rev.length ? rev.slice(0, 4).map(revRow).join('') : '<div class="overview-row"><div class="service-icon"><i data-lucide="shield-check" style="width:14px;height:14px"></i></div><div class="overview-row-copy"><div class="overview-row-title">Nothing flagged</div><div class="overview-row-sub">No temp-folder launches, missing files or unsigned user-folder programs.</div></div></div>'}
-    <div class="overview-row"><div class="service-icon"><i data-lucide="info" style="width:14px;height:14px"></i></div><div class="overview-row-copy"><div class="overview-row-title">Changes are reversible</div><div class="overview-row-sub">Each one is backed up and can be undone from Change history.</div></div></div></div>
-   <div class="overview-block"><div class="overview-block-head"><strong>Recent changes</strong><button onclick="navigate('history')">View history \u2192</button></div>${history.length ? history.slice(0, 3).map(h => `<div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">${esc(h.title)}</div><div class="overview-row-sub">${esc(h.summary)} \u00B7 ${esc(fmtTime(h.time))}</div></div><span class="badge ${h.status === 'applied' ? 'green' : h.status === 'restored' ? 'gray' : 'amber'}">${esc(h.status)}</span></div>`).join('') : '<div class="empty-state">No changes yet.</div>'}</div>
-   <div class="overview-block"><div class="overview-block-head"><strong>Discovery coverage</strong><button onclick="navigate('sources')">View locations \u2192</button></div>${inv.sources.filter(s => s.status !== 'notscanned').slice(0, 5).map(s => `<div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">${esc(s.title)}</div></div><span class="source-count">${s.count}</span></div>`).join('')}</div>
-  </div>`;
-  refreshIcons();
-  animateCounters();
-  animateList('.overview-block');
-}
-
-
-// ---- safe changes ----
-function toggleOn(c) { return c.kind === 'service' ? c.autoStart : c.enabled; }
-const CHANGEABLE = ['service', 'run', 'folder', 'task'];
-function controlHtml(c) {
-  const badge = c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.review ? '<span class="badge amber">Review</span>' : '';
-  if (!CHANGEABLE.includes(c.kind)) return badge;
-  const dis = c.control !== 'yes';
-  return `<span style="display:flex;gap:8px;align-items:center">${badge}<input class="toggle" type="checkbox" data-cid="${esc(c.id)}" ${toggleOn(c) ? 'checked' : ''} ${dis ? 'disabled' : ''} title="${esc(dis ? (c.controlNote || '') : 'Starts automatically')}" aria-label="Start automatically" onchange="requestChange(this.dataset.cid, this.checked ? 'enable' : 'disable')"></span>`;
-}
-function actionButtons(c) {
-  if (!CHANGEABLE.includes(c.kind)) return '';
-  const b = (a, t) => `<button class="win-btn" style="height:26px;font-size:10px" data-cid="${esc(c.id)}" onclick="requestChange(this.dataset.cid,'${a}')">${t}</button>`;
-  let out = '';
-  if (c.control === 'yes') {
-    if (c.kind === 'service') out += c.autoStart ? b('disable', 'Set to Manual') : b('enable', 'Set to Automatic');
-    else out += toggleOn(c) ? b('disable', c.kind === 'task' ? 'Disable task' : 'Disable at sign-in') : b('enable', c.kind === 'task' ? 'Enable task' : 'Enable at sign-in');
-  }
-  if (c.kind === 'service' && c.canStop) out += c.running ? b('stop', 'Stop now') : b('start', 'Start now');
-  const note = c.control !== 'yes' && c.controlNote ? `<div class="howto">${esc(c.controlNote)}</div>` : '';
-  const caution = c.control === 'yes' && c.caution ? `<div class="howto" style="color:#e6c27e">${esc(c.caution)}</div>` : '';
-  return note + caution + (out ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${out}</div>` : '');
-}
-function findComp(id) { for (const a of inv.apps) for (const c of a.components) if (c.id === id) return {c, a}; return null; }
-function describe(c, action) {
-  const n = c.display || c.name;
-  const startup = {
-    disable: ['Stop ' + n + ' starting at sign-in?', 'It will no longer launch by itself when you sign in. You can still open it yourself. This is the same switch Task Manager\u2019s Startup apps uses.', 'Disable at sign-in'],
-    enable: ['Let ' + n + ' start at sign-in?', 'It will launch automatically every time you sign in.', 'Enable at sign-in']};
-  const T = {
-    run: startup, folder: startup,
-    task: {disable: ['Disable the task \u201C' + n + '\u201D?', 'It will stop running on its schedule or triggers. The task is kept, not deleted. Some updaters recreate their tasks.', 'Disable task'], enable: ['Enable the task \u201C' + n + '\u201D?', 'It will run again on its schedule or triggers.', 'Enable task']},
-    service: {disable: ['Set ' + n + ' to Manual start?', 'It will no longer start automatically with Windows. Windows or the app can still start it when needed. It is not stopped now.', 'Set to Manual'], enable: ['Set ' + n + ' to Automatic start?', 'It will start automatically with Windows.', 'Set to Automatic'],
-      stop: ['Stop ' + n + ' now?', 'The service stops until it is started again. If it is set to Automatic it starts again at the next boot. Apps that need it may stop working meanwhile.', 'Stop service'], start: ['Start ' + n + ' now?', 'The service starts and keeps running until stopped or Windows restarts.', 'Start service']}
-  };
-  const t = (T[c.kind] || {})[action];
-  if (!t) return null;
-  const caution = c.caution && c.control === 'yes' ? `<p style="color:#e6c27e">${esc(c.caution)}</p>` : '';
-  return {title: t[0], confirm: t[2], body: `<p>${esc(t[1])}</p>${caution}<p>The current setting is saved first. You can undo this from <strong>Change history</strong>.</p>`};
-}
-function requestChange(id, action) {
-  if (!api()) { toast('Changes are only available in the desktop app.'); render(); return; }
-  const f = findComp(id); if (!f) return;
-  const d = describe(f.c, action); if (!d) return;
-  pending = {id, action};
-  $('modal-title').textContent = d.title; $('modal-body').innerHTML = d.body; $('modal-confirm').textContent = d.confirm;
-  openModal();
-}
-async function confirmChange() {
-  const p = pending; closeModal(); if (!p) return;
-  try {
-    const r = await api().Apply(p);
-    toast(r.message);
-    if (r.ok) {
-      celebrateSuccess();
-      await doScan();
-    } else {
-      render();
-    }
-    loadHistory();
-  } catch (e) { toast('Change failed: ' + e); render(); }
-}
-async function doElevate() { try { await api().RestartAsAdmin(); } catch (e) { toast('Could not restart: ' + e); } }
-
-async function loadHistory() {
-  const a = api();
-  try { history = a ? ((await a.History()) || []) : []; } catch (e) { history = []; }
-  renderHistory(); if (inv) renderOverview();
-}
-function renderHistory() {
-  const ok = history.filter(h => h.status === 'applied' && h.restorable).length;
-  $('history-summary').innerHTML = `<div class="summary-item"><strong>${history.length}</strong> changes recorded</div><span class="summary-separator"></span><div class="summary-item"><strong>${ok}</strong> can be restored</div>`;
-  const ST = {applied: ['green', 'Applied'], restored: ['gray', 'Restored'], failed: ['red', 'Failed'], rolledback: ['amber', 'Rolled back'], pending: ['amber', 'Interrupted']};
-  $('history-list').innerHTML = history.length ? history.map(h => {
-    const st = ST[h.status] || ['gray', h.status];
-    return `<div class="history-row"><div class="history-symbol"><i data-lucide="history" style="width:13px;height:13px"></i></div><div class="history-copy"><div class="history-title">${esc(h.title)} <span class="badge ${st[0]}">${st[1]}</span></div><div class="history-meta">${esc(h.appName)} \u00B7 ${esc(h.summary)}${h.error ? ' \u00B7 ' + esc(h.error) : ''}</div></div><div class="history-time">${esc(fmtTime(h.time))}</div>${h.status === 'applied' && h.restorable ? `<button class="win-btn" data-hid="${esc(h.id)}" onclick="doRestore(this.dataset.hid)"><i data-lucide="rotate-ccw" style="width:11px;height:11px;margin-right:4px"></i>Restore</button>` : ''}</div>`;
-  }).join('') : '<div class="empty-state">No changes yet. Every change you make is saved here first, so you can undo it.</div>';
-  refreshIcons();
-  animateList('#history-list .history-row');
-}
-async function doRestore(id) {
-  const a = api(); if (!a) return;
-  try {
-    const r = await a.Restore(id);
-    toast(r.message);
-    if (r.ok) {
-      celebrateSuccess();
-      await doScan();
-    }
-    await loadHistory();
-  } catch (e) { toast('Restore failed: ' + e); }
-}
-
-// ---- events ----
-document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => navigate(b.dataset.page)));
-$('app-filters').addEventListener('click', e => { const b = e.target.closest('button[data-filter]'); if (b) { filter = b.dataset.filter; renderApps(); } });
-$('app-list').addEventListener('click', e => { const r = e.target.closest('.app-row'); if (r) { sel = r.dataset.id; renderApps(); } });
-$('app-search').addEventListener('input', e => { query = e.target.value; renderApps(); });
-$('app-sort').addEventListener('change', e => { sortMode = e.target.value; renderApps(); });
-$('svc-search').addEventListener('input', renderServices); $('svc-type').addEventListener('change', renderServices); $('task-search').addEventListener('input', renderTasks);
-function rowToggle(e, fn) { const r = e.target.closest('tr.clickable'); if (!r) return; const id = r.dataset.id; expanded.has(id) ? expanded.delete(id) : expanded.add(id); fn(); }
-$('svc-body').addEventListener('click', e => rowToggle(e, renderServices)); $('task-body').addEventListener('click', e => rowToggle(e, renderTasks));
-$('modal-confirm').addEventListener('click', confirmChange); $('modal-cancel').addEventListener('click', closeModal);
-$('confirm-modal').addEventListener('click', e => { if (e.target === $('confirm-modal')) closeModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && pending) closeModal(); });
-$('set-system').addEventListener('change', e => { showSystem = e.target.checked; try { localStorage.setItem('bgm.showSystem', showSystem ? '1' : '0'); } catch (x) {} render(); });
-
-const SCALES = ['100%', '110%', '120%', '130%', '140%'];
-function applyScale(scale) {
-  if (!SCALES.includes(scale)) scale = '100%';
-  uiScale = scale;
-  document.documentElement.style.zoom = scale;
-  try { localStorage.setItem('bgm.uiScale', scale); } catch (e) {}
-  const el = $('set-ui-scale');
-  if (el && el.value !== scale) el.value = scale;
-}
-function stepScale(delta) {
-  let idx = SCALES.indexOf(uiScale);
-  if (idx === -1) idx = 0;
-  const next = Math.max(0, Math.min(SCALES.length - 1, idx + delta));
-  applyScale(SCALES[next]);
-  toast('Text size: ' + SCALES[next]);
-}
-
-$('set-ui-scale').addEventListener('change', e => {
-  applyScale(e.target.value);
-  toast('Text size: ' + e.target.value);
-});
-
-$('set-always-admin').addEventListener('change', async e => {
-  const on = e.target.checked;
-  const a = api();
-  if (!a) {
-    if (inv) inv.alwaysAdmin = on;
-    toast(on ? 'Always start as administrator enabled (sample preview).' : 'Always start as administrator disabled (sample preview).');
-    return;
-  }
-  try {
-    await a.SetAlwaysAdmin(on);
-    if (inv) inv.alwaysAdmin = on;
-    if (on) {
-      toast('Always start as administrator enabled.');
-      if (inv && !inv.elevated) {
-        pending = null;
-        $('modal-title').textContent = 'Restart as administrator?';
-        $('modal-body').innerHTML = '<p>Background Manager has been configured to always run with administrator rights.</p><p>Would you like to restart the app as administrator right now to unlock service and task management?</p>';
-        $('modal-confirm').textContent = 'Restart as administrator';
-        $('modal-confirm').onclick = async () => {
-          closeModal();
-          await doElevate();
-        };
-        openModal();
-      }
-    } else {
-      toast('Always start as administrator disabled.');
-    }
-  } catch (err) {
-    toast('Failed to change setting: ' + err);
-    e.target.checked = !on;
-  }
-});
-
-$('global-search').addEventListener('keydown', e => { if (e.key === 'Enter') { navigate('applications'); query = e.target.value; $('app-search').value = query; renderApps(); } });
-document.addEventListener('keydown', e => {
-  if (e.ctrlKey || e.metaKey) {
-    if (e.key.toLowerCase() === 'k') {
-      e.preventDefault();
-      $('global-search').focus();
-    } else if (e.key === '=' || e.key === '+') {
-      e.preventDefault();
-      stepScale(1);
-    } else if (e.key === '-' || e.key === '_') {
-      e.preventDefault();
-      stepScale(-1);
-    } else if (e.key === '0') {
-      e.preventDefault();
-      applyScale('100%');
-      toast('Text size reset to 100%');
-    }
-  }
-});
-
-// ---- sample data for previewing the page in a plain browser (derived from a real scan) ----
-const DEMO = {scannedAt: new Date().toISOString(), durationMs: 0, machine: 'PREVIEW-PC', os: 'Windows 11 \u00B7 build 26100', elevated: false, alwaysAdmin: false, warnings: [], sources: [
-  {id:'run', title:'Registry Run keys', desc:'HKCU and HKLM Run entries.', count:0, status:'scanned'}, {id:'service', title:'Windows services', desc:'Every service.', count:2, status:'scanned'},
-  {id:'process', title:'Running processes without a window', desc:'Heuristic.', count:1, status:'partial'}, {id:'wmi', title:'WMI event subscriptions', desc:'Not scanned.', count:0, status:'notscanned'}],
- apps: [
-  {id:'pkg:whatsappdesktop', name:'WhatsApp', publisher:'WhatsApp Inc.', letter:'W', signature:'verified', path:'C:\\Program Files\\WindowsApps\\5319275A.WhatsAppDesktop', running:true, autoStart:false, review:false, system:false, behavior:'Started by Windows or another app', behaviorNote:'No sign-in entry found', components:[
-   {id:'p1', kind:'process', name:'WhatsApp.Root.exe', display:'', command:'C:\\Program Files\\WindowsApps\\5319275A.WhatsAppDesktop\\WhatsApp.Root.exe', exePath:'C:\\Program Files\\WindowsApps\\5319275A.WhatsAppDesktop\\WhatsApp.Root.exe', source:'Running processes', trigger:'Started by Windows (background task or notification)', startType:'', enabled:true, autoStart:false, running:true, pids:[10832], lastRun:'', publisher:'WhatsApp Inc.', product:'WhatsApp', signature:'valid', locked:'', system:false, review:false, flags:[]}]},
-  {id:'pkg:claude', name:'Claude', publisher:'Anthropic', letter:'C', signature:'verified', path:'C:\\Program Files\\WindowsApps\\Claude\\app\\resources', running:true, autoStart:true, review:false, system:false, behavior:'Automatic service', behaviorNote:'1 automatic service', components:[
-   {id:'s1', kind:'service', name:'CoworkVMService', display:'Claude', command:'"C:\\Program Files\\WindowsApps\\Claude\\app\\resources\\cowork-svc.exe"', exePath:'C:\\Program Files\\WindowsApps\\Claude\\app\\resources\\cowork-svc.exe', source:'Services', trigger:'Automatic service', startType:'Automatic', enabled:true, autoStart:true, running:true, pids:[4120], lastRun:'', publisher:'Anthropic', product:'Claude', signature:'valid', locked:'yes', system:false, review:false, flags:[]}]},
-  {id:'pkg:codex', name:'ChatGPT', publisher:'OpenAI', letter:'C', signature:'verified', path:'C:\\Program Files\\WindowsApps\\OpenAI.Codex\\app\\resources', running:true, autoStart:true, review:false, system:false, behavior:'Automatic service', behaviorNote:'1 automatic service', components:[
-   {id:'s2', kind:'service', name:'CodexSandboxService.OpenAI.Codex', display:'ChatGPT', command:'"C:\\Program Files\\WindowsApps\\OpenAI.Codex\\app\\resources\\codex-windows-sandbox-service.exe"', exePath:'C:\\Program Files\\WindowsApps\\OpenAI.Codex\\app\\resources\\codex-windows-sandbox-service.exe', source:'Services', trigger:'Automatic service', startType:'Automatic', enabled:true, autoStart:true, running:true, pids:[4188], lastRun:'', publisher:'OpenAI', product:'ChatGPT', signature:'valid', locked:'yes', system:false, review:false, flags:[]}]}
- ]};
-
-DEMO.apps.push({id:'dir:discord', name:'Discord', publisher:'Discord Inc.', letter:'D', signature:'verified', path:'C:\\Users\\you\\AppData\\Local\\Discord', running:true, autoStart:true, review:false, system:false, behavior:'At sign-in', behaviorNote:'1 enabled entry', components:[
- {id:'r1', kind:'run', name:'Discord', display:'', command:'"C:\\Users\\you\\AppData\\Local\\Discord\\Update.exe" --processStart Discord.exe', exePath:'C:\\Users\\you\\AppData\\Local\\Discord\\Update.exe', source:'HKCU Run', trigger:'At sign-in', startType:'', enabled:true, autoStart:true, running:true, pids:[2210], lastRun:'', publisher:'Discord Inc.', product:'Discord', signature:'valid', locked:'', system:false, review:false, flags:[], control:'yes', controlNote:'', caution:'', canStop:false}]});
-DEMO.apps.forEach(a => a.components.forEach(c => { if (!c.control) { c.control = 'no'; c.controlNote = c.locked === 'yes' ? 'Locked by its publisher: Windows doesn\u2019t let this account change its startup type. You can still stop or start it.' : 'This can\u2019t be changed safely from here.'; c.canStop = c.kind === 'service'; } }));
-doScan().then(loadHistory);
-
-</script>
+<!-- Modular Scripts -->
+<script src="js/state.js"></script>
+<script src="js/animations.js"></script>
+<script src="js/api.js"></script>
+<script src="js/renderers.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>

@@ -41,7 +41,7 @@ shows it Disabled, then Restore from Change history and confirm it is Enabled ag
 
 ## Layout
 inventory.go (scan+grouping) · services.go/registry.go/tasks.go (sources) · procs.go · pe.go (publisher+signature) ·
-owners.go · protect.go (safety rules) · ops.go (apply/restore) · history.go (backups) · admin.go (elevation settings) · frontend/dist/index.html (UI)
+owners.go · protect.go (safety rules) · ops.go (apply/restore) · history.go (backups) · admin.go (elevation settings) · frontend/dist/ (modular HTML/CSS/JS architecture)
 
 ## Settings & Accessibility
 - **Text Size & UI Scale**: Configure scale (`Default 100%`, `110%`, `120%`, `130%`, `140%`) from Settings, or use `Ctrl +` / `Ctrl -` (reset with `Ctrl 0`).

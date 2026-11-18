@@ -1,0 +1,118 @@
+/* --- Animations & Micro-Interactions --- */
+
+.lucide {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* Keyframes */
+@keyframes spinCw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseLed {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(117, 189, 134, 0.22); }
+  50% { box-shadow: 0 0 0 5px rgba(117, 189, 134, 0.45); }
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Scan Spinner */
+.is-scanning .lucide-refresh-cw,
+.is-scanning svg,
+.spin-active {
+  animation: spinCw 0.85s linear infinite !important;
+}
+
+.state-led, .status-dot {
+  animation: pulseLed 2.4s infinite ease-in-out;
+}
+
+.page {
+  animation: pageFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Tactile Button Feedback */
+.win-btn, .command-btn, .nav-item, .segmented button {
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.win-btn:active, .command-btn:active, .segmented button:active {
+  transform: scale(0.96);
+}
+.win-btn.primary {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.win-btn.primary:hover {
+  box-shadow: 0 2px 8px rgba(15, 108, 189, 0.4);
+}
+
+/* App Row Hover & Selection */
+.app-row {
+  transition: background 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
+.app-row:hover {
+  background: #1e242d !important;
+  transform: translateX(3px);
+}
+.app-row.selected {
+  background: #232d3a !important;
+  box-shadow: inset 3px 0 #60a5fa;
+}
+.app-row:active {
+  transform: scale(0.995);
+}
+
+/* Product Icon Hover Tilt */
+.product-icon {
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s;
+}
+.app-row:hover .product-icon {
+  transform: scale(1.08) rotate(-2deg);
+}
+
+/* Source Card Hover Lift */
+.source-card {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s, border-color 0.22s, background 0.22s;
+}
+.source-card:hover {
+  transform: translateY(-2px);
+  border-color: #3d4a57;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  background: #1a1e24 !important;
+}
+
+/* Overview Stat Hover */
+.overview-stat {
+  transition: background 0.18s ease;
+}
+.overview-stat:hover {
+  background: #1c2027;
+}
+
+/* Smooth Spring Toggle */
+.toggle {
+  transition: background .22s cubic-bezier(0.34, 1.56, 0.64, 1), border-color .22s;
+}
+.toggle:before {
+  transition: transform .25s cubic-bezier(0.34, 1.56, 0.64, 1), background .2s, width .15s;
+}
+.toggle:active:not(:disabled):before {
+  width: 14px;
+}
+
+/* Expanding Quick Search */
+.quick-search {
+  transition: width .25s cubic-bezier(0.16, 1, 0.3, 1), border-color .2s, box-shadow .2s;
+}
+.quick-search:focus-within {
+  width: min(100%, 410px);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.22);
+}

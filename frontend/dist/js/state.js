@@ -1,0 +1,136 @@
+// --- Application State & Data Mappings ---
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const KIND = {
+  service: 'Windows service',
+  run: 'Registry Run entry',
+  folder: 'Startup folder item',
+  task: 'Scheduled task',
+  process: 'Background process',
+  storeapp: 'Store app permission'
+};
+
+const KIND_ICON = {
+  service: 'cog',
+  run: 'zap',
+  folder: 'folder-open',
+  task: 'calendar-clock',
+  process: 'activity',
+  storeapp: 'package'
+};
+
+const SOURCE_ICONS = {
+  run: 'zap',
+  folder: 'folder-open',
+  service: 'cog',
+  task: 'calendar-clock',
+  storeapp: 'package',
+  process: 'activity',
+  winlogon: 'shield-alert',
+  wmi: 'terminal'
+};
+
+const HOWTO = {
+  service: 'Open Services (services.msc), find this service and change its startup type or stop it. Some packaged services are locked by their publisher.',
+  run: 'Task Manager → Startup apps, or the app’s own “launch at sign-in” setting.',
+  folder: 'Task Manager → Startup apps, or remove the shortcut from the Startup folder.',
+  task: 'Open Task Scheduler (taskschd.msc) and disable the task. Updates may recreate it.',
+  process: 'Close it from Task Manager, or look for a “run in background” / “close to tray” option in the app. Windows may also start it for notifications.',
+  storeapp: 'Settings → Apps → Installed apps → the app → Advanced options → Background apps permissions.'
+};
+
+const KNOWN = [
+  { m: /whatsapp/i, t: 'Windows can start WhatsApp in the background to receive push notifications, even when it is not at sign-in. For Store apps this is controlled under Settings → Apps → Installed apps → WhatsApp → Advanced options → Background apps permissions.' },
+  { m: /claude|cowork/i, t: 'The Cowork service appears to support Claude’s sandboxed environment and starts automatically with Windows. If it is marked Locked, its startup type cannot be changed from here or from Services.' },
+  { m: /codex|chatgpt|openai/i, t: 'This looks like the sandbox service used by the ChatGPT/Codex desktop app and starts automatically with Windows. If it is marked Locked, its startup type cannot be changed from here or from Services.' }
+];
+
+const SCALES = ['100%', '110%', '120%', '130%', '140%'];
+
+// State
+let history = [];
+let pending = null;
+let inv = null;
+let sel = null;
+let filter = 'all';
+let query = '';
+let sortMode = 'name';
+let showSystem = false;
+let page = 'applications';
+let toastTimer = null;
+const expanded = new Set();
+
+try { showSystem = localStorage.getItem('bgm.showSystem') === '1'; } catch (e) {}
+let uiScale = '100%';
+try { uiScale = localStorage.getItem('bgm.uiScale') || '100%'; } catch (e) {}
+
+// Queries
+function hue(s) {
+  let h = 0;
+  for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return h;
+}
+function iconStyle(name) {
+  const h = hue(name);
+  return `background:hsl(${h} 22% 22%);color:hsl(${h} 65% 78%);border-color:hsl(${h} 22% 34%)`;
+}
+function apps() {
+  return inv ? inv.apps.filter(a => showSystem || !a.system) : [];
+}
+function comps(kind) {
+  return apps().flatMap(a => a.components.map(c => Object.assign({}, c, {appId: a.id, appName: a.name}))).filter(c => c.kind === kind && (showSystem || !c.system));
+}
+function base(p) {
+  return String(p || '').split('\\').pop();
+}
+function fmtTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+}
+function cfgText(c) {
+  return c.kind === 'service' ? c.startType : c.kind === 'process' ? 'Running now' : c.kind === 'storeapp' ? (c.enabled ? 'Allowed' : 'Blocked') : (c.enabled ? 'Enabled' : 'Disabled');
+}
+function sigText(c) {
+  return ({valid:'Valid digital signature', unsigned:'Signature not verified', missing:'File not found', 'n/a':'Not applicable'})[c.signature] || '—';
+}
+function findComp(id) {
+  if (!inv || !inv.apps) return null;
+  for (const a of inv.apps) {
+    for (const c of a.components) {
+      if (c.id === id) return { c, a };
+    }
+  }
+  return null;
+}
+function describe(c, action) {
+  const n = c.display || c.name;
+  const startup = {
+    disable: ['Stop ' + n + ' starting at sign-in?', 'It will no longer launch by itself when you sign in. You can still open it yourself. This is the same switch Task Manager’s Startup apps uses.', 'Disable at sign-in'],
+    enable: ['Let ' + n + ' start at sign-in?', 'It will launch automatically every time you sign in.', 'Enable at sign-in']
+  };
+  const T = {
+    run: startup,
+    folder: startup,
+    task: {
+      disable: ['Disable the task “' + n + '”?', 'It will stop running on its schedule or triggers. The task is kept, not deleted. Some updaters recreate their tasks.', 'Disable task'],
+      enable: ['Enable the task “' + n + '”?', 'It will run again on its schedule or triggers.', 'Enable task']
+    },
+    service: {
+      disable: ['Set ' + n + ' to Manual start?', 'It will no longer start automatically with Windows. Windows or the app can still start it when needed. It is not stopped now.', 'Set to Manual'],
+      enable: ['Set ' + n + ' to Automatic start?', 'It will start automatically with Windows.', 'Set to Automatic'],
+      stop: ['Stop ' + n + ' now?', 'The service stops until it is started again. If it is set to Automatic it starts again at the next boot. Apps that need it may stop working meanwhile.', 'Stop service'],
+      start: ['Start ' + n + ' now?', 'The service starts and keeps running until stopped or Windows restarts.', 'Start service']
+    }
+  };
+  const t = (T[c.kind] || {})[action];
+  if (!t) return null;
+  const caution = c.caution && c.control === 'yes' ? `<p style="color:#e6c27e">${esc(c.caution)}</p>` : '';
+  return {
+    title: t[0],
+    confirm: t[2],
+    body: `<p>${esc(t[1])}</p>${caution}<p>The current setting is saved first. You can undo this from <strong>Change history</strong>.</p>`
+  };
+}
