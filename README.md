@@ -43,6 +43,11 @@ shows it Disabled, then Restore from Change history and confirm it is Enabled ag
 inventory.go (scan+grouping) · services.go/registry.go/tasks.go (sources) · procs.go · pe.go (publisher+signature) ·
 owners.go · protect.go (safety rules) · ops.go (apply/restore) · history.go (backups) · admin.go (elevation settings) · frontend/dist/ (modular HTML/CSS/JS architecture)
 
-## Settings & Accessibility
+## Settings, Accessibility & Enhancements
+- **Live Memory Footprint**: Real-time process RAM working set querying (`psapi.dll`), displaying per-app and system-wide background RAM totals.
+- **Quick Focus Mode**: 1-click batch optimization that safely disables third-party autostart programs/services with full reversible history backup.
+- **Deep Persistence Discovery**: Scans `HKCU`/`HKLM` Run & RunOnce keys, Startup shortcuts, Services, Scheduled Tasks, Winlogon configuration (`Userinit`, `Shell`), and persistent WMI event consumers (`root/subscription`).
+- **Security Auditing**: Computes SHA-256 binary hashes, provides 1-click VirusTotal verification, and flags system binary name impersonation (e.g. `svchost.exe` outside System32).
+- **Multi-Format Export**: Export comprehensive background audit reports in JSON, formatted Markdown (`.md`), or CSV spreadsheet format.
 - **Text Size & UI Scale**: Configure scale (`Default 100%`, `110%`, `120%`, `130%`, `140%`) from Settings, or use `Ctrl +` / `Ctrl -` (reset with `Ctrl 0`).
 - **Always Start as Administrator**: Toggle in Settings automatically applies the Windows `~ RUNASADMIN` compatibility flag (`HKCU\...\AppCompatFlags\Layers`), ensuring UAC elevation on every launch.
