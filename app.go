@@ -14,13 +14,15 @@ import (
 	"syscall"
 	"time"
 
+	"bgmui/backend"
+
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App is bound to the frontend.
 type App struct {
 	ctx  context.Context
-	last *Inventory
+	last *backend.Inventory
 }
 
 func NewApp() *App { return &App{} }
@@ -28,10 +30,49 @@ func NewApp() *App { return &App{} }
 func (a *App) startup(ctx context.Context) { a.ctx = ctx }
 
 // Scan inspects the machine and returns the full inventory. It changes nothing.
-func (a *App) Scan() Inventory {
-	inv := buildInventory()
+func (a *App) Scan() backend.Inventory {
+	inv := backend.BuildInventory()
 	a.last = &inv
 	return inv
+}
+
+// Apply changes one item after re-checking every safety rule on the Go side.
+func (a *App) Apply(req backend.ChangeRequest) backend.ChangeResult {
+	return backend.Apply(a.last, req)
+}
+
+// Restore undoes one history entry, but only if the item is still exactly as WinBGM left it.
+func (a *App) Restore(id string) backend.ChangeResult {
+	return backend.Restore(id)
+}
+
+// History returns past changes, newest first.
+func (a *App) History() []backend.HistoryEntry {
+	return backend.History()
+}
+
+// ApplyFocusMode disables third-party automatic startup items safely.
+func (a *App) ApplyFocusMode() backend.BatchResult {
+	return backend.ApplyFocusMode(a.last)
+}
+
+// GetAlwaysAdmin returns true if the app executable has the RUNASADMIN compatibility flag set.
+func (a *App) GetAlwaysAdmin() bool {
+	return backend.CheckAlwaysAdmin()
+}
+
+// SetAlwaysAdmin enables or disables the RUNASADMIN compatibility flag in Windows registry (HKCU).
+func (a *App) SetAlwaysAdmin(enable bool) (bool, error) {
+	return backend.SetAlwaysAdmin(enable)
+}
+
+// RestartAsAdmin relaunches this exe with a UAC prompt, then closes this window.
+func (a *App) RestartAsAdmin() error {
+	if err := backend.RelaunchAsAdmin(); err != nil {
+		return err
+	}
+	runtime.Quit(a.ctx)
+	return nil
 }
 
 // Reveal opens File Explorer with the given file selected (or its folder if the file is gone).

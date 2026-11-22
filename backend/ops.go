@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"encoding/binary"
@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc"
@@ -349,13 +348,13 @@ func targetNeedsAdmin(t Target) bool {
 // ---------- the operations the UI can call ----------
 
 // Apply changes one item after re-checking every safety rule on the Go side (the UI is never trusted).
-func (a *App) Apply(req ChangeRequest) ChangeResult {
+func Apply(last *Inventory, req ChangeRequest) ChangeResult {
 	opMu.Lock()
 	defer opMu.Unlock()
-	if a.last == nil {
+	if last == nil {
 		return fail("Scan first.")
 	}
-	c, appName := findComponent(a.last, req.ID)
+	c, appName := findComponent(last, req.ID)
 	if c == nil {
 		return fail("That item is no longer in the scan. Scan again.")
 	}
@@ -444,7 +443,7 @@ func (a *App) Apply(req ChangeRequest) ChangeResult {
 }
 
 // Restore undoes one history entry, but only if the item is still exactly as WinBGM left it.
-func (a *App) Restore(id string) ChangeResult {
+func Restore(id string) ChangeResult {
 	opMu.Lock()
 	defer opMu.Unlock()
 	var e *HistoryEntry
@@ -481,7 +480,7 @@ func (a *App) Restore(id string) ChangeResult {
 }
 
 // History returns past changes, newest first.
-func (a *App) History() []HistoryEntry {
+func History() []HistoryEntry {
 	h := loadHistory()
 	for i, j := 0, len(h)-1; i < j; i, j = i+1, j-1 {
 		h[i], h[j] = h[j], h[i]
@@ -489,19 +488,15 @@ func (a *App) History() []HistoryEntry {
 	return h
 }
 
-// RestartAsAdmin relaunches this exe with a UAC prompt, then closes this window.
-func (a *App) RestartAsAdmin() error {
+// RelaunchAsAdmin relaunches this exe with a UAC prompt.
+func RelaunchAsAdmin() error {
 	exe, err := os.Executable()
 	if err != nil {
 		return err
 	}
 	verb, _ := windows.UTF16PtrFromString("runas")
 	file, _ := windows.UTF16PtrFromString(exe)
-	if err := windows.ShellExecute(0, verb, file, nil, nil, 1); err != nil {
-		return err
-	}
-	runtime.Quit(a.ctx)
-	return nil
+	return windows.ShellExecute(0, verb, file, nil, nil, 1)
 }
 
 func orElse(s, d string) string {
@@ -521,12 +516,12 @@ type BatchResult struct {
 
 // ApplyFocusMode disables third-party automatic startup items safely.
 // Each item is backed up individually to history first and can be undone at any time.
-func (a *App) ApplyFocusMode() BatchResult {
-	if a.last == nil {
+func ApplyFocusMode(last *Inventory) BatchResult {
+	if last == nil {
 		return BatchResult{Message: "Run a scan first."}
 	}
 	var toDisable []ChangeRequest
-	for _, app := range a.last.Apps {
+	for _, app := range last.Apps {
 		if app.System {
 			continue
 		}
@@ -542,7 +537,7 @@ func (a *App) ApplyFocusMode() BatchResult {
 
 	res := BatchResult{Total: len(toDisable)}
 	for _, req := range toDisable {
-		r := a.Apply(req)
+		r := Apply(last, req)
 		if r.OK {
 			res.Modified++
 			if r.Entry != nil {

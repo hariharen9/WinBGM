@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"errors"
@@ -51,7 +51,8 @@ func isCompatRunAsAdmin(root registry.Key, path, exe string) bool {
 	return strings.Contains(strings.ToUpper(val), "RUNASADMIN")
 }
 
-func checkAlwaysAdmin() bool {
+// CheckAlwaysAdmin returns true if the app executable has the RUNASADMIN compatibility flag set.
+func CheckAlwaysAdmin() bool {
 	for _, p := range getAppExePaths() {
 		if isCompatRunAsAdmin(registry.CURRENT_USER, compatLayersKey, p) ||
 			isCompatRunAsAdmin(registry.LOCAL_MACHINE, compatLayersKey, p) {
@@ -61,13 +62,8 @@ func checkAlwaysAdmin() bool {
 	return false
 }
 
-// GetAlwaysAdmin returns true if the app executable has the RUNASADMIN compatibility flag set.
-func (a *App) GetAlwaysAdmin() bool {
-	return checkAlwaysAdmin()
-}
-
 // SetAlwaysAdmin enables or disables the RUNASADMIN compatibility flag in Windows registry (HKCU).
-func (a *App) SetAlwaysAdmin(enable bool) (bool, error) {
+func SetAlwaysAdmin(enable bool) (bool, error) {
 	paths := getAppExePaths()
 	if len(paths) == 0 {
 		return false, errors.New("could not determine executable path")

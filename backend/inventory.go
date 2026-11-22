@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ var kindOrder = map[string]int{
 	"process": 4, "storeapp": 5, "winlogon": 6, "wmi": 7,
 }
 
-func buildInventory() Inventory {
+func BuildInventory() Inventory {
 	t0 := time.Now()
 	pt := snapshotProcs()
 	elevated := isElevated()
@@ -108,7 +108,7 @@ func buildInventory() Inventory {
 		Machine:           hostName(),
 		OS:                osName(),
 		Elevated:          elevated,
-		AlwaysAdmin:       checkAlwaysAdmin(),
+		AlwaysAdmin:       CheckAlwaysAdmin(),
 		TotalRAMBytes:     totalRAM,
 		TotalRAMFormatted: formatRAM(totalRAM),
 	}
