@@ -9,7 +9,9 @@ const KIND = {
   folder: 'Startup folder item',
   task: 'Scheduled task',
   process: 'Background process',
-  storeapp: 'Store app permission'
+  storeapp: 'Store app permission',
+  winlogon: 'Winlogon configuration',
+  wmi: 'WMI event consumer'
 };
 
 const KIND_ICON = {
@@ -18,7 +20,9 @@ const KIND_ICON = {
   folder: 'folder-open',
   task: 'calendar-clock',
   process: 'activity',
-  storeapp: 'package'
+  storeapp: 'package',
+  winlogon: 'shield-alert',
+  wmi: 'terminal'
 };
 
 const SOURCE_ICONS = {
@@ -38,13 +42,23 @@ const HOWTO = {
   folder: 'Task Manager → Startup apps, or remove the shortcut from the Startup folder.',
   task: 'Open Task Scheduler (taskschd.msc) and disable the task. Updates may recreate it.',
   process: 'Close it from Task Manager, or look for a “run in background” / “close to tray” option in the app. Windows may also start it for notifications.',
-  storeapp: 'Settings → Apps → Installed apps → the app → Advanced options → Background apps permissions.'
+  storeapp: 'Settings → Apps → Installed apps → the app → Advanced options → Background apps permissions.',
+  winlogon: 'Winlogon entries are system hooks executed during Windows logon. Investigate the key in Registry Editor under Microsoft\\Windows NT\\CurrentVersion\\Winlogon.',
+  wmi: 'WMI persistence can be queried and managed using PowerShell (Get-CimInstance -Namespace root/subscription -ClassName __EventConsumer).'
 };
 
 const KNOWN = [
   { m: /whatsapp/i, t: 'Windows can start WhatsApp in the background to receive push notifications, even when it is not at sign-in. For Store apps this is controlled under Settings → Apps → Installed apps → WhatsApp → Advanced options → Background apps permissions.' },
   { m: /claude|cowork/i, t: 'The Cowork service appears to support Claude’s sandboxed environment and starts automatically with Windows. If it is marked Locked, its startup type cannot be changed from here or from Services.' },
-  { m: /codex|chatgpt|openai/i, t: 'This looks like the sandbox service used by the ChatGPT/Codex desktop app and starts automatically with Windows. If it is marked Locked, its startup type cannot be changed from here or from Services.' }
+  { m: /codex|chatgpt|openai/i, t: 'This looks like the sandbox service used by the ChatGPT/Codex desktop app and starts automatically with Windows. If it is marked Locked, its startup type cannot be changed from here or from Services.' },
+  { m: /ollama/i, t: 'Ollama runs a background local LLM inference engine and REST API server (localhost:11434). It starts automatically to serve model requests on demand.' },
+  { m: /lm studio|lms/i, t: 'LM Studio includes a local model execution daemon and CLI server for local AI acceleration.' },
+  { m: /docker/i, t: 'Docker Desktop runs the background engine, WSL2 integration services, and virtualization daemons.' },
+  { m: /steam/i, t: 'Steam Client WebHelper runs Chromium Embedded Framework (CEF) background processes to handle store rendering, friend activity, and cloud sync.' },
+  { m: /epic/i, t: 'Epic Online Services and Epic Games Launcher background helpers maintain game entitlement checks, friend presence, and background updates.' },
+  { m: /spotify/i, t: 'Spotify Web Helper runs in the background for media key control, URI handling, and desktop client integration.' },
+  { m: /adobe|creative cloud|coresync/i, t: 'Adobe Creative Cloud uses multiple background synchronization daemons (CoreSync, CCXProcess) for cloud assets, font licensing, and automatic updates.' },
+  { m: /discord/i, t: 'Discord launches in the background to listen for notifications, voice channels, and handle background hotkeys.' }
 ];
 
 const SCALES = ['100%', '110%', '120%', '130%', '140%'];

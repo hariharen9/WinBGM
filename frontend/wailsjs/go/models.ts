@@ -14,6 +14,10 @@ export namespace main {
 	    autoStart: boolean;
 	    running: boolean;
 	    pids: number[];
+	    ramBytes: number;
+	    ramFormatted: string;
+	    sha256: string;
+	    virusTotalURL: string;
 	    lastRun: string;
 	    publisher: string;
 	    product: string;
@@ -46,6 +50,10 @@ export namespace main {
 	        this.autoStart = source["autoStart"];
 	        this.running = source["running"];
 	        this.pids = source["pids"];
+	        this.ramBytes = source["ramBytes"];
+	        this.ramFormatted = source["ramFormatted"];
+	        this.sha256 = source["sha256"];
+	        this.virusTotalURL = source["virusTotalURL"];
 	        this.lastRun = source["lastRun"];
 	        this.publisher = source["publisher"];
 	        this.product = source["product"];
@@ -69,6 +77,8 @@ export namespace main {
 	    path: string;
 	    components: Component[];
 	    running: boolean;
+	    ramBytes: number;
+	    ramFormatted: string;
 	    autoStart: boolean;
 	    review: boolean;
 	    system: boolean;
@@ -89,6 +99,8 @@ export namespace main {
 	        this.path = source["path"];
 	        this.components = this.convertValues(source["components"], Component);
 	        this.running = source["running"];
+	        this.ramBytes = source["ramBytes"];
+	        this.ramFormatted = source["ramFormatted"];
 	        this.autoStart = source["autoStart"];
 	        this.review = source["review"];
 	        this.system = source["system"];
@@ -113,6 +125,26 @@ export namespace main {
 		    }
 		    return a;
 		}
+	}
+	export class BatchResult {
+	    total: number;
+	    modified: number;
+	    failed: number;
+	    message: string;
+	    entries: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new BatchResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.total = source["total"];
+	        this.modified = source["modified"];
+	        this.failed = source["failed"];
+	        this.message = source["message"];
+	        this.entries = source["entries"];
+	    }
 	}
 	export class ChangeRequest {
 	    id: string;
@@ -272,6 +304,8 @@ export namespace main {
 	    os: string;
 	    elevated: boolean;
 	    alwaysAdmin: boolean;
+	    totalRAMBytes: number;
+	    totalRAMFormatted: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Inventory(source);
@@ -288,6 +322,8 @@ export namespace main {
 	        this.os = source["os"];
 	        this.elevated = source["elevated"];
 	        this.alwaysAdmin = source["alwaysAdmin"];
+	        this.totalRAMBytes = source["totalRAMBytes"];
+	        this.totalRAMFormatted = source["totalRAMFormatted"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

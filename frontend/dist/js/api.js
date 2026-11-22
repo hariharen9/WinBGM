@@ -36,6 +36,47 @@ async function doExport() {
   }
 }
 
+async function doExportMarkdown() {
+  const a = api();
+  if (!a) return toast('Export is available in the desktop app.');
+  try {
+    const p = await a.ExportMarkdown();
+    toast(p ? 'Exported Markdown audit to ' + p : 'Export cancelled');
+  } catch (e) {
+    toast('Export failed: ' + e);
+  }
+}
+
+async function doExportCSV() {
+  const a = api();
+  if (!a) return toast('Export is available in the desktop app.');
+  try {
+    const p = await a.ExportCSV();
+    toast(p ? 'Exported CSV spreadsheet to ' + p : 'Export cancelled');
+  } catch (e) {
+    toast('Export failed: ' + e);
+  }
+}
+
+async function doFocusMode() {
+  const a = api();
+  if (!a) {
+    toast('Focus Mode applied (sample preview: optimized 2 startup items).');
+    return;
+  }
+  try {
+    const res = await a.ApplyFocusMode();
+    toast(res.message);
+    if (res.modified > 0) {
+      celebrateSuccess();
+      await doScan();
+      await loadHistory();
+    }
+  } catch (err) {
+    toast('Focus Mode failed: ' + err);
+  }
+}
+
 async function doReveal() {
   const a = api();
   const app = apps().find(x => x.id === sel);
@@ -107,17 +148,23 @@ async function doRestore(id) {
 // Sample offline data for previewing without compiling
 const DEMO = {
   scannedAt: new Date().toISOString(),
-  durationMs: 0,
+  durationMs: 42,
   machine: 'PREVIEW-PC',
   os: 'Windows 11 · build 26100',
   elevated: false,
   alwaysAdmin: false,
+  totalRAMBytes: 673185792,
+  totalRAMFormatted: '642.0 MB',
   warnings: [],
   sources: [
-    { id: 'run', title: 'Registry Run keys', desc: 'HKCU and HKLM Run entries.', count: 1, status: 'scanned' },
-    { id: 'service', title: 'Windows services', desc: 'Every service.', count: 2, status: 'scanned' },
-    { id: 'process', title: 'Running processes without a window', desc: 'Heuristic.', count: 1, status: 'partial' },
-    { id: 'wmi', title: 'WMI event subscriptions', desc: 'Not scanned.', count: 0, status: 'notscanned' }
+    { id: 'run', title: 'Registry Run & RunOnce keys', desc: 'HKCU and HKLM Run/RunOnce entries.', count: 2, status: 'scanned' },
+    { id: 'service', title: 'Windows services', desc: 'Every service.', count: 3, status: 'scanned' },
+    { id: 'folder', title: 'Startup folders', desc: 'Per-user and all-users Startup folders.', count: 1, status: 'scanned' },
+    { id: 'task', title: 'Task Scheduler', desc: 'Tasks outside Microsoft library.', count: 1, status: 'scanned' },
+    { id: 'winlogon', title: 'Winlogon & logon shell', desc: 'Logon shell overrides and Userinit handlers.', count: 2, status: 'scanned' },
+    { id: 'wmi', title: 'WMI event subscriptions', desc: 'Persistent WMI event filters and consumers.', count: 0, status: 'scanned' },
+    { id: 'storeapp', title: 'Store app permissions', desc: 'Packaged app background records.', count: 1, status: 'partial' },
+    { id: 'process', title: 'Running processes without a window', desc: 'Heuristic.', count: 1, status: 'partial' }
   ],
   apps: [
     {
@@ -128,6 +175,8 @@ const DEMO = {
       signature: 'verified',
       path: 'C:\\Program Files\\WindowsApps\\5319275A.WhatsAppDesktop',
       running: true,
+      ramBytes: 157286400,
+      ramFormatted: '150.0 MB',
       autoStart: false,
       review: false,
       system: false,
@@ -148,10 +197,14 @@ const DEMO = {
           autoStart: false,
           running: true,
           pids: [10832],
+          ramBytes: 157286400,
+          ramFormatted: '150.0 MB',
           lastRun: '',
           publisher: 'WhatsApp Inc.',
           product: 'WhatsApp',
           signature: 'valid',
+          sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          virusTotalURL: 'https://www.virustotal.com/gui/file/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
           locked: '',
           system: false,
           review: false,
@@ -167,6 +220,8 @@ const DEMO = {
       signature: 'verified',
       path: 'C:\\Program Files\\WindowsApps\\Claude\\app\\resources',
       running: true,
+      ramBytes: 94371840,
+      ramFormatted: '90.0 MB',
       autoStart: true,
       review: false,
       system: false,
@@ -187,10 +242,14 @@ const DEMO = {
           autoStart: true,
           running: true,
           pids: [4120],
+          ramBytes: 94371840,
+          ramFormatted: '90.0 MB',
           lastRun: '',
           publisher: 'Anthropic',
           product: 'Claude',
           signature: 'valid',
+          sha256: 'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
+          virusTotalURL: 'https://www.virustotal.com/gui/file/c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
           locked: 'yes',
           system: false,
           review: false,
@@ -199,41 +258,51 @@ const DEMO = {
       ]
     },
     {
-      id: 'pkg:codex',
-      name: 'ChatGPT',
-      publisher: 'OpenAI',
-      letter: 'C',
+      id: 'dir:ollama',
+      name: 'Ollama',
+      publisher: 'Ollama Inc.',
+      letter: 'O',
       signature: 'verified',
-      path: 'C:\\Program Files\\WindowsApps\\OpenAI.Codex\\app\\resources',
+      path: 'C:\\Users\\you\\AppData\\Local\\Programs\\Ollama',
       running: true,
+      ramBytes: 251658240,
+      ramFormatted: '240.0 MB',
       autoStart: true,
       review: false,
       system: false,
-      behavior: 'Automatic service',
-      behaviorNote: '1 automatic service',
+      behavior: 'At sign-in',
+      behaviorNote: '1 enabled entry',
       components: [
         {
-          id: 's2',
-          kind: 'service',
-          name: 'CodexSandboxService.OpenAI.Codex',
-          display: 'ChatGPT',
-          command: '"C:\\Program Files\\WindowsApps\\OpenAI.Codex\\app\\resources\\codex-windows-sandbox-service.exe"',
-          exePath: 'C:\\Program Files\\WindowsApps\\OpenAI.Codex\\app\\resources\\codex-windows-sandbox-service.exe',
-          source: 'Services',
-          trigger: 'Automatic service',
-          startType: 'Automatic',
+          id: 'r2',
+          kind: 'run',
+          name: 'Ollama',
+          display: 'Ollama Background Daemon',
+          command: '"C:\\Users\\you\\AppData\\Local\\Programs\\Ollama\\ollama app.exe"',
+          exePath: 'C:\\Users\\you\\AppData\\Local\\Programs\\Ollama\\ollama app.exe',
+          source: 'HKCU Run',
+          trigger: 'At sign-in',
+          startType: '',
           enabled: true,
           autoStart: true,
           running: true,
-          pids: [4188],
+          pids: [6380],
+          ramBytes: 251658240,
+          ramFormatted: '240.0 MB',
           lastRun: '',
-          publisher: 'OpenAI',
-          product: 'ChatGPT',
+          publisher: 'Ollama Inc.',
+          product: 'Ollama',
           signature: 'valid',
-          locked: 'yes',
+          sha256: 'a1b2c3d4e5f60718293a4b5c6d7e8f901234567890abcdef1234567890abcdef',
+          virusTotalURL: 'https://www.virustotal.com/gui/file/a1b2c3d4e5f60718293a4b5c6d7e8f901234567890abcdef1234567890abcdef',
+          locked: '',
           system: false,
           review: false,
-          flags: []
+          flags: [],
+          control: 'yes',
+          controlNote: '',
+          caution: '',
+          canStop: false
         }
       ]
     },
@@ -245,6 +314,8 @@ const DEMO = {
       signature: 'verified',
       path: 'C:\\Users\\you\\AppData\\Local\\Discord',
       running: true,
+      ramBytes: 169869312,
+      ramFormatted: '162.0 MB',
       autoStart: true,
       review: false,
       system: false,
@@ -265,10 +336,14 @@ const DEMO = {
           autoStart: true,
           running: true,
           pids: [2210],
+          ramBytes: 169869312,
+          ramFormatted: '162.0 MB',
           lastRun: '',
           publisher: 'Discord Inc.',
           product: 'Discord',
           signature: 'valid',
+          sha256: '9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba',
+          virusTotalURL: 'https://www.virustotal.com/gui/file/9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba',
           locked: '',
           system: false,
           review: false,

@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -21,6 +22,31 @@ var (
 	antiCheatRe = regexp.MustCompile(`(?i)(\bvgc\b|\bvgk\b|vanguard|easyanticheat|\bbeservice\b|battleye|faceit|\besea\b)`)
 	driverRe    = regexp.MustCompile(`(?i)(nvidia|advanced micro devices|\bamd\b|intel|realtek|logitech|razer)`)
 )
+
+var suspiciousSystemNames = map[string]bool{
+	"svchost.exe": true, "csrss.exe": true, "lsass.exe": true, "smss.exe": true,
+	"services.exe": true, "winlogon.exe": true, "explorer.exe": true,
+	"taskhostw.exe": true, "runtimebroker.exe": true, "conhost.exe": true,
+	"dwm.exe": true, "sihost.exe": true,
+}
+
+func isSuspiciousSystemName(exePath string) bool {
+	if exePath == "" {
+		return false
+	}
+	base := strings.ToLower(filepath.Base(exePath))
+	if !suspiciousSystemNames[base] {
+		return false
+	}
+	low := strings.ToLower(exePath)
+	if strings.Contains(low, `\windows\system32\`) ||
+		strings.Contains(low, `\windows\syswow64\`) ||
+		strings.EqualFold(low, `c:\windows\explorer.exe`) ||
+		strings.HasSuffix(low, `\windows\explorer.exe`) {
+		return false
+	}
+	return true
+}
 
 func selfExe() string {
 	p, err := os.Executable()
@@ -47,6 +73,9 @@ func protectedReason(c *Component) string {
 }
 
 func cautionReason(c *Component) string {
+	if isSuspiciousSystemName(c.ExePath) {
+		return "Suspicious: This executable shares the name of a Windows system file but runs from outside the Windows directory. Exercise extreme caution."
+	}
 	all := c.Name + " " + c.Display + " " + c.Product + " " + c.ExePath
 	switch {
 	case antiCheatRe.MatchString(all):
@@ -65,7 +94,7 @@ func needsAdmin(c *Component) bool {
 
 func computeControl(c *Component, elevated bool) {
 	switch c.Kind {
-	case "process", "storeapp":
+	case "process", "storeapp", "winlogon", "wmi":
 		c.Control, c.ControlNote = "no", "This can't be changed safely from here. See \u201CHow to change\u201D."
 		return
 	}

@@ -8,10 +8,48 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
+var (
+	modPsapi       = windows.NewLazySystemDLL("psapi.dll")
+	pGetProcessMem = modPsapi.NewProc("GetProcessMemoryInfo")
+)
+
+type processMemoryCounters struct {
+	CB                         uint32
+	PageFaultCount             uint32
+	PeakWorkingSetSize         uintptr
+	WorkingSetSize             uintptr
+	QuotaPeakPagedPoolUsage    uintptr
+	QuotaPagedPoolUsage        uintptr
+	QuotaPeakNonPagedPoolUsage uintptr
+	QuotaNonPagedPoolUsage     uintptr
+	PagefileUsage              uintptr
+	PeakPagefileUsage          uintptr
+}
+
+func getProcessMemory(pid uint32) uint64 {
+	if pid == 0 {
+		return 0
+	}
+	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	if err != nil {
+		return 0
+	}
+	defer windows.CloseHandle(h)
+
+	var counters processMemoryCounters
+	counters.CB = uint32(unsafe.Sizeof(counters))
+	r, _, _ := pGetProcessMem.Call(uintptr(h), uintptr(unsafe.Pointer(&counters)), uintptr(counters.CB))
+	if r == 0 {
+		return 0
+	}
+	return uint64(counters.WorkingSetSize)
+}
+
 type procInfo struct {
 	PID, PPID  uint32
 	Name, Path string
 	Window     bool // owns at least one visible top-level window
+	RAM        uint64
 }
 
 type procTable struct {
@@ -35,8 +73,13 @@ func snapshotProcs() procTable {
 		return pt
 	}
 	for {
-		p := procInfo{PID: pe.ProcessID, PPID: pe.ParentProcessID,
-			Name: windows.UTF16ToString(pe.ExeFile[:]), Window: wins[pe.ProcessID]}
+		p := procInfo{
+			PID:    pe.ProcessID,
+			PPID:   pe.ParentProcessID,
+			Name:   windows.UTF16ToString(pe.ExeFile[:]),
+			Window: wins[pe.ProcessID],
+			RAM:    getProcessMemory(pe.ProcessID),
+		}
 		p.Path = imagePath(p.PID)
 		pt.list = append(pt.list, p)
 		pt.byPID[p.PID] = p
@@ -123,4 +166,18 @@ func (pt procTable) pidsFor(path string) []uint32 {
 		return nil
 	}
 	return pt.byPath[strings.ToLower(path)]
+}
+
+func (pt procTable) ramFor(pids []uint32) uint64 {
+	var total uint64
+	seen := map[uint32]bool{}
+	for _, pid := range pids {
+		if !seen[pid] {
+			seen[pid] = true
+			if p, ok := pt.byPID[pid]; ok {
+				total += p.RAM
+			}
+		}
+	}
+	return total
 }

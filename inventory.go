@@ -11,7 +11,10 @@ import (
 	"unicode"
 )
 
-var kindOrder = map[string]int{"service": 0, "run": 1, "folder": 2, "task": 3, "process": 4, "storeapp": 5}
+var kindOrder = map[string]int{
+	"service": 0, "run": 1, "folder": 2, "task": 3,
+	"process": 4, "storeapp": 5, "winlogon": 6, "wmi": 7,
+}
 
 func buildInventory() Inventory {
 	t0 := time.Now()
@@ -24,8 +27,13 @@ func buildInventory() Inventory {
 		fn func(procTable, bool) ([]Component, error)
 	}
 	scanners := []scanner{
-		{"service", scanServices}, {"run", scanRun}, {"folder", scanFolders},
-		{"task", scanTasks}, {"storeapp", scanStoreApps},
+		{"service", scanServices},
+		{"run", scanRun},
+		{"folder", scanFolders},
+		{"task", scanTasks},
+		{"storeapp", scanStoreApps},
+		{"winlogon", scanWinlogon},
+		{"wmi", scanWMI},
 	}
 	results := make([][]Component, len(scanners))
 	errs := make([]error, len(scanners))
@@ -65,11 +73,26 @@ func buildInventory() Inventory {
 	counts["process"] = len(procComps)
 	comps = append(comps, procComps...)
 
-	enrich(comps)
-	apps := group(comps)
+	enrich(comps, pt)
+	apps := group(comps, pt)
 	for i := range apps {
 		for j := range apps[i].Components {
 			computeControl(&apps[i].Components[j], elevated)
+		}
+	}
+
+	var totalRAM uint64
+	seenPIDs := map[uint32]bool{}
+	for _, app := range apps {
+		for _, c := range app.Components {
+			for _, pid := range c.PIDs {
+				if !seenPIDs[pid] {
+					seenPIDs[pid] = true
+					if p, ok := pt.byPID[pid]; ok {
+						totalRAM += p.RAM
+					}
+				}
+			}
 		}
 	}
 
@@ -77,9 +100,17 @@ func buildInventory() Inventory {
 		warns = append(warns, "Not running as administrator: some processes can't be inspected and service lock status is not checked.")
 	}
 	return Inventory{
-		Apps: apps, Sources: sourceList(counts), Warnings: warns,
-		ScannedAt: time.Now().Format(time.RFC3339), DurationMs: time.Since(t0).Milliseconds(),
-		Machine: hostName(), OS: osName(), Elevated: elevated, AlwaysAdmin: checkAlwaysAdmin(),
+		Apps:              apps,
+		Sources:           sourceList(counts),
+		Warnings:          warns,
+		ScannedAt:         time.Now().Format(time.RFC3339),
+		DurationMs:        time.Since(t0).Milliseconds(),
+		Machine:           hostName(),
+		OS:                osName(),
+		Elevated:          elevated,
+		AlwaysAdmin:       checkAlwaysAdmin(),
+		TotalRAMBytes:     totalRAM,
+		TotalRAMFormatted: formatRAM(totalRAM),
 	}
 }
 
@@ -136,7 +167,7 @@ func backgroundProcesses(pt procTable, existing []Component) []Component {
 	return out
 }
 
-func enrich(comps []Component) {
+func enrich(comps []Component, pt procTable) {
 	infos := map[string]exeInfo{}
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -171,11 +202,22 @@ func enrich(comps []Component) {
 		c := &comps[i]
 		c.ID = strings.ToLower(c.Kind + "|" + c.Source + "|" + c.Name)
 		c.Signature = "n/a"
+
+		if len(c.PIDs) > 0 {
+			c.RAMBytes = pt.ramFor(c.PIDs)
+			c.RAMFormatted = formatRAM(c.RAMBytes)
+		}
+
 		if c.ExePath == "" {
 			continue
 		}
 		info := infos[c.ExePath]
 		c.Publisher, c.Product = info.Company, info.Product
+		c.SHA256 = info.SHA256
+		if c.SHA256 != "" {
+			c.VirusTotalURL = "https://www.virustotal.com/gui/file/" + c.SHA256
+		}
+
 		switch {
 		case !info.Exists:
 			c.Signature = "missing"
@@ -194,7 +236,13 @@ func enrich(comps []Component) {
 		if c.Signature == "unsigned" && strings.Contains(low, `\users\`) {
 			c.Flags = append(c.Flags, "unsigned")
 		}
-		c.Review = len(c.Flags) > 0
+		if isSuspiciousSystemName(c.ExePath) {
+			c.Flags = append(c.Flags, "impersonation")
+			c.Review = true
+		}
+		if len(c.Flags) > 0 {
+			c.Review = true
+		}
 	}
 }
 
@@ -211,7 +259,7 @@ func ownerFor(c *Component) (key, label string, sys bool) {
 	return "name:" + strings.ToLower(n), n, false
 }
 
-func group(comps []Component) []AppGroup {
+func group(comps []Component, pt procTable) []AppGroup {
 	groups := map[string]*AppGroup{}
 	prods := map[string]map[string]int{}
 	comps2 := map[string]map[string]int{}
@@ -264,9 +312,14 @@ func group(comps []Component) []AppGroup {
 
 		var signIn, svcAuto, scheduled, procs int
 		anyUnsigned, anyValid := false, false
+		groupPIDs := map[uint32]bool{}
+
 		for _, c := range g.Components {
 			g.Running = g.Running || c.Running
 			g.Review = g.Review || c.Review
+			for _, pid := range c.PIDs {
+				groupPIDs[pid] = true
+			}
 			if c.AutoStart {
 				g.AutoStart = true
 				if c.Kind == "service" {
@@ -291,6 +344,16 @@ func group(comps []Component) []AppGroup {
 				g.Path = filepath.Dir(c.ExePath)
 			}
 		}
+
+		var appRAM uint64
+		for pid := range groupPIDs {
+			if p, ok := pt.byPID[pid]; ok {
+				appRAM += p.RAM
+			}
+		}
+		g.RAMBytes = appRAM
+		g.RAMFormatted = formatRAM(appRAM)
+
 		switch {
 		case anyUnsigned:
 			g.Signature = "unverified"
@@ -338,13 +401,13 @@ func plural(n int, one, many string) string {
 
 func sourceList(c map[string]int) []SourceInfo {
 	return []SourceInfo{
-		{"run", "Registry Run keys", "HKCU and HKLM Run entries, with Task Manager's enabled/disabled state.", c["run"], "scanned"},
+		{"run", "Registry Run & RunOnce keys", "HKCU and HKLM Run/RunOnce entries, with Task Manager's enabled/disabled state.", c["run"], "scanned"},
 		{"folder", "Startup folders", "Per-user and all-users Startup folders, with shortcut targets resolved.", c["folder"], "scanned"},
-		{"service", "Windows services", "Every service with its startup type, running state and (as administrator) whether it can be reconfigured.", c["service"], "scanned"},
+		{"service", "Windows services", "Every service with its startup type, running state and reconfigurability.", c["service"], "scanned"},
 		{"task", "Task Scheduler", "Tasks outside Microsoft's own library, with triggers and actions.", c["task"], "scanned"},
-		{"storeapp", "Store app permissions", "Per-app background permission records for packaged apps. May be empty on newer Windows 11 builds.", c["storeapp"], "partial"},
-		{"process", "Running processes without a window", "Programs running now with no visible window that no entry above explains. Heuristic.", c["process"], "partial"},
-		{"winlogon", "Winlogon & shell extensions", "Logon shell configuration and extension points.", 0, "notscanned"},
-		{"wmi", "WMI event subscriptions", "Persistent event filters and consumers that can launch actions.", 0, "notscanned"},
+		{"winlogon", "Winlogon & logon shell", "Logon shell overrides, Userinit handlers, and logon startup hooks.", c["winlogon"], "scanned"},
+		{"wmi", "WMI event subscriptions", "Persistent WMI event filters and consumers that launch actions.", c["wmi"], "scanned"},
+		{"storeapp", "Store app permissions", "Per-app background permission records for packaged apps.", c["storeapp"], "partial"},
+		{"process", "Running processes without a window", "Programs running now with no visible window that no entry above explains.", c["process"], "partial"},
 	}
 }

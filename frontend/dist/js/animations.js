@@ -69,6 +69,16 @@ function openModal() {
 
 function closeModal() {
   const m = $('confirm-modal');
+  const resetModal = () => {
+    m.classList.remove('show');
+    pending = null;
+    if ($('modal-confirm')) {
+      $('modal-confirm').style.display = '';
+      $('modal-confirm').onclick = confirmChange;
+    }
+    if ($('modal-cancel')) $('modal-cancel').textContent = 'Cancel';
+    if (inv) render();
+  };
   if (window.anime && m.classList.contains('show')) {
     anime({
       targets: '#confirm-modal .modal',
@@ -76,15 +86,9 @@ function closeModal() {
       opacity: [1, 0],
       duration: 160,
       easing: 'easeInCubic',
-      complete: () => {
-        m.classList.remove('show');
-        pending = null;
-        if (inv) render();
-      }
+      complete: resetModal
     });
   } else {
-    m.classList.remove('show');
-    pending = null;
-    if (inv) render();
+    resetModal();
   }
 }

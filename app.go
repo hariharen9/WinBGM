@@ -1,19 +1,23 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App is bound to the frontend. Every method here is read-only with respect to Windows settings.
+// App is bound to the frontend.
 type App struct {
 	ctx  context.Context
 	last *Inventory
@@ -55,7 +59,7 @@ func (a *App) Export() (string, error) {
 		return "", errors.New("run a scan first")
 	}
 	p, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Export background inventory",
+		Title:           "Export background inventory (JSON)",
 		DefaultFilename: "background-inventory-" + time.Now().Format("2006-01-02") + ".json",
 		Filters:         []runtime.FileFilter{{DisplayName: "JSON (*.json)", Pattern: "*.json"}},
 	})
@@ -67,4 +71,122 @@ func (a *App) Export() (string, error) {
 		return "", err
 	}
 	return p, os.WriteFile(p, b, 0o644)
+}
+
+// ExportMarkdown creates a Markdown audit report.
+func (a *App) ExportMarkdown() (string, error) {
+	if a.last == nil {
+		return "", errors.New("run a scan first")
+	}
+	p, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Export background audit report (Markdown)",
+		DefaultFilename: "background-report-" + time.Now().Format("2006-01-02") + ".md",
+		Filters:         []runtime.FileFilter{{DisplayName: "Markdown (*.md)", Pattern: "*.md"}},
+	})
+	if err != nil || p == "" {
+		return "", err
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("# WinBGM Background Inventory Audit Report\n\n"))
+	sb.WriteString(fmt.Sprintf("- **Machine**: %s\n", a.last.Machine))
+	sb.WriteString(fmt.Sprintf("- **OS**: %s\n", a.last.OS))
+	sb.WriteString(fmt.Sprintf("- **Scanned At**: %s\n", a.last.ScannedAt))
+	sb.WriteString(fmt.Sprintf("- **Total Background RAM Usage**: %s\n", a.last.TotalRAMFormatted))
+	sb.WriteString(fmt.Sprintf("- **Applications Detected**: %d\n\n", len(a.last.Apps)))
+
+	sb.WriteString("## Detected Applications\n\n")
+	sb.WriteString("| Application | Publisher | Launch Behavior | Active | RAM | Components |\n")
+	sb.WriteString("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
+	for _, app := range a.last.Apps {
+		activeStr := "No"
+		if app.Running {
+			activeStr = "Yes"
+		}
+		ramStr := app.RAMFormatted
+		if ramStr == "" {
+			ramStr = "—"
+		}
+		sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %d |\n",
+			app.Name, app.Publisher, app.Behavior, activeStr, ramStr, len(app.Components)))
+	}
+
+	sb.WriteString("\n## Background Components\n\n")
+	sb.WriteString("| Name | Kind | Source | Trigger | Enabled | Running | RAM | SHA256 |\n")
+	sb.WriteString("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
+	for _, app := range a.last.Apps {
+		for _, c := range app.Components {
+			enStr := "Disabled"
+			if c.Enabled {
+				enStr = "Enabled"
+			}
+			runStr := "Stopped"
+			if c.Running {
+				runStr = "Running"
+			}
+			ramStr := c.RAMFormatted
+			if ramStr == "" {
+				ramStr = "—"
+			}
+			hashStr := c.SHA256
+			if len(hashStr) > 12 {
+				hashStr = hashStr[:12] + "…"
+			} else if hashStr == "" {
+				hashStr = "—"
+			}
+			name := c.Display
+			if name == "" {
+				name = c.Name
+			}
+			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | `%s` |\n",
+				name, c.Kind, c.Source, c.Trigger, enStr, runStr, ramStr, hashStr))
+		}
+	}
+
+	return p, os.WriteFile(p, []byte(sb.String()), 0o644)
+}
+
+// ExportCSV creates a spreadsheet CSV file.
+func (a *App) ExportCSV() (string, error) {
+	if a.last == nil {
+		return "", errors.New("run a scan first")
+	}
+	p, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Export background inventory (CSV)",
+		DefaultFilename: "background-inventory-" + time.Now().Format("2006-01-02") + ".csv",
+		Filters:         []runtime.FileFilter{{DisplayName: "CSV (*.csv)", Pattern: "*.csv"}},
+	})
+	if err != nil || p == "" {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	_ = w.Write([]string{"Application", "Component Name", "Kind", "Source", "Trigger", "Enabled", "Running", "RAM", "Signature", "Publisher", "Executable Path", "SHA256"})
+
+	for _, app := range a.last.Apps {
+		for _, c := range app.Components {
+			name := c.Display
+			if name == "" {
+				name = c.Name
+			}
+			_ = w.Write([]string{
+				app.Name,
+				name,
+				c.Kind,
+				c.Source,
+				c.Trigger,
+				fmt.Sprint(c.Enabled),
+				fmt.Sprint(c.Running),
+				c.RAMFormatted,
+				c.Signature,
+				c.Publisher,
+				c.ExePath,
+				c.SHA256,
+			})
+		}
+	}
+	w.Flush()
+
+	return p, os.WriteFile(p, buf.Bytes(), 0o644)
 }

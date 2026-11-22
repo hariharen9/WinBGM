@@ -510,3 +510,49 @@ func orElse(s, d string) string {
 	}
 	return s
 }
+
+type BatchResult struct {
+	Total    int      `json:"total"`
+	Modified int      `json:"modified"`
+	Failed   int      `json:"failed"`
+	Message  string   `json:"message"`
+	Entries  []string `json:"entries"`
+}
+
+// ApplyFocusMode disables third-party automatic startup items safely.
+// Each item is backed up individually to history first and can be undone at any time.
+func (a *App) ApplyFocusMode() BatchResult {
+	if a.last == nil {
+		return BatchResult{Message: "Run a scan first."}
+	}
+	var toDisable []ChangeRequest
+	for _, app := range a.last.Apps {
+		if app.System {
+			continue
+		}
+		for _, c := range app.Components {
+			if c.AutoStart && c.Control == "yes" && !c.System && c.Kind != "process" && c.Kind != "storeapp" {
+				toDisable = append(toDisable, ChangeRequest{ID: c.ID, Action: "disable"})
+			}
+		}
+	}
+	if len(toDisable) == 0 {
+		return BatchResult{Message: "No third-party automatic startup items to disable."}
+	}
+
+	res := BatchResult{Total: len(toDisable)}
+	for _, req := range toDisable {
+		r := a.Apply(req)
+		if r.OK {
+			res.Modified++
+			if r.Entry != nil {
+				res.Entries = append(res.Entries, r.Entry.ID)
+			}
+		} else {
+			res.Failed++
+		}
+	}
+	res.Message = fmt.Sprintf("Focus Mode: %d item(s) safely disabled and backed up. You can restore them anytime from Change history.", res.Modified)
+	return res
+}
+

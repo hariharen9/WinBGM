@@ -4,7 +4,13 @@ import {main} from '../models';
 
 export function Apply(arg1:main.ChangeRequest):Promise<main.ChangeResult>;
 
+export function ApplyFocusMode():Promise<main.BatchResult>;
+
 export function Export():Promise<string>;
+
+export function ExportCSV():Promise<string>;
+
+export function ExportMarkdown():Promise<string>;
 
 export function GetAlwaysAdmin():Promise<boolean>;
 

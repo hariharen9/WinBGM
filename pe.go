@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,8 +15,8 @@ import (
 )
 
 type exeInfo struct {
-	Company, Product, Sig string
-	Exists                bool
+	Company, Product, Sig, SHA256 string
+	Exists                        bool
 }
 
 var (
@@ -38,6 +41,20 @@ func fileExists(p string) bool {
 	return err == nil
 }
 
+func calcSHA256(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	h := sha256.New()
+	// Read up to 80MB to maintain responsive scanning on very large binaries
+	if _, err := io.Copy(h, io.LimitReader(f, 80*1024*1024)); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 func lookupInfo(path string) exeInfo {
 	key := strings.ToLower(path)
 	infoMu.Lock()
@@ -52,6 +69,7 @@ func lookupInfo(path string) exeInfo {
 		e.Exists = true
 		e.Company, e.Product = versionStrings(path)
 		e.Sig = verifySig(path)
+		e.SHA256 = calcSHA256(path)
 	}
 	infoMu.Lock()
 	infoCache[key] = e

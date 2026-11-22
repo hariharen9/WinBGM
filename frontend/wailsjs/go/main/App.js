@@ -6,8 +6,20 @@ export function Apply(arg1) {
   return window['go']['main']['App']['Apply'](arg1);
 }
 
+export function ApplyFocusMode() {
+  return window['go']['main']['App']['ApplyFocusMode']();
+}
+
 export function Export() {
   return window['go']['main']['App']['Export']();
+}
+
+export function ExportCSV() {
+  return window['go']['main']['App']['ExportCSV']();
+}
+
+export function ExportMarkdown() {
+  return window['go']['main']['App']['ExportMarkdown']();
 }
 
 export function GetAlwaysAdmin() {

@@ -48,7 +48,8 @@ function renderApps() {
   ).join('');
 
   const nComp = all.reduce((n, a) => n + a.components.length, 0);
-  $('app-summary').innerHTML = `<div class="summary-item"><strong>${all.length}</strong> applications detected</div><span class="summary-separator"></span><div class="summary-item"><strong>${nComp}</strong> background components</div><span class="summary-separator"></span><div class="summary-item"><span class="state-led"></span>Scanned <strong>${esc(new Date(inv.scannedAt).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}))}</strong></div>`;
+  const ramSummary = inv.totalRAMFormatted ? `<span class="summary-separator"></span><div class="summary-item">Background RAM: <strong>${esc(inv.totalRAMFormatted)}</strong></div>` : '';
+  $('app-summary').innerHTML = `<div class="summary-item"><strong>${all.length}</strong> applications detected</div><span class="summary-separator"></span><div class="summary-item"><strong>${nComp}</strong> components</div>${ramSummary}<span class="summary-separator"></span><div class="summary-item"><span class="state-led"></span>Scanned <strong>${esc(new Date(inv.scannedAt).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}))}</strong></div>`;
 
   const q = query.toLowerCase();
   let list = all.filter(a =>
@@ -59,19 +60,24 @@ function renderApps() {
   const by = {
     name: (a, b) => a.name.localeCompare(b.name),
     running: (a, b) => Number(b.running) - Number(a.running) || a.name.localeCompare(b.name),
+    ram: (a, b) => (b.ramBytes || 0) - (a.ramBytes || 0) || a.name.localeCompare(b.name),
     review: (a, b) => Number(b.review) - Number(a.review) || a.name.localeCompare(b.name)
-  }[sortMode];
+  }[sortMode] || ((a, b) => a.name.localeCompare(b.name));
   list = list.slice().sort(by);
 
   if (!list.find(a => a.id === sel)) sel = list.length ? list[0].id : null;
   $('visible-count').textContent = list.length + ' items shown';
   $('list-foot').textContent = 'Showing ' + list.length + ' of ' + all.length + ' detected apps';
 
-  $('app-list').innerHTML = list.length ? list.map(a => `<button class="app-row ${a.id === sel ? 'selected' : ''}" data-id="${esc(a.id)}">
-    <div class="app-cell"><div class="app-name-wrap"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="app-name">${esc(a.name)}</div><div class="app-publisher">${esc(a.publisher || 'Publisher unknown')}</div></div></div></div>
-    <div class="app-cell cell-secondary">${a.components.length}</div>
-    <div class="app-cell"><span class="state-text ${a.review ? 'review' : a.running ? '' : 'stopped'}">${a.review ? 'Review' : a.running ? 'Running' : 'Not running'}</span></div>
-    <div class="app-cell behavior">${esc(a.behavior)}<small>${esc(a.behaviorNote)}</small></div></button>`).join('') : '<div class="empty-state">No applications match this filter.</div>';
+  $('app-list').innerHTML = list.length ? list.map(a => {
+    const ramBadge = a.ramFormatted ? `<span class="badge blue" style="font-size:10px;padding:1px 6px;margin-left:6px">${esc(a.ramFormatted)}</span>` : '';
+    const reviewBadge = a.review ? `<span class="state-text review">Review</span>` : a.running ? `<span class="state-text">Running</span>` : `<span class="state-text stopped">Not running</span>`;
+    return `<button class="app-row ${a.id === sel ? 'selected' : ''}" data-id="${esc(a.id)}">
+      <div class="app-cell"><div class="app-name-wrap"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="app-name">${esc(a.name)}${ramBadge}</div><div class="app-publisher">${esc(a.publisher || 'Publisher unknown')}</div></div></div></div>
+      <div class="app-cell cell-secondary">${a.components.length}</div>
+      <div class="app-cell">${reviewBadge}</div>
+      <div class="app-cell behavior">${esc(a.behavior)}<small>${esc(a.behaviorNote)}</small></div></button>`;
+  }).join('') : '<div class="empty-state">No applications match this filter.</div>';
 
   renderDetail(list.find(a => a.id === sel));
   animateList('#app-list .app-row');
@@ -97,21 +103,32 @@ function renderDetail(a) {
     return;
   }
   const ver = a.signature === 'verified';
+  const ramTag = a.ramFormatted ? `<span class="small-tag good"><i data-lucide="cpu" style="width:11px;height:11px;margin-right:4px"></i>${esc(a.ramFormatted)} RAM</span>` : '';
   h.innerHTML = `
   <div class="detail-head"><div class="product-icon detail-app-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="detail-app-name">${esc(a.name)}</div><div class="detail-publisher">${esc(a.publisher || 'Publisher unknown')}</div>
-   <div class="detail-tags"><span class="small-tag ${ver ? 'good' : ''}"><i data-lucide="${ver ? 'shield-check' : 'shield-alert'}" style="width:11px;height:11px;margin-right:4px"></i>${ver ? 'Verified publisher' : a.signature === 'unverified' ? 'Signature not verified' : 'Signature unknown'}</span><span class="small-tag">${a.components.length} component${a.components.length === 1 ? '' : 's'}</span>${a.review ? '<span class="small-tag review">Review</span>' : ''}</div></div></div>
+   <div class="detail-tags"><span class="small-tag ${ver ? 'good' : ''}"><i data-lucide="${ver ? 'shield-check' : 'shield-alert'}" style="width:11px;height:11px;margin-right:4px"></i>${ver ? 'Verified publisher' : a.signature === 'unverified' ? 'Signature not verified' : 'Signature unknown'}</span>${ramTag}<span class="small-tag">${a.components.length} component${a.components.length === 1 ? '' : 's'}</span>${a.review ? '<span class="small-tag review">Review</span>' : ''}</div></div></div>
   <div class="detail-section"><div class="detail-section-title">Background components</div>
-   ${a.components.map(c => `<div class="component"><div class="component-head"><div class="component-symbol"><i data-lucide="${KIND_ICON[c.kind] || 'layers'}" style="width:14px;height:14px"></i></div><div class="component-copy"><div class="component-name">${esc(c.display || c.name)}</div><div class="component-meta">${esc(KIND[c.kind])} · ${esc(c.trigger)}</div></div></div>
-    <div class="component-bottom"><span class="component-state">${c.running ? 'Running' : 'Not running'} · ${esc(cfgText(c))}</span>${controlHtml(c)}</div>
-    <details class="comp-more"><summary>Details</summary>
-     <div class="detail-kv"><span>Source</span><span>${esc(c.source)}</span></div>
-     ${c.command ? `<div class="detail-kv"><span>Command</span><span>${esc(c.command)}</span></div>` : ''}
-     <div class="detail-kv"><span>Signature</span><span>${esc(sigText(c))}</span></div>
-     ${c.pids.length ? `<div class="detail-kv"><span>Process ID</span><span>${esc(c.pids.slice(0, 6).join(', '))}</span></div>` : ''}
-     ${c.lastRun ? `<div class="detail-kv"><span>Last run</span><span>${esc(fmtTime(c.lastRun))}</span></div>` : ''}
-     ${actionButtons(c)}
-     ${c.flags.length ? `<div class="howto">Flags: ${esc(c.flags.map(f => ({missing:'target file missing', temp:'runs from a temp/downloads folder', unsigned:'unsigned file in a user folder'})[f] || f).join('; '))}.</div>` : ''}
-     <div class="howto">How to change: ${esc(HOWTO[c.kind])}</div></details></div>`).join('')}
+   ${a.components.map(c => {
+     const cRam = c.ramFormatted ? `<span class="badge blue" style="font-size:10px;padding:1px 5px;margin-left:6px">${esc(c.ramFormatted)} RAM</span>` : '';
+     const vtLink = c.virusTotalURL ? `<div class="detail-kv"><span>Security</span><span><a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;display:inline-flex;align-items:center;gap:4px">Check on VirusTotal <i data-lucide="external-link" style="width:11px;height:11px"></i></a></span></div>` : '';
+     const shaRow = c.sha256 ? `<div class="detail-kv"><span>SHA-256</span><span style="font-family:monospace;font-size:11px">${esc(c.sha256)}</span></div>` : '';
+     const isImpersonating = (c.flags || []).includes('impersonation');
+     const impersonationWarning = isImpersonating ? `<div class="howto" style="color:#f87171;font-weight:600"><i data-lucide="alert-triangle" style="width:13px;height:13px;display:inline;margin-right:4px"></i>Warning: This program shares the name of a Windows system file but runs outside Windows directories!</div>` : '';
+     return `<div class="component"><div class="component-head"><div class="component-symbol"><i data-lucide="${KIND_ICON[c.kind] || 'layers'}" style="width:14px;height:14px"></i></div><div class="component-copy"><div class="component-name">${esc(c.display || c.name)}${cRam}</div><div class="component-meta">${esc(KIND[c.kind] || c.kind)} · ${esc(c.trigger)}</div></div></div>
+      <div class="component-bottom"><span class="component-state">${c.running ? 'Running' : 'Not running'} · ${esc(cfgText(c))}</span>${controlHtml(c)}</div>
+      <details class="comp-more"><summary>Details & Security</summary>
+       <div class="detail-kv"><span>Source</span><span>${esc(c.source)}</span></div>
+       ${c.command ? `<div class="detail-kv"><span>Command</span><span>${esc(c.command)}</span></div>` : ''}
+       <div class="detail-kv"><span>Signature</span><span>${esc(sigText(c))}</span></div>
+       ${shaRow}
+       ${vtLink}
+       ${c.pids.length ? `<div class="detail-kv"><span>Process ID</span><span>${esc(c.pids.slice(0, 6).join(', '))}</span></div>` : ''}
+       ${c.lastRun ? `<div class="detail-kv"><span>Last run</span><span>${esc(fmtTime(c.lastRun))}</span></div>` : ''}
+       ${actionButtons(c)}
+       ${impersonationWarning}
+       ${c.flags.length ? `<div class="howto">Flags: ${esc(c.flags.map(f => ({missing:'target file missing', temp:'runs from temp/downloads', unsigned:'unsigned in user folder', impersonation:'system file name impersonation', 'winlogon-override':'non-default logon hook', 'wmi-consumer':'wmi event persistence'})[f] || f).join('; '))}.</div>` : ''}
+       <div class="howto">How to change: ${esc(HOWTO[c.kind] || HOWTO.process)}</div></details></div>`;
+   }).join('')}
   </div>
   <div class="detail-section"><div class="detail-section-title">About this application</div><div class="detail-explain">${esc(explain(a))}</div></div>
   <div class="detail-section"><div class="detail-section-title">Application details</div>
@@ -143,7 +160,10 @@ function kvRow(a, b) {
 
 function expandRow(c, cols) {
   if (!expanded.has(c.id)) return '';
-  return `<tr class="expand"><td colspan="${cols}">${kvRow('Command', c.command || '—')}${kvRow('Owner app', c.appName)}${kvRow('Signature', sigText(c))}${kvRow('Source', c.source)}${c.pids.length ? kvRow('Process ID', c.pids.slice(0, 6).join(', ')) : ''}${c.locked === 'yes' ? kvRow('Locked', 'This account cannot change its settings; stopping may still work.') : ''}${kvRow('How to change', HOWTO[c.kind])}${actionButtons(c)}</td></tr>`;
+  const vt = c.virusTotalURL ? `<div class="detail-kv"><span>Security</span><span><a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;display:inline-flex;align-items:center;gap:4px">Check on VirusTotal <i data-lucide="external-link" style="width:11px;height:11px"></i></a></span></div>` : '';
+  const sha = c.sha256 ? kvRow('SHA-256', c.sha256) : '';
+  const ram = c.ramFormatted ? kvRow('RAM Usage', c.ramFormatted) : '';
+  return `<tr class="expand"><td colspan="${cols}">${kvRow('Command', c.command || '—')}${kvRow('Owner app', c.appName)}${ram}${kvRow('Signature', sigText(c))}${sha}${vt}${kvRow('Source', c.source)}${c.pids.length ? kvRow('Process ID', c.pids.slice(0, 6).join(', ')) : ''}${c.locked === 'yes' ? kvRow('Locked', 'This account cannot change its settings; stopping may still work.') : ''}${kvRow('How to change', HOWTO[c.kind] || HOWTO.process)}${actionButtons(c)}</td></tr>`;
 }
 
 function renderServices() {
@@ -154,7 +174,10 @@ function renderServices() {
 
   $('svc-summary').innerHTML = `<div class="summary-item"><strong>${all.length}</strong> services shown</div><span class="summary-separator"></span><div class="summary-item"><strong>${all.filter(c => c.autoStart).length}</strong> automatic or delayed</div><span class="summary-separator"></span><div class="summary-item"><strong>${all.filter(c => c.locked === 'yes').length}</strong> locked</div>`;
   $('svc-count').textContent = list.length + ' of ' + all.length;
-  $('svc-body').innerHTML = list.length ? list.map(c => `<tr class="clickable" data-id="${esc(c.id)}" data-t="svc"><td><div class="name-cell"><div class="service-icon"><i data-lucide="cog" style="width:14px;height:14px"></i></div><div><div class="name-primary">${esc(c.display || c.name)}</div><div class="name-secondary">${esc(c.name)}</div></div></div></td><td>${esc(c.publisher || '—')}</td><td>${esc(c.startType)}</td><td>${stateBadge(c)}</td><td>${c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.system ? '<span class="badge blue">Protected</span>' : '<span class="badge gray">Standard</span>'}</td></tr>${expandRow(c, 5)}`).join('') : '<tr><td colspan="5"><div class="empty-state">No services match.</div></td></tr>';
+  $('svc-body').innerHTML = list.length ? list.map(c => {
+    const ramLabel = c.ramFormatted ? `<span class="badge blue" style="font-size:9px;padding:1px 4px;margin-left:4px">${esc(c.ramFormatted)}</span>` : '';
+    return `<tr class="clickable" data-id="${esc(c.id)}" data-t="svc"><td><div class="name-cell"><div class="service-icon"><i data-lucide="cog" style="width:14px;height:14px"></i></div><div><div class="name-primary">${esc(c.display || c.name)}${ramLabel}</div><div class="name-secondary">${esc(c.name)}</div></div></div></td><td>${esc(c.publisher || '—')}</td><td>${esc(c.startType)}</td><td>${stateBadge(c)}</td><td>${c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.system ? '<span class="badge blue">Protected</span>' : '<span class="badge gray">Standard</span>'}</td></tr>${expandRow(c, 5)}`;
+  }).join('') : '<tr><td colspan="5"><div class="empty-state">No services match.</div></td></tr>';
 
   refreshIcons();
   animateList('#svc-body tr.clickable');
@@ -175,7 +198,7 @@ function renderTasks() {
 
 function renderSources() {
   const badge = { scanned: ['green', 'Scanned'], partial: ['amber', 'Partial coverage'], notscanned: ['amber', 'Not scanned yet'] };
-  $('source-grid').innerHTML = inv.sources.map(s => `<div class="source-card"><div class="source-card-icon"><i data-lucide="${SOURCE_ICONS[s.id] || 'layers'}" style="width:16px;height:16px"></i></div><div class="source-card-copy"><div class="source-card-title">${esc(s.title)}</div><div class="source-card-desc">${esc(s.desc)}</div><div class="source-card-foot"><span class="source-count">${s.status === 'notscanned' ? 'Advanced' : s.count + ' found'}</span><span class="badge ${badge[s.status][0]}">${badge[s.status][1]}</span></div></div></div>`).join('');
+  $('source-grid').innerHTML = inv.sources.map(s => `<div class="source-card"><div class="source-card-icon"><i data-lucide="${SOURCE_ICONS[s.id] || 'layers'}" style="width:16px;height:16px"></i></div><div class="source-card-copy"><div class="source-card-title">${esc(s.title)}</div><div class="source-card-desc">${esc(s.desc)}</div><div class="source-card-foot"><span class="source-count">${s.count} found</span><span class="badge ${badge[s.status][0]}">${badge[s.status][1]}</span></div></div></div>`).join('');
 
   refreshIcons();
   animateList('#source-grid .source-card');
@@ -184,24 +207,32 @@ function renderSources() {
 function renderOverview() {
   const A = apps(), svc = comps('service'), tasks = comps('task'), rev = A.filter(a => a.review);
   const running = A.filter(a => a.running).sort((a, b) => b.components.length - a.components.length).slice(0, 4);
-  const row = a => `<div class="overview-row"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.publisher || 'Publisher unknown')} · ${a.components.length} component${a.components.length === 1 ? '' : 's'}</div></div><div class="overview-row-end"><span class="state-text ${a.running ? '' : 'stopped'}">${a.running ? 'Running' : 'Not running'}</span></div></div>`;
-  const revRow = a => `<div class="overview-row"><div class="product-icon" style="background:#39332a;color:#e4c27e;border-color:#5b5030">!</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.components.filter(c => c.review).map(c => c.flags.map(f => ({missing:'Target file missing', temp:'Temp/Downloads folder', unsigned:'Unsigned, user folder'})[f] || f).join(', ')).join(' · '))}</div></div><span class="badge amber">Review</span></div>`;
+  const row = a => {
+    const ramBadge = a.ramFormatted ? `<span class="badge blue" style="font-size:10px;padding:1px 5px;margin-left:6px">${esc(a.ramFormatted)}</span>` : '';
+    return `<div class="overview-row"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}${ramBadge}</div><div class="overview-row-sub">${esc(a.publisher || 'Publisher unknown')} · ${a.components.length} component${a.components.length === 1 ? '' : 's'}</div></div><div class="overview-row-end"><span class="state-text ${a.running ? '' : 'stopped'}">${a.running ? 'Running' : 'Not running'}</span></div></div>`;
+  };
+  const revRow = a => `<div class="overview-row"><div class="product-icon" style="background:#39332a;color:#e4c27e;border-color:#5b5030">!</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.components.filter(c => c.review).map(c => c.flags.map(f => ({missing:'Target file missing', temp:'Temp/Downloads folder', unsigned:'Unsigned, user folder', impersonation:'Impersonation hazard'})[f] || f).join(', ')).join(' · '))}</div></div><span class="badge amber">Review</span></div>`;
   const nonSys = A.filter(a => a.autoStart).length;
 
   $('overview-content').innerHTML = `
-  <div class="page-header"><div><h1>Overview</h1><p class="page-subtitle">A quick view of background activity detected on this PC.</p></div><div class="header-actions"><button class="win-btn primary btn-scan" onclick="doScan()"><i data-lucide="refresh-cw" style="width:13px;height:13px;margin-right:6px"></i>Scan now</button></div></div>
+  <div class="page-header"><div><h1>Overview</h1><p class="page-subtitle">A quick view of background activity and system impact on this PC.</p></div>
+   <div class="header-actions">
+     <button class="win-btn" onclick="requestFocusMode()"><i data-lucide="zap" style="width:13px;height:13px;margin-right:6px"></i>Focus Mode</button>
+     <button class="win-btn primary btn-scan" onclick="doScan()"><i data-lucide="refresh-cw" style="width:13px;height:13px;margin-right:6px"></i>Scan now</button>
+   </div>
+  </div>
   <div class="overview-summary">
    <div class="overview-stat"><div class="overview-stat-label">Applications</div><div class="overview-stat-value" id="stat-apps">${A.length}</div><div class="overview-stat-foot">${A.filter(a => a.running).length} currently active</div></div>
+   <div class="overview-stat"><div class="overview-stat-label">Background RAM</div><div class="overview-stat-value" id="stat-ram">${inv.totalRAMFormatted || '0 KB'}</div><div class="overview-stat-foot">In-memory working set</div></div>
    <div class="overview-stat"><div class="overview-stat-label">Services</div><div class="overview-stat-value" id="stat-svc">${svc.length}</div><div class="overview-stat-foot">${svc.filter(c => c.autoStart).length} automatic or delayed</div></div>
-   <div class="overview-stat"><div class="overview-stat-label">Scheduled tasks</div><div class="overview-stat-value" id="stat-tasks">${tasks.length}</div><div class="overview-stat-foot">${tasks.filter(c => c.autoStart).length} at logon or startup</div></div>
    <div class="overview-stat"><div class="overview-stat-label">Needs attention</div><div class="overview-stat-value" id="stat-rev">${rev.length}</div><div class="overview-stat-foot ${rev.length ? 'attention' : ''}">${rev.length ? 'Location or signature needs review' : 'Nothing flagged'}</div></div></div>
   <p class="overview-intro">Background components can run without an app window. This inventory groups related entries so you can see what owns them and how they are launched. ${nonSys} application${nonSys === 1 ? '' : 's'} start automatically.</p>
   <div class="overview-grid">
    <div class="overview-block"><div class="overview-block-head"><strong>Active applications</strong><button onclick="navigate('applications')">View all applications →</button></div>${running.length ? running.map(row).join('') : '<div class="empty-state">No running background apps found.</div>'}</div>
-   <div class="overview-block"><div class="overview-block-head"><strong>Review recommended</strong><button onclick="filter='review';navigate('applications');renderApps()">Review →</button></div>${rev.length ? rev.slice(0, 4).map(revRow).join('') : '<div class="overview-row"><div class="service-icon"><i data-lucide="shield-check" style="width:14px;height:14px"></i></div><div class="overview-row-copy"><div class="overview-row-title">Nothing flagged</div><div class="overview-row-sub">No temp-folder launches, missing files or unsigned user-folder programs.</div></div></div>'}
+   <div class="overview-block"><div class="overview-block-head"><strong>Review recommended</strong><button onclick="filter='review';navigate('applications');renderApps()">Review →</button></div>${rev.length ? rev.slice(0, 4).map(revRow).join('') : '<div class="overview-row"><div class="service-icon"><i data-lucide="shield-check" style="width:14px;height:14px"></i></div><div class="overview-row-copy"><div class="overview-row-title">Nothing flagged</div><div class="overview-row-sub">No temp-folder launches, missing files, or unsigned user-folder programs.</div></div></div>'}
     <div class="overview-row"><div class="service-icon"><i data-lucide="info" style="width:14px;height:14px"></i></div><div class="overview-row-copy"><div class="overview-row-title">Changes are reversible</div><div class="overview-row-sub">Each one is backed up and can be undone from Change history.</div></div></div></div>
    <div class="overview-block"><div class="overview-block-head"><strong>Recent changes</strong><button onclick="navigate('history')">View history →</button></div>${history.length ? history.slice(0, 3).map(h => `<div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">${esc(h.title)}</div><div class="overview-row-sub">${esc(h.summary)} · ${esc(fmtTime(h.time))}</div></div><span class="badge ${h.status === 'applied' ? 'green' : h.status === 'restored' ? 'gray' : 'amber'}">${esc(h.status)}</span></div>`).join('') : '<div class="empty-state">No changes yet.</div>'}</div>
-   <div class="overview-block"><div class="overview-block-head"><strong>Discovery coverage</strong><button onclick="navigate('sources')">View locations →</button></div>${inv.sources.filter(s => s.status !== 'notscanned').slice(0, 5).map(s => `<div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">${esc(s.title)}</div></div><span class="source-count">${s.count}</span></div>`).join('')}</div>
+   <div class="overview-block"><div class="overview-block-head"><strong>Startup locations scanned</strong><button onclick="navigate('sources')">View locations →</button></div>${inv.sources.filter(s => s.status === 'scanned').slice(0, 6).map(s => `<div class="overview-row"><div class="overview-row-copy"><div class="overview-row-title">${esc(s.title)}</div></div><span class="source-count">${s.count}</span></div>`).join('')}</div>
   </div>`;
 
   refreshIcons();
@@ -259,4 +290,20 @@ function requestChange(id, action) {
   $('modal-body').innerHTML = d.body;
   $('modal-confirm').textContent = d.confirm;
   openModal();
+}
+
+function requestFocusMode() {
+  $('modal-title').textContent = 'Activate Focus Mode?';
+  $('modal-body').innerHTML = `
+    <p>Focus Mode disables <strong>third-party automatic startup programs and services</strong> to speed up boot times and free background resources.</p>
+    <p style="color:#60a5fa"><i data-lucide="shield-check" style="width:13px;height:13px;display:inline;margin-right:4px"></i>Windows system components and antivirus software are strictly protected and will not be touched.</p>
+    <p>Every single item is backed up before being modified. You can undo this anytime from <strong>Change history</strong>.</p>
+  `;
+  $('modal-confirm').textContent = 'Activate Focus Mode';
+  $('modal-confirm').onclick = async () => {
+    closeModal();
+    await doFocusMode();
+  };
+  openModal();
+  refreshIcons();
 }

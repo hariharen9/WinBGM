@@ -67,8 +67,9 @@
         <span class="commandbar-label" id="commandbar-label">Applications</span>
         <span class="commandbar-sep"></span>
         <button class="command-btn btn-scan" id="scan-btn" onclick="doScan()"><i data-lucide="refresh-cw"></i>Scan now</button>
+        <button class="command-btn" onclick="requestFocusMode()"><i data-lucide="zap"></i>Focus Mode</button>
         <button class="command-btn" onclick="doReveal()"><i data-lucide="folder-search"></i>Open location</button>
-        <button class="command-btn" onclick="doExport()"><i data-lucide="download"></i>Export</button>
+        <button class="command-btn" onclick="openExportModal()"><i data-lucide="download"></i>Export</button>
         <div class="command-spacer"></div>
         <div class="command-state"><span class="state-led"></span><span id="scan-status">Scanning…</span></div>
       </div>
@@ -82,7 +83,8 @@
               <p class="page-subtitle">Background components found on this PC, grouped by the application that owns them. Every change is backed up first and can be undone.</p>
             </div>
             <div class="header-actions">
-              <button class="win-btn" onclick="doExport()">Export list</button>
+              <button class="win-btn" onclick="requestFocusMode()"><i data-lucide="zap" style="width:13px;height:13px;margin-right:4px"></i>Focus Mode</button>
+              <button class="win-btn" onclick="openExportModal()"><i data-lucide="download" style="width:13px;height:13px;margin-right:4px"></i>Export Report</button>
             </div>
           </div>
           <div id="app-banners"></div>
@@ -94,6 +96,7 @@
             <select class="select-control" id="app-sort" aria-label="Sort applications">
               <option value="name">Name A–Z</option>
               <option value="running">Running first</option>
+              <option value="ram">RAM usage (High to Low)</option>
               <option value="review">Needs review first</option>
             </select>
           </div>

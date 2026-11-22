@@ -53,6 +53,31 @@ function rowToggle(e, fn) {
   fn();
 }
 
+function openExportModal() {
+  $('modal-title').textContent = 'Export Background Inventory Report';
+  $('modal-body').innerHTML = `
+    <p style="margin-bottom:12px">Choose an export format for this machine's background inventory:</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="win-btn" onclick="closeModal();doExport()" style="display:flex;align-items:center;justify-content:flex-start;padding:10px 14px;height:auto;gap:10px;text-align:left">
+        <i data-lucide="file-json" style="width:18px;height:18px;color:#38bdf8;flex:none"></i>
+        <div><strong style="display:block;font-size:13px">JSON Format (*.json)</strong><span style="font-size:11px;color:var(--text-dim)">Complete raw system inventory data for backups or automated tools</span></div>
+      </button>
+      <button class="win-btn" onclick="closeModal();doExportMarkdown()" style="display:flex;align-items:center;justify-content:flex-start;padding:10px 14px;height:auto;gap:10px;text-align:left">
+        <i data-lucide="file-text" style="width:18px;height:18px;color:#34d399;flex:none"></i>
+        <div><strong style="display:block;font-size:13px">Markdown Audit Report (*.md)</strong><span style="font-size:11px;color:var(--text-dim)">Structured tables showing apps, RAM usage, and security status</span></div>
+      </button>
+      <button class="win-btn" onclick="closeModal();doExportCSV()" style="display:flex;align-items:center;justify-content:flex-start;padding:10px 14px;height:auto;gap:10px;text-align:left">
+        <i data-lucide="table" style="width:18px;height:18px;color:#fbbf24;flex:none"></i>
+        <div><strong style="display:block;font-size:13px">CSV Spreadsheet (*.csv)</strong><span style="font-size:11px;color:var(--text-dim)">Tabular spreadsheet of all background components for Excel/Sheets</span></div>
+      </button>
+    </div>
+  `;
+  $('modal-confirm').style.display = 'none';
+  $('modal-cancel').textContent = 'Close';
+  openModal();
+  refreshIcons();
+}
+
 // Event Listeners
 document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => navigate(b.dataset.page)));
 

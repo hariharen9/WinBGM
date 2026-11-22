@@ -22,6 +22,8 @@ var runLocs = []runLoc{
 	{registry.CURRENT_USER, "HKCU Run", `Software\Microsoft\Windows\CurrentVersion\Run`, approvedBase + "Run"},
 	{registry.LOCAL_MACHINE, "HKLM Run", `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`, approvedBase + "Run"},
 	{registry.LOCAL_MACHINE, "HKLM Run (32-bit)", `SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run`, approvedBase + "Run32"},
+	{registry.CURRENT_USER, "HKCU RunOnce", `Software\Microsoft\Windows\CurrentVersion\RunOnce`, ""},
+	{registry.LOCAL_MACHINE, "HKLM RunOnce", `SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce`, ""},
 }
 
 func scanRun(pt procTable, _ bool) ([]Component, error) {
@@ -40,9 +42,14 @@ func scanRun(pt procTable, _ bool) ([]Component, error) {
 			on := approved(l.root, l.approved, n)
 			exe := exePath(cmd)
 			pids := pt.pidsFor(exe)
+			isRunOnce := strings.Contains(l.label, "RunOnce")
+			trigger := "At sign-in"
+			if isRunOnce {
+				trigger = "At next sign-in once"
+			}
 			out = append(out, Component{
 				Kind: "run", Name: n, Command: cmd, ExePath: exe, Source: l.label,
-				Trigger: "At sign-in", Enabled: on, AutoStart: on,
+				Trigger: trigger, Enabled: on, AutoStart: on,
 				Running: len(pids) > 0, PIDs: pids,
 				tgt: Target{Kind: "run", Root: rootName(l.root), Path: l.approved, Name: n},
 			})
@@ -107,6 +114,9 @@ Get-ChildItem -LiteralPath %s,%s -Filter *.lnk -ErrorAction SilentlyContinue | F
 
 // StartupApproved values: first byte even = enabled, odd = disabled (what Task Manager reads).
 func approved(root registry.Key, path, name string) bool {
+	if path == "" {
+		return true
+	}
 	k, err := registry.OpenKey(root, path, registry.QUERY_VALUE)
 	if err != nil {
 		return true
@@ -119,7 +129,7 @@ func approved(root registry.Key, path, name string) bool {
 	return v[0]&1 == 0
 }
 
-// scanStoreApps lists per-app background permissions of Store/packaged apps (where Windows records them).
+// scanStoreApps lists per-app background permissions of Store/packaged apps.
 func scanStoreApps(pt procTable, _ bool) ([]Component, error) {
 	k, err := registry.OpenKey(registry.CURRENT_USER,
 		`Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications`,
@@ -154,6 +164,119 @@ func scanStoreApps(pt procTable, _ bool) ([]Component, error) {
 			}
 		}
 		c.Running = len(c.PIDs) > 0
+		out = append(out, c)
+	}
+	return out, nil
+}
+
+// scanWinlogon checks logon shell configuration and userinit persistence vectors.
+func scanWinlogon(pt procTable, _ bool) ([]Component, error) {
+	var out []Component
+	keys := []struct {
+		root  registry.Key
+		label string
+		path  string
+	}{
+		{registry.LOCAL_MACHINE, "HKLM Winlogon", `SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`},
+		{registry.CURRENT_USER, "HKCU Winlogon", `SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`},
+	}
+
+	for _, kl := range keys {
+		k, err := registry.OpenKey(kl.root, kl.path, registry.QUERY_VALUE)
+		if err != nil {
+			continue
+		}
+		defer k.Close()
+
+		for _, valName := range []string{"Userinit", "Shell", "AppInit_DLLs"} {
+			v, _, err := k.GetStringValue(valName)
+			if err != nil || strings.TrimSpace(v) == "" {
+				continue
+			}
+			vClean := strings.TrimSpace(v)
+			isDefault := false
+			if valName == "Shell" && strings.EqualFold(vClean, "explorer.exe") && kl.root == registry.LOCAL_MACHINE {
+				isDefault = true
+			}
+			if valName == "Userinit" && strings.Contains(strings.ToLower(vClean), "userinit.exe") && !strings.Contains(vClean, ",") && kl.root == registry.LOCAL_MACHINE {
+				isDefault = true
+			}
+
+			// Report non-default shell/userinit entries or HKCU shell overrides
+			exe := exePath(vClean)
+			pids := pt.pidsFor(exe)
+			c := Component{
+				Kind:      "winlogon",
+				Name:      kl.label + " " + valName,
+				Display:   valName + " (" + kl.label + ")",
+				Command:   vClean,
+				ExePath:   exe,
+				Source:    kl.label,
+				Trigger:   "During Windows logon",
+				Enabled:   true,
+				AutoStart: true,
+				Running:   len(pids) > 0,
+				PIDs:      pids,
+				System:    isDefault,
+			}
+			if !isDefault {
+				c.Flags = append(c.Flags, "winlogon-override")
+				c.Review = true
+			}
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+type wmiConsumer struct {
+	Name        string `json:"Name"`
+	CommandLine string `json:"CommandLine"`
+	ScriptText  string `json:"ScriptText"`
+}
+
+// scanWMI inspects persistent WMI event consumers in root\subscription.
+func scanWMI(pt procTable, _ bool) ([]Component, error) {
+	script := `Get-CimInstance -Namespace root/subscription -ClassName __EventConsumer -ErrorAction SilentlyContinue | ForEach-Object {
+		[pscustomobject]@{
+			Name = $_.Name
+			CommandLine = [string]$_.CommandLine
+			ScriptText = [string]$_.ScriptText
+		}
+	} | ConvertTo-Json -Compress`
+
+	raw, err := ps(script)
+	if err != nil {
+		return nil, nil
+	}
+	consumers, err := parseList[wmiConsumer](raw)
+	if err != nil || len(consumers) == 0 {
+		return nil, nil
+	}
+
+	var out []Component
+	for _, cons := range consumers {
+		cmd := strings.TrimSpace(cons.CommandLine)
+		if cmd == "" && cons.ScriptText != "" {
+			cmd = "ActiveScript: " + strings.TrimSpace(cons.ScriptText)
+		}
+		exe := exePath(cmd)
+		pids := pt.pidsFor(exe)
+		c := Component{
+			Kind:      "wmi",
+			Name:      cons.Name,
+			Display:   cons.Name,
+			Command:   cmd,
+			ExePath:   exe,
+			Source:    "WMI event subscription",
+			Trigger:   "On WMI event filter match",
+			Enabled:   true,
+			AutoStart: true,
+			Running:   len(pids) > 0,
+			PIDs:      pids,
+			Review:    true,
+		}
+		c.Flags = append(c.Flags, "wmi-consumer")
 		out = append(out, c)
 	}
 	return out, nil
