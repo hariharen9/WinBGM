@@ -90,7 +90,7 @@ let filter = 'all';
 let query = '';
 let sortMode = 'name';
 let showSystem = false;
-let page = 'applications';
+let page = 'overview';
 let toastTimer = null;
 const expanded = new Set();
 

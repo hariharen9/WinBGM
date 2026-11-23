@@ -228,6 +228,7 @@ document.addEventListener('keydown', e => {
 applyTheme(currentTheme);
 applyAccent(currentAccent);
 document.documentElement.style.zoom = uiScale;
+navigate('overview');
 doScan().then(() => {
   loadHistory();
   loadSnapshots();

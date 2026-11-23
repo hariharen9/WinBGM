@@ -41,16 +41,17 @@
         <span class="search-shortcut">Ctrl+K</span>
       </label>
     </div>
-    <div class="titlebar-spacer"></div>
-    <span class="readonly-pill"><i data-lucide="shield" style="width:11px;height:11px;margin-right:4px"></i>Safe mode</span>
+    <div class="titlebar-right">
+      <span class="readonly-pill"><i data-lucide="shield" style="width:11px;height:11px;margin-right:4px"></i>Safe mode</span>
+    </div>
   </header>
 
   <div class="app-body">
     <aside class="sidebar">
       <div class="nav-group-label">Manage</div>
       <nav class="nav-list" aria-label="Main navigation">
-        <button class="nav-item" data-page="overview"><i data-lucide="layout-grid"></i><span>Overview</span></button>
-        <button class="nav-item active" data-page="applications"><i data-lucide="layers"></i><span>Applications</span><span class="nav-count" id="nav-apps"></span></button>
+        <button class="nav-item active" data-page="overview"><i data-lucide="layout-grid"></i><span>Overview</span></button>
+        <button class="nav-item" data-page="applications"><i data-lucide="layers"></i><span>Applications</span><span class="nav-count" id="nav-apps"></span></button>
         <button class="nav-item" data-page="services"><i data-lucide="cog"></i><span>Services</span><span class="nav-count" id="nav-services"></span></button>
         <button class="nav-item" data-page="tasks"><i data-lucide="calendar-clock"></i><span>Scheduled tasks</span><span class="nav-count" id="nav-tasks"></span></button>
         <button class="nav-item" data-page="sources"><i data-lucide="compass"></i><span>Startup locations</span></button>
@@ -75,7 +76,7 @@
 
     <main class="main-shell">
       <div class="commandbar">
-        <span class="commandbar-label" id="commandbar-label">Applications</span>
+        <span class="commandbar-label" id="commandbar-label">Overview</span>
         <span class="commandbar-sep"></span>
         <button class="command-btn btn-scan" id="scan-btn" onclick="doScan()"><i data-lucide="refresh-cw"></i>Scan now</button>
         <button class="command-btn" onclick="requestFocusMode()"><i data-lucide="zap"></i>Focus Mode</button>
@@ -88,7 +89,7 @@
       <div class="content-host" id="content-host">
         <div id="sentinel-banner-host" style="padding:10px 24px 0 24px"></div>
         <!-- Applications Page -->
-        <section class="page active" id="page-applications">
+        <section class="page" id="page-applications">
           <div class="page-header">
             <div>
               <h1>Applications</h1>
@@ -126,7 +127,7 @@
         </section>
 
         <!-- Overview Page -->
-        <section class="page" id="page-overview">
+        <section class="page active" id="page-overview">
           <div id="overview-content"><div class="loading">Scanning this PC…</div></div>
         </section>
 
