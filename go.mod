@@ -1,4 +1,4 @@
-module bgmui
+module winbgm
 
 go 1.26.0
 

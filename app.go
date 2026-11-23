@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"bgmui/backend"
+	"winbgm/backend"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
