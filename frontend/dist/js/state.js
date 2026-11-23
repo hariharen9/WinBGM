@@ -220,9 +220,10 @@ function describe(c, action) {
   const t = (T[c.kind] || {})[action];
   if (!t) return null;
   const caution = c.caution && c.control === 'yes' ? `<p style="color:#e6c27e">${esc(c.caution)}</p>` : '';
+  const vtInfo = c.virusTotalURL ? `<p style="margin-top:10px;font-size:11px"><a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;display:inline-flex;align-items:center;gap:4px"><i data-lucide="shield-check" style="width:13px;height:13px"></i>Verify file safety &amp; hash on VirusTotal</a></p>` : '';
   return {
     title: t[0],
     confirm: t[2],
-    body: `<p>${esc(t[1])}</p>${caution}<p>The current setting is saved first. You can undo this from <strong>Change history</strong>.</p>`
+    body: `<p>${esc(t[1])}</p>${caution}${vtInfo}<p style="margin-top:8px">The current setting is saved first. You can undo this from <strong>Change history</strong>.</p>`
   };
 }

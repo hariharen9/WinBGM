@@ -178,7 +178,8 @@ function renderServices() {
   $('svc-count').textContent = list.length + ' of ' + all.length;
   $('svc-body').innerHTML = list.length ? list.map(c => {
     const ramLabel = c.ramFormatted ? `<span class="badge blue" style="font-size:9px;padding:1px 4px;margin-left:4px">${esc(c.ramFormatted)}</span>` : '';
-    return `<tr class="clickable" data-id="${esc(c.id)}" data-t="svc"><td><div class="name-cell"><div class="service-icon"><i data-lucide="cog" style="width:14px;height:14px"></i></div><div><div class="name-primary">${esc(c.display || c.name)}${ramLabel}</div><div class="name-secondary">${esc(c.name)}</div></div></div></td><td>${esc(c.publisher || '—')}</td><td>${esc(c.startType)}</td><td>${stateBadge(c)}</td><td>${c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.system ? '<span class="badge blue">Protected</span>' : '<span class="badge gray">Standard</span>'}</td></tr>${expandRow(c, 5)}`;
+    const vtBadge = c.virusTotalURL ? `<a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="badge blue" style="font-size:9px;padding:1px 4px;margin-left:4px;text-decoration:none;display:inline-flex;align-items:center;gap:2px" title="Check service executable on VirusTotal" onclick="event.stopPropagation()"><i data-lucide="shield-check" style="width:10px;height:10px"></i>VT</a>` : '';
+    return `<tr class="clickable" data-id="${esc(c.id)}" data-t="svc"><td><div class="name-cell"><div class="service-icon"><i data-lucide="cog" style="width:14px;height:14px"></i></div><div><div class="name-primary">${esc(c.display || c.name)}${ramLabel}</div><div class="name-secondary">${esc(c.name)}</div></div></div></td><td>${esc(c.publisher || '—')}${vtBadge}</td><td>${esc(c.startType)}</td><td>${stateBadge(c)}</td><td>${c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.system ? '<span class="badge blue">Protected</span>' : '<span class="badge gray">Standard</span>'}</td></tr>${expandRow(c, 5)}`;
   }).join('') : '<tr><td colspan="5"><div class="empty-state">No services match.</div></td></tr>';
 
   refreshIcons();
@@ -192,7 +193,11 @@ function renderTasks() {
 
   $('task-summary').innerHTML = `<div class="summary-item"><strong>${all.length}</strong> tasks discovered</div><span class="summary-separator"></span><div class="summary-item"><strong>${all.filter(c => c.autoStart).length}</strong> start at logon or boot</div>`;
   $('task-count').textContent = list.length + ' of ' + all.length;
-  $('task-body').innerHTML = list.length ? list.map(c => `<tr class="clickable" data-id="${esc(c.id)}" data-t="task"><td><div class="name-primary">${esc(c.display)}</div><div class="name-secondary">${esc(c.name.slice(0, c.name.length - c.display.length) || '\\')}</div></td><td>${esc(c.trigger)}</td><td>${c.review ? '<span style="color:var(--amber)">Unverified</span>' : esc(c.publisher || '—')}</td><td>${esc(base(c.exePath) || '—')}</td><td>${esc(fmtTime(c.lastRun))}</td><td><span class="badge ${c.review ? 'amber' : c.enabled ? 'green' : 'gray'}">${c.review ? 'Review' : c.enabled ? 'Enabled' : 'Disabled'}</span></td></tr>${expandRow(c, 6)}`).join('') : '<tr><td colspan="6"><div class="empty-state">No tasks match.</div></td></tr>';
+  $('task-body').innerHTML = list.length ? list.map(c => {
+    const vtBadge = c.virusTotalURL ? `<a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="badge blue" style="font-size:9.5px;padding:1px 5px;margin-left:6px;text-decoration:none;display:inline-flex;align-items:center;gap:3px" title="Check binary hash on VirusTotal" onclick="event.stopPropagation()"><i data-lucide="shield-check" style="width:10px;height:10px"></i>VT</a>` : '';
+    const binaryDisplay = esc(base(c.exePath) || '—');
+    return `<tr class="clickable" data-id="${esc(c.id)}" data-t="task"><td><div class="name-primary">${esc(c.display)}</div><div class="name-secondary">${esc(c.name.slice(0, c.name.length - c.display.length) || '\\')}</div></td><td>${esc(c.trigger)}</td><td>${c.review ? '<span style="color:var(--amber)">Unverified</span>' : esc(c.publisher || '—')}</td><td><span style="font-family:monospace;font-size:10.5px">${binaryDisplay}</span>${vtBadge}</td><td>${esc(fmtTime(c.lastRun))}</td><td><span class="badge ${c.review ? 'amber' : c.enabled ? 'green' : 'gray'}">${c.review ? 'Review' : c.enabled ? 'Enabled' : 'Disabled'}</span></td></tr>${expandRow(c, 6)}`;
+  }).join('') : '<tr><td colspan="6"><div class="empty-state">No tasks match.</div></td></tr>';
 
   refreshIcons();
   animateList('#task-body tr.clickable');
@@ -304,6 +309,10 @@ function renderSourceInspectorItems() {
       <button class="win-btn" style="height:24px;font-size:10px;padding:2px 8px" onclick="event.stopPropagation();sel='${esc(c.appId)}';navigate('applications');" title="Inspect application"><i data-lucide="layers" style="width:11px;height:11px;margin-right:2px"></i>App</button>
     `;
 
+    const vtBtn = c.virusTotalURL ? `
+      <a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:24px;font-size:10px;padding:2px 8px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:2px" title="Check SHA-256 on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VT</a>
+    ` : '';
+
     const statusBadge = c.enabled ? `<span class="badge green">Enabled</span>` : `<span class="badge amber">Blocked / Off</span>`;
     const runningBadge = c.running ? `<span class="badge blue" style="font-size:9px;padding:1px 4px;margin-left:4px">Running</span>` : '';
 
@@ -331,6 +340,7 @@ function renderSourceInspectorItems() {
             ${toggleHtml}
             ${revealBtn}
             ${appBtn}
+            ${vtBtn}
           </div>
         </td>
       </tr>
@@ -348,7 +358,11 @@ function renderOverview() {
     const ramBadge = a.ramFormatted ? `<span class="badge blue" style="font-size:10px;padding:1px 5px;margin-left:6px">${esc(a.ramFormatted)}</span>` : '';
     return `<div class="overview-row"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}${ramBadge}</div><div class="overview-row-sub">${esc(a.publisher || 'Publisher unknown')} · ${a.components.length} component${a.components.length === 1 ? '' : 's'}</div></div><div class="overview-row-end"><span class="state-text ${a.running ? '' : 'stopped'}">${a.running ? 'Running' : 'Not running'}</span></div></div>`;
   };
-  const revRow = a => `<div class="overview-row"><div class="product-icon" style="background:rgba(245,158,11,0.15);color:var(--amber);border:1px solid rgba(245,158,11,0.35)">!</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.components.filter(c => c.review).map(c => c.flags.map(f => ({missing:'Target file missing', temp:'Temp/Downloads folder', unsigned:'Unsigned, user folder', impersonation:'Impersonation hazard'})[f] || f).join(', ')).join(' · '))}</div></div><span class="badge amber">Review</span></div>`;
+  const revRow = a => {
+    const vtComp = a.components.find(c => c.virusTotalURL);
+    const vtBtn = vtComp ? `<a href="${esc(vtComp.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:22px;font-size:9.5px;padding:1px 6px;text-decoration:none;color:var(--accent);margin-left:6px;display:inline-flex;align-items:center;gap:3px" title="Check file hash on VirusTotal" onclick="event.stopPropagation()"><i data-lucide="shield-check" style="width:10px;height:10px"></i>VT</a>` : '';
+    return `<div class="overview-row"><div class="product-icon" style="background:rgba(245,158,11,0.15);color:var(--amber);border:1px solid rgba(245,158,11,0.35)">!</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}${vtBtn}</div><div class="overview-row-sub">${esc(a.components.filter(c => c.review).map(c => c.flags.map(f => ({missing:'Target file missing', temp:'Temp/Downloads folder', unsigned:'Unsigned, user folder', impersonation:'Impersonation hazard'})[f] || f).join(', ')).join(' · '))}</div></div><span class="badge amber">Review</span></div>`;
+  };
   const nonSys = A.filter(a => a.autoStart).length;
 
   let bootBlock = '';
@@ -513,9 +527,10 @@ function toggleOn(c) {
 
 function controlHtml(c) {
   const badge = c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.review ? '<span class="badge amber">Review</span>' : '';
-  if (!CHANGEABLE.includes(c.kind)) return badge;
+  const vtBtn = c.virusTotalURL ? `<a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:22px;font-size:9.5px;padding:1px 6px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:2px" title="Verify executable on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VT</a>` : '';
+  if (!CHANGEABLE.includes(c.kind)) return `<span style="display:flex;gap:6px;align-items:center">${badge}${vtBtn}</span>`;
   const dis = c.control !== 'yes';
-  return `<span style="display:flex;gap:8px;align-items:center">${badge}<input class="toggle" type="checkbox" data-cid="${esc(c.id)}" ${toggleOn(c) ? 'checked' : ''} ${dis ? 'disabled' : ''} title="${esc(dis ? (c.controlNote || '') : 'Starts automatically')}" aria-label="Start automatically" onchange="requestChange(this.dataset.cid, this.checked ? 'enable' : 'disable')"></span>`;
+  return `<span style="display:flex;gap:6px;align-items:center">${badge}${vtBtn}<input class="toggle" type="checkbox" data-cid="${esc(c.id)}" ${toggleOn(c) ? 'checked' : ''} ${dis ? 'disabled' : ''} title="${esc(dis ? (c.controlNote || '') : 'Starts automatically')}" aria-label="Start automatically" onchange="requestChange(this.dataset.cid, this.checked ? 'enable' : 'disable')"></span>`;
 }
 
 function actionButtons(c) {
@@ -526,6 +541,14 @@ function actionButtons(c) {
     else if (c.kind === 'shellex') out += c.enabled ? b('disable', 'Disable extension') : b('enable', 'Enable extension');
     else out += toggleOn(c) ? b('disable', c.kind === 'task' ? 'Disable task' : 'Disable at sign-in') : b('enable', c.kind === 'task' ? 'Enable task' : 'Enable at sign-in');
     if (c.kind === 'service' && c.canStop) out += c.running ? b('stop', 'Stop now') : b('start', 'Start now');
+  }
+
+  // VirusTotal lookup action button directly alongside disable/enable
+  if (c.virusTotalURL) {
+    out += `<a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:26px;font-size:10px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:4px" title="Scan or check executable on VirusTotal"><i data-lucide="shield-check" style="width:12px;height:12px"></i>Check on VirusTotal</a>`;
+  }
+  if (c.exePath) {
+    out += `<button class="win-btn" style="height:26px;font-size:10px;display:inline-flex;align-items:center;gap:4px" onclick="event.stopPropagation();api().Reveal('${esc(c.exePath).replace(/'/g, "\\'")}')" title="Open containing folder in File Explorer"><i data-lucide="folder-search" style="width:12px;height:12px"></i>Open Folder</button>`;
   }
 
   // Graceful process management actions
@@ -645,14 +668,17 @@ function renderDiffResults(diff) {
 
   if (diff.added && diff.added.length > 0) {
     html += `<div style="font-weight:600;color:#4ade80;margin:16px 0 8px 0;display:flex;align-items:center;gap:6px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> New Items Dropped / Added (${diff.added.length})</div>`;
-    html += diff.added.map(c => `
-      <div class="overview-row" style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.25);margin-bottom:8px;border-radius:6px;padding:12px 16px">
+    html += diff.added.map(c => {
+      const vtBtn = c.virusTotalURL ? `<a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:24px;font-size:10px;padding:2px 8px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:3px;margin-left:auto" title="Check binary hash on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VirusTotal</a>` : '';
+      return `
+      <div class="overview-row" style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.25);margin-bottom:8px;border-radius:6px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
         <div class="overview-row-copy">
           <div class="overview-row-title" style="font-weight:600;font-size:12px">${esc(c.display || c.name)} <span class="badge green" style="font-size:9.5px;padding:1px 5px;margin-left:6px">${esc(c.kind)}</span></div>
           <div class="overview-row-sub" style="margin-top:4px">${esc(c.command || c.exePath || c.source)}</div>
         </div>
-      </div>
-    `).join('');
+        ${vtBtn}
+      </div>`;
+    }).join('');
   }
 
   if (diff.removed && diff.removed.length > 0) {
@@ -669,7 +695,9 @@ function renderDiffResults(diff) {
 
   if (diff.modified && diff.modified.length > 0) {
     html += `<div style="font-weight:600;color:#fbbf24;margin:16px 0 8px 0;display:flex;align-items:center;gap:6px"><i data-lucide="alert-circle" style="width:14px;height:14px"></i> Modified State (${diff.modified.length})</div>`;
-    html += diff.modified.map(m => `
+    html += diff.modified.map(m => {
+      const vtBtn = m.component.virusTotalURL ? `<a href="${esc(m.component.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:24px;font-size:10px;padding:2px 8px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:3px;margin-left:auto" title="Check binary hash on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VirusTotal</a>` : '';
+      return `
       <div class="overview-row" style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.25);margin-bottom:8px;border-radius:6px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
         <div class="overview-row-copy">
           <div class="overview-row-title" style="font-weight:600;font-size:12px">${esc(m.component.display || m.component.name)} <span class="badge blue" style="font-size:9.5px;padding:1px 5px;margin-left:6px">${esc(m.component.kind)}</span></div>
@@ -677,8 +705,9 @@ function renderDiffResults(diff) {
             <span style="color:#f87171">Previous: ${esc(m.beforeState)}</span> &nbsp;→&nbsp; <span style="color:#4ade80;font-weight:600">Current: ${esc(m.afterState)}</span>
           </div>
         </div>
-      </div>
-    `).join('');
+        ${vtBtn}
+      </div>`;
+    }).join('');
   }
 
   if (!diff.added?.length && !diff.removed?.length && !diff.modified?.length) {
