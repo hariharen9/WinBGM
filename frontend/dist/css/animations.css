@@ -47,10 +47,10 @@
   transform: scale(0.96);
 }
 .win-btn.primary {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .win-btn.primary:hover {
-  box-shadow: 0 2px 8px rgba(15, 108, 189, 0.4);
+  box-shadow: 0 2px 8px var(--accent-subtle);
 }
 
 /* App Row Hover & Selection */
@@ -58,12 +58,12 @@
   transition: background 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
 }
 .app-row:hover {
-  background: #1e242d !important;
+  background: var(--surface-hover) !important;
   transform: translateX(3px);
 }
 .app-row.selected {
-  background: #232d3a !important;
-  box-shadow: inset 3px 0 #60a5fa;
+  background: var(--surface-active) !important;
+  box-shadow: inset 3px 0 var(--accent);
 }
 .app-row:active {
   transform: scale(0.995);
@@ -83,9 +83,9 @@
 }
 .source-card:hover {
   transform: translateY(-2px);
-  border-color: #3d4a57;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  background: #1a1e24 !important;
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  background: var(--surface-hover) !important;
 }
 
 /* Overview Stat Hover */
@@ -93,7 +93,7 @@
   transition: background 0.18s ease;
 }
 .overview-stat:hover {
-  background: #1c2027;
+  background: var(--surface-hover);
 }
 
 /* Smooth Spring Toggle */
@@ -114,5 +114,5 @@
 .quick-search:focus-within {
   width: min(100%, 410px);
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.22);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
 }

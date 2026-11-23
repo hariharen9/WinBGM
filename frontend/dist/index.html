@@ -6,6 +6,16 @@
   <title>WinBGM</title>
   <link rel="icon" type="image/png" href="icon.png">
 
+  <!-- Theme Pre-Initialization (avoids theme flash) -->
+  <script>
+    try {
+      var t = localStorage.getItem('bgm.theme') || 'dark';
+      document.documentElement.dataset.theme = t;
+      var a = localStorage.getItem('bgm.accent') || 'blue';
+      document.documentElement.dataset.accent = a;
+    } catch(e) {}
+  </script>
+
   <!-- Libraries -->
   <script src="lucide.min.js"></script>
   <script src="anime.min.js"></script>
@@ -273,10 +283,41 @@
           <div class="page-header">
             <div>
               <h1>Settings</h1>
-              <p class="page-subtitle">Display preferences, text readability, and administrator privileges.</p>
+              <p class="page-subtitle">Appearance, display preferences, text readability, and administrator privileges.</p>
             </div>
           </div>
+
           <div class="page-section">
+            <div class="section-heading"><strong>Appearance & Personalization</strong><span>Theme & colors</span></div>
+            <div class="overview-row">
+              <div class="overview-row-copy">
+                <div class="overview-row-title">App theme</div>
+                <div class="overview-row-sub">Choose between Dark, Light, AMOLED pitch black, or sync automatically with your Windows system preference.</div>
+              </div>
+              <select class="select-control" id="set-theme" aria-label="App theme">
+                <option value="system">Windows default</option>
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+                <option value="amoled">AMOLED (Pitch Black)</option>
+              </select>
+            </div>
+            <div class="overview-row">
+              <div class="overview-row-copy">
+                <div class="overview-row-title">Accent color</div>
+                <div class="overview-row-sub">Customize the highlight color used across buttons, indicators, active tabs, and navigation items.</div>
+              </div>
+              <div class="accent-picker" id="accent-picker" role="radiogroup" aria-label="Accent color">
+                <button type="button" class="accent-swatch active" data-color="blue" title="Blue" aria-label="Blue"></button>
+                <button type="button" class="accent-swatch" data-color="purple" title="Purple" aria-label="Purple"></button>
+                <button type="button" class="accent-swatch" data-color="emerald" title="Emerald" aria-label="Emerald"></button>
+                <button type="button" class="accent-swatch" data-color="amber" title="Amber" aria-label="Amber"></button>
+                <button type="button" class="accent-swatch" data-color="rose" title="Rose" aria-label="Rose"></button>
+                <button type="button" class="accent-swatch" data-color="cyan" title="Cyan" aria-label="Cyan"></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="page-section" style="margin-top:13px">
             <div class="section-heading"><strong>Display & Readability</strong><span></span></div>
             <div class="overview-row">
               <div class="overview-row-copy">

@@ -127,6 +127,33 @@ $('set-system').addEventListener('change', e => {
   render();
 });
 
+if ($('set-theme')) {
+  $('set-theme').value = currentTheme;
+  $('set-theme').addEventListener('change', e => {
+    applyTheme(e.target.value);
+    toast('Theme set to ' + e.target.options[e.target.selectedIndex].text);
+    renderApps();
+  });
+}
+
+if ($('accent-picker')) {
+  $('accent-picker').addEventListener('click', e => {
+    const swatch = e.target.closest('.accent-swatch');
+    if (swatch && swatch.dataset.color) {
+      applyAccent(swatch.dataset.color);
+      toast('Accent color set to ' + swatch.title);
+    }
+  });
+}
+
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+    if (currentTheme === 'system') {
+      renderApps();
+    }
+  });
+}
+
 if ($('set-ui-scale')) {
   $('set-ui-scale').addEventListener('change', e => {
     applyScale(e.target.value);
@@ -198,6 +225,8 @@ document.addEventListener('keydown', e => {
 });
 
 // Bootstrap
+applyTheme(currentTheme);
+applyAccent(currentAccent);
 document.documentElement.style.zoom = uiScale;
 doScan().then(() => {
   loadHistory();

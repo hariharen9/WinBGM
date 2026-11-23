@@ -98,6 +98,41 @@ try { showSystem = localStorage.getItem('bgm.showSystem') === '1'; } catch (e) {
 let uiScale = '100%';
 try { uiScale = localStorage.getItem('bgm.uiScale') || '100%'; } catch (e) {}
 
+const THEMES = ['system', 'dark', 'light', 'amoled'];
+const ACCENTS = ['blue', 'purple', 'emerald', 'amber', 'rose', 'cyan'];
+
+let currentTheme = 'dark';
+try { currentTheme = localStorage.getItem('bgm.theme') || 'dark'; } catch (e) {}
+let currentAccent = 'blue';
+try { currentAccent = localStorage.getItem('bgm.accent') || 'blue'; } catch (e) {}
+
+function isEffectiveLight() {
+  if (currentTheme === 'light') return true;
+  if (currentTheme === 'system') {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  }
+  return false;
+}
+
+function applyTheme(theme) {
+  if (!THEMES.includes(theme)) theme = 'dark';
+  currentTheme = theme;
+  try { localStorage.setItem('bgm.theme', theme); } catch (e) {}
+  document.documentElement.dataset.theme = theme;
+  const el = $('set-theme');
+  if (el && el.value !== theme) el.value = theme;
+}
+
+function applyAccent(accent) {
+  if (!ACCENTS.includes(accent)) accent = 'blue';
+  currentAccent = accent;
+  try { localStorage.setItem('bgm.accent', accent); } catch (e) {}
+  document.documentElement.dataset.accent = accent;
+  document.querySelectorAll('.accent-swatch').forEach(sw => {
+    sw.classList.toggle('active', sw.dataset.color === accent);
+  });
+}
+
 // Queries
 function formatRAM(bytes) {
   if (!bytes || bytes <= 0) return '0 KB';
@@ -116,7 +151,10 @@ function hue(s) {
 }
 function iconStyle(name) {
   const h = hue(name);
-  return `background:hsl(${h} 22% 22%);color:hsl(${h} 65% 78%);border-color:hsl(${h} 22% 34%)`;
+  if (isEffectiveLight()) {
+    return `background:hsl(${h} 50% 92%);color:hsl(${h} 70% 32%);border-color:hsl(${h} 40% 82%)`;
+  }
+  return `background:hsl(${h} 22% 20%);color:hsl(${h} 65% 80%);border-color:hsl(${h} 25% 30%)`;
 }
 function apps() {
   return inv ? inv.apps.filter(a => showSystem || !a.system) : [];

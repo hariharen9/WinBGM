@@ -112,7 +112,7 @@ function renderDetail(a) {
   <div class="detail-section"><div class="detail-section-title">Background components</div>
    ${a.components.map(c => {
      const cRam = c.ramFormatted ? `<span class="badge blue" style="font-size:10px;padding:1px 5px;margin-left:6px">${esc(c.ramFormatted)} RAM</span>` : '';
-     const vtLink = c.virusTotalURL ? `<div class="detail-kv"><span>Security</span><span><a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;display:inline-flex;align-items:center;gap:4px">Check on VirusTotal <i data-lucide="external-link" style="width:11px;height:11px"></i></a></span></div>` : '';
+     const vtLink = c.virusTotalURL ? `<div class="detail-kv"><span>Security</span><span><a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;display:inline-flex;align-items:center;gap:4px">Check on VirusTotal <i data-lucide="external-link" style="width:11px;height:11px"></i></a></span></div>` : '';
      const shaRow = c.sha256 ? `<div class="detail-kv"><span>SHA-256</span><span style="font-family:monospace;font-size:11px">${esc(c.sha256)}</span></div>` : '';
      const isImpersonating = (c.flags || []).includes('impersonation');
      const impersonationWarning = isImpersonating ? `<div class="howto" style="color:#f87171;font-weight:600"><i data-lucide="alert-triangle" style="width:13px;height:13px;display:inline;margin-right:4px"></i>Warning: This program shares the name of a Windows system file but runs outside Windows directories!</div>` : '';
@@ -162,7 +162,7 @@ function kvRow(a, b) {
 
 function expandRow(c, cols) {
   if (!expanded.has(c.id)) return '';
-  const vt = c.virusTotalURL ? `<div class="detail-kv"><span>Security</span><span><a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;display:inline-flex;align-items:center;gap:4px">Check on VirusTotal <i data-lucide="external-link" style="width:11px;height:11px"></i></a></span></div>` : '';
+  const vt = c.virusTotalURL ? `<div class="detail-kv"><span>Security</span><span><a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;display:inline-flex;align-items:center;gap:4px">Check on VirusTotal <i data-lucide="external-link" style="width:11px;height:11px"></i></a></span></div>` : '';
   const sha = c.sha256 ? kvRow('SHA-256', c.sha256) : '';
   const ram = c.ramFormatted ? kvRow('RAM Usage', c.ramFormatted) : '';
   return `<tr class="expand"><td colspan="${cols}">${kvRow('Command', c.command || '—')}${kvRow('Owner app', c.appName)}${ram}${kvRow('Signature', sigText(c))}${sha}${vt}${kvRow('Source', c.source)}${c.pids.length ? kvRow('Process ID', c.pids.slice(0, 6).join(', ')) : ''}${c.locked === 'yes' ? kvRow('Locked', 'This account cannot change its settings; stopping may still work.') : ''}${kvRow('How to change', HOWTO[c.kind] || HOWTO.process)}${actionButtons(c)}</td></tr>`;
@@ -348,7 +348,7 @@ function renderOverview() {
     const ramBadge = a.ramFormatted ? `<span class="badge blue" style="font-size:10px;padding:1px 5px;margin-left:6px">${esc(a.ramFormatted)}</span>` : '';
     return `<div class="overview-row"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}${ramBadge}</div><div class="overview-row-sub">${esc(a.publisher || 'Publisher unknown')} · ${a.components.length} component${a.components.length === 1 ? '' : 's'}</div></div><div class="overview-row-end"><span class="state-text ${a.running ? '' : 'stopped'}">${a.running ? 'Running' : 'Not running'}</span></div></div>`;
   };
-  const revRow = a => `<div class="overview-row"><div class="product-icon" style="background:#39332a;color:#e4c27e;border-color:#5b5030">!</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.components.filter(c => c.review).map(c => c.flags.map(f => ({missing:'Target file missing', temp:'Temp/Downloads folder', unsigned:'Unsigned, user folder', impersonation:'Impersonation hazard'})[f] || f).join(', ')).join(' · '))}</div></div><span class="badge amber">Review</span></div>`;
+  const revRow = a => `<div class="overview-row"><div class="product-icon" style="background:rgba(245,158,11,0.15);color:var(--amber);border:1px solid rgba(245,158,11,0.35)">!</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.components.filter(c => c.review).map(c => c.flags.map(f => ({missing:'Target file missing', temp:'Temp/Downloads folder', unsigned:'Unsigned, user folder', impersonation:'Impersonation hazard'})[f] || f).join(', ')).join(' · '))}</div></div><span class="badge amber">Review</span></div>`;
   const nonSys = A.filter(a => a.autoStart).length;
 
   let bootBlock = '';
@@ -371,7 +371,7 @@ function renderOverview() {
         </div>
         ${degs.map(d => `
           <div class="overview-row">
-            <div class="product-icon" style="background:#202838;color:#60a5fa;border-color:#38507a">⚡</div>
+            <div class="product-icon" style="background:var(--accent-subtle);color:var(--accent);border:1px solid var(--accent-border)">⚡</div>
             <div class="overview-row-copy">
               <div class="overview-row-title">${esc(d.name)}</div>
               <div class="overview-row-sub">${esc(d.type)} degradation · delay caused</div>
@@ -425,7 +425,7 @@ function renderOverview() {
       </div>
       ${powerReport.hasBlockers ? blockers.map(b => `
         <div class="overview-row">
-          <div class="product-icon" style="background:#3d2c1d;color:#f59e0b;border-color:#78491c">☾</div>
+          <div class="product-icon" style="background:rgba(245,158,11,0.15);color:var(--amber);border:1px solid rgba(245,158,11,0.35)">☾</div>
           <div class="overview-row-copy">
             <div class="overview-row-title">${esc(b.exePath ? base(b.exePath) : b.caller)}</div>
             <div class="overview-row-sub">${esc(b.category)} · ${esc(b.reason)}</div>
@@ -563,7 +563,7 @@ function requestFocusMode() {
   $('modal-title').textContent = 'Activate Focus Mode?';
   $('modal-body').innerHTML = `
     <p>Focus Mode disables <strong>third-party automatic startup programs and services</strong> to speed up boot times and free background resources.</p>
-    <p style="color:#60a5fa"><i data-lucide="shield-check" style="width:13px;height:13px;display:inline;margin-right:4px"></i>Windows system components and antivirus software are strictly protected and will not be touched.</p>
+    <p style="color:var(--accent)"><i data-lucide="shield-check" style="width:13px;height:13px;display:inline;margin-right:4px"></i>Windows system components and antivirus software are strictly protected and will not be touched.</p>
     <p>Every single item is backed up before being modified. You can undo this anytime from <strong>Change history</strong>.</p>
   `;
   $('modal-confirm').textContent = 'Activate Focus Mode';
@@ -583,8 +583,8 @@ function renderSentinelAlerts() {
     return;
   }
   host.innerHTML = sentinelAlerts.map(a => `
-    <div class="banner warning" style="margin-bottom:8px;display:flex;align-items:center;background:#3b2a1a;border:1px solid #78491c;color:#fed7aa;padding:10px 14px;border-radius:6px">
-      <i data-lucide="shield-alert" style="width:16px;height:16px;flex:none;color:#f97316;margin-right:8px"></i>
+    <div class="banner" style="margin-bottom:8px;display:flex;align-items:center;padding:10px 14px">
+      <i data-lucide="shield-alert" style="width:16px;height:16px;flex:none;color:var(--amber);margin-right:8px"></i>
       <div style="flex:1">
         <strong>Persistence Sentinel Alert:</strong> ${esc(a.message || a.name)} (${esc(a.timestamp)})
       </div>
@@ -615,7 +615,7 @@ function renderSnapshots() {
 
   el.innerHTML = list.map(s => `
     <div class="overview-row" style="padding:12px 16px;border-bottom:1px solid var(--border)">
-      <div class="product-icon" style="background:#1e293b;color:#38bdf8;border-color:#334155">📷</div>
+      <div class="product-icon" style="background:var(--accent-subtle);color:var(--accent);border:1px solid var(--accent-border)">📷</div>
       <div class="overview-row-copy">
         <div class="overview-row-title">${esc(s.name)}</div>
         <div class="overview-row-sub">Created ${esc(fmtTime(s.createdAt))} · ${s.appCount} apps · ${s.itemCount} background items</div>
