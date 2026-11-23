@@ -1,0 +1,100 @@
+name: Release WinBGM
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Windows (${{ matrix.name }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            name: x64
+            platform: windows/amd64
+          - arch: arm64
+            name: arm64
+            platform: windows/arm64
+          - arch: 386
+            name: x86
+            platform: windows/386
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Install Wails CLI
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Run Backend Unit Tests (amd64)
+        if: matrix.arch == 'amd64'
+        run: |
+          go test -v ./backend
+
+      - name: Build Wails Binary (${{ matrix.platform }})
+        run: |
+          wails build -platform ${{ matrix.platform }} -clean -trimpath -o WinBGM.exe
+
+      - name: Package Release Archive
+        shell: pwsh
+        run: |
+          $Tag = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "latest" }
+          $ZipName = "WinBGM-$Tag-windows-${{ matrix.name }}.zip"
+          $DistDir = "dist-${{ matrix.name }}"
+          New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
+          Copy-Item -Path "build/bin/WinBGM.exe" -Destination "$DistDir/WinBGM.exe"
+          if (Test-Path "README.md") { Copy-Item -Path "README.md" -Destination "$DistDir/README.md" }
+          Compress-Archive -Path "$DistDir/*" -DestinationPath $ZipName -Force
+          Write-Host "Created archive: $ZipName"
+          Get-FileHash -Path $ZipName -Algorithm SHA256 | Format-List
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: winbgm-${{ matrix.name }}
+          path: WinBGM-*-windows-${{ matrix.name }}.zip
+          if-no-files-found: error
+          retention-days: 2
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate Checksums
+        run: |
+          cd release-assets
+          sha256sum *.zip > SHA256SUMS.txt
+          echo "Generated SHA256 Checksums:"
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/*.zip
+            release-assets/SHA256SUMS.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: false
