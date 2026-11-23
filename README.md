@@ -1,12 +1,9 @@
 <div align="center">
 
-<img src="WinBGM.png" alt="WinBGM Preview" width="720" style="max-width: 20%; height: auto; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.35);" />
+# <img src="WinBGM.png" alt="WinBGM Logo" width="38" height="38" align="absmiddle" style="vertical-align: middle;" /> WinBGM
 
-# WinBGM
-
-**Windows Background Manager**
-<br/>
-**The safe, modern background application & persistence manager for Windows 10 and 11.**
+**Windows Background Manager**  
+*The safe, modern background application & persistence manager for Windows 10 and 11.*
 
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Wails v2](https://img.shields.io/badge/Built%20with-Wails%20v2-DF1A29?style=flat&logo=wails)](https://wails.io/)
