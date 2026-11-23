@@ -59,10 +59,16 @@ if (window.runtime && window.runtime.EventsOn) {
     const activePaths = poll.activeExePaths || {};
     const ramByPath = poll.ramByExePath || {};
     const ramFmtByPath = poll.ramFormattedByExe || {};
+    const ramByPID = poll.ramByPID || {};
+
+    let totalBgRAMBytes = 0;
+    const globalCountedPIDs = new Set();
 
     inv.apps.forEach(app => {
       let appRunning = false;
-      let appRAM = 0;
+      let appRAMBytes = 0;
+      const appCountedPIDs = new Set();
+
       app.components.forEach(c => {
         if (!c.exePath) return;
         const low = c.exePath.toLowerCase();
@@ -72,15 +78,31 @@ if (window.runtime && window.runtime.EventsOn) {
         c.ramBytes = ramByPath[low] || 0;
         c.ramFormatted = ramFmtByPath[low] || '';
         if (c.running) appRunning = true;
-        appRAM += c.ramBytes;
+
+        pids.forEach(pid => {
+          const pidRAM = ramByPID[pid] || 0;
+          if (!appCountedPIDs.has(pid)) {
+            appCountedPIDs.add(pid);
+            appRAMBytes += pidRAM;
+          }
+          if (!globalCountedPIDs.has(pid)) {
+            globalCountedPIDs.add(pid);
+            totalBgRAMBytes += pidRAM;
+          }
+        });
       });
+
       app.running = appRunning;
-      app.ramBytes = appRAM;
+      app.ramBytes = appRAMBytes;
+      app.ramFormatted = formatRAM(appRAMBytes);
     });
 
-    if (poll.totalRAMFormatted) {
-      const ramEl = document.getElementById('stat-ram');
-      if (ramEl) ramEl.textContent = poll.totalRAMFormatted;
+    inv.totalRAMBytes = totalBgRAMBytes;
+    inv.totalRAMFormatted = formatRAM(totalBgRAMBytes);
+
+    const ramEl = document.getElementById('stat-ram');
+    if (ramEl && inv.totalRAMFormatted) {
+      ramEl.textContent = inv.totalRAMFormatted;
     }
   });
 

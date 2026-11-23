@@ -521,6 +521,7 @@ export namespace backend {
 	    activeExePaths: Record<string, Array<number>>;
 	    ramByExePath: Record<string, number>;
 	    ramFormattedByExe: Record<string, string>;
+	    ramByPID: Record<number, number>;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProcessPollResult(source);
@@ -534,6 +535,7 @@ export namespace backend {
 	        this.activeExePaths = source["activeExePaths"];
 	        this.ramByExePath = source["ramByExePath"];
 	        this.ramFormattedByExe = source["ramFormattedByExe"];
+	        this.ramByPID = source["ramByPID"];
 	    }
 	}
 	export class SentinelAlert {

@@ -99,6 +99,16 @@ let uiScale = '100%';
 try { uiScale = localStorage.getItem('bgm.uiScale') || '100%'; } catch (e) {}
 
 // Queries
+function formatRAM(bytes) {
+  if (!bytes || bytes <= 0) return '0 KB';
+  const kb = 1024;
+  const mb = 1024 * kb;
+  const gb = 1024 * mb;
+  if (bytes >= gb) return (bytes / gb).toFixed(2) + ' GB';
+  if (bytes >= mb) return (bytes / mb).toFixed(1) + ' MB';
+  return Math.round(bytes / kb) + ' KB';
+}
+
 function hue(s) {
   let h = 0;
   for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360;

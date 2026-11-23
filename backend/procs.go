@@ -65,6 +65,7 @@ type ProcessPollResult struct {
 	ActiveExePaths    map[string][]uint32 `json:"activeExePaths"`
 	RAMByExePath      map[string]uint64   `json:"ramByExePath"`
 	RAMFormattedByExe map[string]string   `json:"ramFormattedByExe"`
+	RAMByPID          map[uint32]uint64   `json:"ramByPID"`
 }
 
 func PollProcesses() ProcessPollResult {
@@ -73,11 +74,13 @@ func PollProcesses() ProcessPollResult {
 	activePaths := make(map[string][]uint32)
 	ramByPath := make(map[string]uint64)
 	ramFmtByPath := make(map[string]string)
+	ramByPID := make(map[uint32]uint64, len(pt.list))
 	pids := make([]uint32, 0, len(pt.list))
 
 	for _, p := range pt.list {
 		pids = append(pids, p.PID)
 		totalRAM += p.RAM
+		ramByPID[p.PID] = p.RAM
 		if p.Path != "" {
 			low := strings.ToLower(p.Path)
 			activePaths[low] = append(activePaths[low], p.PID)
@@ -95,6 +98,7 @@ func PollProcesses() ProcessPollResult {
 		ActiveExePaths:    activePaths,
 		RAMByExePath:      ramByPath,
 		RAMFormattedByExe: ramFmtByPath,
+		RAMByPID:          ramByPID,
 	}
 }
 
