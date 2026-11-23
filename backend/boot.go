@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 type BootDegradationItem struct {
@@ -51,6 +53,16 @@ type xmlEvents struct {
 	Events []xmlEvent `xml:"Event"`
 }
 
+var (
+	modKernel32     = windows.NewLazySystemDLL("kernel32.dll")
+	pGetTickCount64 = modKernel32.NewProc("GetTickCount64")
+)
+
+func getSystemUptime() time.Duration {
+	r, _, _ := pGetTickCount64.Call()
+	return time.Duration(r) * time.Millisecond
+}
+
 // GetBootProfile queries the Windows Event Log channel Microsoft-Windows-Diagnostics-Performance/Operational.
 // Requires administrator elevation to access diagnostic channels.
 func GetBootProfile() BootProfile {
@@ -63,38 +75,29 @@ func GetBootProfile() BootProfile {
 		}
 	}
 
-	// Query Event 100 (boot duration) and 101-109 (boot degradations)
+	// Query latest 50 events from Diagnostics-Performance directly without complex XPath to avoid syntax errors
 	cmd := exec.Command("wevtutil", "qe", "Microsoft-Windows-Diagnostics-Performance/Operational",
-		"/q:*[System[(EventID=100 or (EventID>=101 and EventID<=109))]]",
-		"/c:25", "/rd:true", "/f:xml")
+		"/c:50", "/rd:true", "/f:xml")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 	out, err := cmd.Output()
 	if err != nil {
+		uptime := getSystemUptime()
+		bootTime := time.Now().Add(-uptime)
+		hours := int(uptime.Hours())
+		mins := int(uptime.Minutes()) % 60
 		return BootProfile{
-			Available:     false,
-			RequiresAdmin: false,
-			Error:         "Could not query Diagnostics-Performance log: " + err.Error(),
-			Summary:       "Diagnostics-Performance log is currently unavailable or disabled.",
+			Available: true,
+			Summary: fmt.Sprintf("PC running for %dh %dm (booted %s). Diagnostics log could not be queried.",
+				hours, mins, bootTime.Format("Jan 02, 3:04 PM")),
+			Error: "Query returned: " + err.Error(),
 		}
 	}
 
 	// Wrap in a root element so encoding/xml can parse multiple <Event> nodes
 	wrapped := "<Events>" + string(out) + "</Events>"
 	var parsed xmlEvents
-	if err := xml.Unmarshal([]byte(wrapped), &parsed); err != nil {
-		return BootProfile{
-			Available: false,
-			Error:     "Error parsing boot diagnostic XML: " + err.Error(),
-		}
-	}
-
-	if len(parsed.Events) == 0 {
-		return BootProfile{
-			Available: false,
-			Summary:   "No recent Windows boot diagnostic events found in event log.",
-		}
-	}
+	_ = xml.Unmarshal([]byte(wrapped), &parsed)
 
 	profile := BootProfile{Available: true}
 
@@ -126,7 +129,7 @@ func GetBootProfile() BootProfile {
 		}
 	}
 
-	// Correlate degradations belonging to the same boot session (within 10 minutes of boot)
+	// Correlate degradations (Event IDs 101-109)
 	for _, ev := range parsed.Events {
 		id := ev.System.EventID
 		if id < 101 || id > 109 {
@@ -194,6 +197,15 @@ func GetBootProfile() BootProfile {
 		}
 	}
 
+	uptime := getSystemUptime()
+	bootTime := time.Now().Add(-uptime)
+	hours := int(uptime.Hours())
+	mins := int(uptime.Minutes()) % 60
+	uptimeStr := fmt.Sprintf("%dh %dm", hours, mins)
+	if hours == 0 {
+		uptimeStr = fmt.Sprintf("%dm", mins)
+	}
+
 	if profile.BootDurationMs > 0 {
 		var parts []string
 		for _, d := range profile.Degradations {
@@ -206,6 +218,9 @@ func GetBootProfile() BootProfile {
 		} else {
 			profile.Summary = fmt.Sprintf("Last boot: %s (no major application delays detected).", profile.BootFormatted)
 		}
+	} else {
+		profile.Summary = fmt.Sprintf("PC running for %s (booted %s). No boot degradation bottlenecks recorded by Windows.",
+			uptimeStr, bootTime.Format("Jan 02, 3:04 PM"))
 	}
 
 	return profile

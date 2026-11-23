@@ -215,48 +215,66 @@ function renderOverview() {
   const nonSys = A.filter(a => a.autoStart).length;
 
   let bootBlock = '';
-  if (bootProfile && bootProfile.available) {
-    const degs = (bootProfile.degradations || []).slice(0, 4);
-    bootBlock = `
-    <div class="overview-block">
-      <div class="overview-block-head">
-        <strong>Boot Performance Profiler</strong>
-        <span class="badge blue">${esc(bootProfile.bootFormatted || '—')}</span>
-      </div>
-      <div class="overview-row">
-        <div class="service-icon"><i data-lucide="gauge" style="width:14px;height:14px"></i></div>
-        <div class="overview-row-copy">
-          <div class="overview-row-title">Total Boot Time: ${esc(bootProfile.bootFormatted)}</div>
-          <div class="overview-row-sub">${esc(bootProfile.summary)}</div>
+  if (bootProfile) {
+    if (bootProfile.available) {
+      const degs = (bootProfile.degradations || []).slice(0, 4);
+      const title = bootProfile.bootFormatted ? 'Total Boot Time: ' + esc(bootProfile.bootFormatted) : 'System Boot Uptime';
+      bootBlock = `
+      <div class="overview-block">
+        <div class="overview-block-head">
+          <strong>Boot Performance Profiler</strong>
+          <span class="badge ${bootProfile.bootFormatted ? 'blue' : 'green'}">${esc(bootProfile.bootFormatted || 'Active')}</span>
         </div>
-      </div>
-      ${degs.map(d => `
         <div class="overview-row">
-          <div class="product-icon" style="background:#202838;color:#60a5fa;border-color:#38507a">⚡</div>
+          <div class="service-icon"><i data-lucide="gauge" style="width:14px;height:14px"></i></div>
           <div class="overview-row-copy">
-            <div class="overview-row-title">${esc(d.name)}</div>
-            <div class="overview-row-sub">${esc(d.type)} degradation · delay caused</div>
+            <div class="overview-row-title">${title}</div>
+            <div class="overview-row-sub">${esc(bootProfile.summary)}</div>
           </div>
-          <span class="badge red">${esc(d.formattedDelay)}</span>
         </div>
-      `).join('')}
-    </div>`;
-  } else if (bootProfile && bootProfile.requiresAdmin) {
-    bootBlock = `
-    <div class="overview-block">
-      <div class="overview-block-head">
-        <strong>Boot Performance Profiler</strong>
-        <span class="badge amber">Admin Required</span>
-      </div>
-      <div class="overview-row">
-        <div class="service-icon"><i data-lucide="shield-alert" style="width:14px;height:14px"></i></div>
-        <div class="overview-row-copy">
-          <div class="overview-row-title">Measure Exact App Boot Delays</div>
-          <div class="overview-row-sub">Windows Event Diagnostics tracks boot delays (IDs 100-109). Administrator elevation is required to read this log.</div>
+        ${degs.map(d => `
+          <div class="overview-row">
+            <div class="product-icon" style="background:#202838;color:#60a5fa;border-color:#38507a">⚡</div>
+            <div class="overview-row-copy">
+              <div class="overview-row-title">${esc(d.name)}</div>
+              <div class="overview-row-sub">${esc(d.type)} degradation · delay caused</div>
+            </div>
+            <span class="badge red">${esc(d.formattedDelay)}</span>
+          </div>
+        `).join('')}
+      </div>`;
+    } else if (bootProfile.requiresAdmin) {
+      bootBlock = `
+      <div class="overview-block">
+        <div class="overview-block-head">
+          <strong>Boot Performance Profiler</strong>
+          <span class="badge amber">Admin Required</span>
         </div>
-        <button class="win-btn" style="height:26px;flex:none;margin-left:auto" onclick="doElevate()">Restart as Admin</button>
-      </div>
-    </div>`;
+        <div class="overview-row">
+          <div class="service-icon"><i data-lucide="shield-alert" style="width:14px;height:14px"></i></div>
+          <div class="overview-row-copy">
+            <div class="overview-row-title">Measure Exact App Boot Delays</div>
+            <div class="overview-row-sub">Windows Event Diagnostics tracks boot delays (IDs 100-109). Administrator elevation is required to read this log.</div>
+          </div>
+          <button class="win-btn" style="height:26px;flex:none;margin-left:auto" onclick="doElevate()">Restart as Admin</button>
+        </div>
+      </div>`;
+    } else {
+      bootBlock = `
+      <div class="overview-block">
+        <div class="overview-block-head">
+          <strong>Boot Performance Profiler</strong>
+          <span class="badge gray">Diagnostics</span>
+        </div>
+        <div class="overview-row">
+          <div class="service-icon"><i data-lucide="gauge" style="width:14px;height:14px"></i></div>
+          <div class="overview-row-copy">
+            <div class="overview-row-title">Boot Diagnostics</div>
+            <div class="overview-row-sub">${esc(bootProfile.summary || bootProfile.error || 'Diagnostic log is active.')}</div>
+          </div>
+        </div>
+      </div>`;
+    }
   }
 
   let powerBlock = '';
