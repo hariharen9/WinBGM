@@ -189,14 +189,41 @@
         <section class="page" id="page-sources">
           <div class="page-header">
             <div>
-              <h1>Startup locations</h1>
-              <p class="page-subtitle">The Windows mechanisms scanned to discover automatic and event-triggered launches.</p>
+              <h1 id="source-page-title">Startup locations</h1>
+              <p class="page-subtitle" id="source-page-subtitle">The Windows mechanisms scanned to discover automatic and event-triggered launches.</p>
+            </div>
+            <div class="header-actions" id="source-header-actions" style="display:none">
+              <button class="win-btn" onclick="closeSourceInspector()"><i data-lucide="arrow-left" style="width:13px;height:13px;margin-right:4px"></i>Back to all locations</button>
             </div>
           </div>
-          <div class="source-grid" id="source-grid"></div>
-          <div class="notice-line" style="margin-top:13px">
-            <i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i>
-            <span>This is an inventory of launch mechanisms plus a heuristic for windowless processes. A running process may have been started by another app, a service or a system event.</span>
+
+          <div id="source-grid-container">
+            <div class="source-grid" id="source-grid"></div>
+            <div class="notice-line" style="margin-top:13px">
+              <i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i>
+              <span>Click any startup location card to inspect, filter, and manage all background entries discovered in that mechanism.</span>
+            </div>
+          </div>
+
+          <!-- Interactive Location Inspector -->
+          <div id="source-inspector" style="display:none">
+            <div class="system-summary" id="inspector-summary"></div>
+            <div class="content-toolbar">
+              <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="inspector-search" type="search" placeholder="Search items in this location..."></label>
+              <div class="toolbar-flex"></div>
+              <span class="subtle-label" id="inspector-count"></span>
+            </div>
+            <div class="page-section">
+              <div class="section-heading"><strong id="inspector-heading">Location Items</strong><span id="inspector-hint">Click row for details & security</span></div>
+              <div style="overflow-x:auto">
+                <table class="data-table">
+                  <thead>
+                    <tr id="inspector-table-head"><th>Item Name</th><th>Application</th><th>Command / Target</th><th>Status</th><th>Control</th></tr>
+                  </thead>
+                  <tbody id="inspector-table-body"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -237,7 +264,7 @@
           </div>
           <div id="diff-container" style="display:none;margin-top:20px" class="page-section">
             <div class="section-heading"><strong id="diff-heading">Comparison Results</strong><button class="win-btn" style="height:24px;font-size:11px" onclick="$('diff-container').style.display='none'">Close Diff</button></div>
-            <div id="diff-content" style="padding:14px 0"></div>
+            <div id="diff-content" style="padding:16px 20px"></div>
           </div>
         </section>
 

@@ -200,10 +200,145 @@ function renderTasks() {
 
 function renderSources() {
   const badge = { scanned: ['green', 'Scanned'], partial: ['amber', 'Partial coverage'], notscanned: ['amber', 'Not scanned yet'] };
-  $('source-grid').innerHTML = inv.sources.map(s => `<div class="source-card"><div class="source-card-icon"><i data-lucide="${SOURCE_ICONS[s.id] || 'layers'}" style="width:16px;height:16px"></i></div><div class="source-card-copy"><div class="source-card-title">${esc(s.title)}</div><div class="source-card-desc">${esc(s.desc)}</div><div class="source-card-foot"><span class="source-count">${s.count} found</span><span class="badge ${badge[s.status][0]}">${badge[s.status][1]}</span></div></div></div>`).join('');
+  $('source-grid').innerHTML = inv.sources.map(s => `
+    <div class="source-card" onclick="openSourceInspector('${esc(s.id)}')">
+      <div class="source-card-icon"><i data-lucide="${SOURCE_ICONS[s.id] || 'layers'}" style="width:16px;height:16px"></i></div>
+      <div class="source-card-copy">
+        <div class="source-card-title">${esc(s.title)}</div>
+        <div class="source-card-desc">${esc(s.desc)}</div>
+        <div class="source-card-foot">
+          <span class="source-count">${s.count} found</span>
+          <span class="badge ${badge[s.status][0]}">${badge[s.status][1]}</span>
+          <span class="source-explore">Explore entries →</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
 
   refreshIcons();
   animateList('#source-grid .source-card');
+}
+
+let currentSourceId = null;
+let inspectorSearch = '';
+
+function getSourceComponents(sourceId) {
+  if (!inv || !inv.apps) return [];
+  const list = [];
+  inv.apps.forEach(a => {
+    a.components.forEach(c => {
+      if (c.kind === sourceId) {
+        list.push(Object.assign({}, c, {appId: a.id, appName: a.name, appPublisher: a.publisher}));
+      }
+    });
+  });
+  return list;
+}
+
+function openSourceInspector(sourceId) {
+  currentSourceId = sourceId;
+  inspectorSearch = '';
+  const searchInput = $('inspector-search');
+  if (searchInput) searchInput.value = '';
+
+  const sourceMeta = inv.sources.find(s => s.id === sourceId) || {
+    id: sourceId,
+    title: KIND[sourceId] || 'Startup Location',
+    desc: 'Components registered in this location mechanism.'
+  };
+
+  $('source-grid-container').style.display = 'none';
+  $('source-inspector').style.display = 'block';
+  $('source-header-actions').style.display = 'block';
+  $('source-page-title').textContent = sourceMeta.title;
+  $('source-page-subtitle').textContent = sourceMeta.desc;
+
+  renderSourceInspectorItems();
+  refreshIcons();
+}
+
+function closeSourceInspector() {
+  currentSourceId = null;
+  $('source-grid-container').style.display = 'block';
+  $('source-inspector').style.display = 'none';
+  $('source-header-actions').style.display = 'none';
+  $('source-page-title').textContent = 'Startup locations';
+  $('source-page-subtitle').textContent = 'The Windows mechanisms scanned to discover automatic and event-triggered launches.';
+  refreshIcons();
+}
+
+function renderSourceInspectorItems() {
+  if (!currentSourceId) return;
+  const all = getSourceComponents(currentSourceId);
+  const q = inspectorSearch.toLowerCase();
+  const list = all.filter(c => !q || (c.name + ' ' + (c.display || '') + ' ' + c.appName + ' ' + (c.exePath || '') + ' ' + (c.command || '')).toLowerCase().includes(q));
+
+  const enabledCount = all.filter(c => c.enabled).length;
+  const disabledCount = all.length - enabledCount;
+  $('inspector-summary').innerHTML = `
+    <div class="summary-item"><strong>${all.length}</strong> total entries discovered</div>
+    <span class="summary-separator"></span>
+    <div class="summary-item"><strong>${enabledCount}</strong> enabled / active</div>
+    <span class="summary-separator"></span>
+    <div class="summary-item"><strong>${disabledCount}</strong> disabled / blocked</div>
+  `;
+  $('inspector-count').textContent = list.length + ' of ' + all.length;
+
+  const tbody = $('inspector-table-body');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No entries match the search filter.</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(c => {
+    const isChangeable = CHANGEABLE.includes(c.kind);
+    const toggleHtml = isChangeable ? `
+      <input class="toggle" type="checkbox" data-cid="${esc(c.id)}" ${toggleOn(c) ? 'checked' : ''} ${c.control !== 'yes' ? 'disabled' : ''} title="${esc(c.control !== 'yes' ? (c.controlNote || 'Locked') : 'Toggle status')}" onchange="requestChange(this.dataset.cid, this.checked ? 'enable' : 'disable')">
+    ` : '—';
+
+    const revealBtn = c.exePath ? `
+      <button class="win-btn" style="height:24px;font-size:10px;padding:2px 8px" onclick="event.stopPropagation();api().Reveal('${esc(c.exePath).replace(/'/g, "\\'")}')" title="Open containing folder in File Explorer"><i data-lucide="folder-search" style="width:11px;height:11px;margin-right:2px"></i>Folder</button>
+    ` : '';
+
+    const appBtn = `
+      <button class="win-btn" style="height:24px;font-size:10px;padding:2px 8px" onclick="event.stopPropagation();sel='${esc(c.appId)}';navigate('applications');" title="Inspect application"><i data-lucide="layers" style="width:11px;height:11px;margin-right:2px"></i>App</button>
+    `;
+
+    const statusBadge = c.enabled ? `<span class="badge green">Enabled</span>` : `<span class="badge amber">Blocked / Off</span>`;
+    const runningBadge = c.running ? `<span class="badge blue" style="font-size:9px;padding:1px 4px;margin-left:4px">Running</span>` : '';
+
+    return `
+      <tr class="clickable" data-id="${esc(c.id)}" onclick="rowToggle(event, renderSourceInspectorItems)">
+        <td>
+          <div class="name-cell">
+            <div class="service-icon"><i data-lucide="${KIND_ICON[c.kind] || 'layers'}" style="width:14px;height:14px"></i></div>
+            <div>
+              <div class="name-primary">${esc(c.display || c.name)}${runningBadge}</div>
+              <div class="name-secondary">${esc(c.name)}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="name-primary">${esc(c.appName)}</div>
+          <div class="name-secondary">${esc(c.appPublisher || '—')}</div>
+        </td>
+        <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;font-size:11px;color:var(--text-dim)">
+          ${esc(c.command || c.exePath || '—')}
+        </td>
+        <td>${statusBadge}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+            ${toggleHtml}
+            ${revealBtn}
+            ${appBtn}
+          </div>
+        </td>
+      </tr>
+      ${expandRow(c, 5)}
+    `;
+  }).join('');
+
+  refreshIcons();
 }
 
 function renderOverview() {
@@ -501,39 +636,46 @@ function renderDiffResults(diff) {
   if (!container || !content) return;
 
   $('diff-heading').textContent = `Diff vs. ${diff.baseName || 'Baseline'}`;
-  let html = `<div style="font-size:12px;color:var(--text-dim);margin-bottom:12px">${esc(diff.summary)}</div>`;
+  let html = `
+    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--text);display:flex;align-items:center;gap:8px">
+      <i data-lucide="info" style="width:15px;height:15px;color:#60a5fa;flex:none"></i>
+      <span>${esc(diff.summary)}</span>
+    </div>
+  `;
 
   if (diff.added && diff.added.length > 0) {
-    html += `<div style="font-weight:600;color:#4ade80;margin:10px 0 6px 0;display:flex;align-items:center;gap:6px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> New Items Dropped / Added (${diff.added.length})</div>`;
+    html += `<div style="font-weight:600;color:#4ade80;margin:16px 0 8px 0;display:flex;align-items:center;gap:6px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> New Items Dropped / Added (${diff.added.length})</div>`;
     html += diff.added.map(c => `
-      <div class="overview-row" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);margin-bottom:6px;border-radius:6px;padding:8px 12px">
+      <div class="overview-row" style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.25);margin-bottom:8px;border-radius:6px;padding:12px 16px">
         <div class="overview-row-copy">
-          <div class="overview-row-title">${esc(c.display || c.name)} <span class="badge green">${esc(c.kind)}</span></div>
-          <div class="overview-row-sub">${esc(c.command || c.exePath || c.source)}</div>
+          <div class="overview-row-title" style="font-weight:600;font-size:12px">${esc(c.display || c.name)} <span class="badge green" style="font-size:9.5px;padding:1px 5px;margin-left:6px">${esc(c.kind)}</span></div>
+          <div class="overview-row-sub" style="margin-top:4px">${esc(c.command || c.exePath || c.source)}</div>
         </div>
       </div>
     `).join('');
   }
 
   if (diff.removed && diff.removed.length > 0) {
-    html += `<div style="font-weight:600;color:#f87171;margin:14px 0 6px 0;display:flex;align-items:center;gap:6px"><i data-lucide="minus-circle" style="width:14px;height:14px"></i> Removed Items (${diff.removed.length})</div>`;
+    html += `<div style="font-weight:600;color:#f87171;margin:16px 0 8px 0;display:flex;align-items:center;gap:6px"><i data-lucide="minus-circle" style="width:14px;height:14px"></i> Removed Items (${diff.removed.length})</div>`;
     html += diff.removed.map(c => `
-      <div class="overview-row" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);margin-bottom:6px;border-radius:6px;padding:8px 12px">
+      <div class="overview-row" style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25);margin-bottom:8px;border-radius:6px;padding:12px 16px">
         <div class="overview-row-copy">
-          <div class="overview-row-title">${esc(c.display || c.name)} <span class="badge red">${esc(c.kind)}</span></div>
-          <div class="overview-row-sub">${esc(c.command || c.exePath || c.source)}</div>
+          <div class="overview-row-title" style="font-weight:600;font-size:12px">${esc(c.display || c.name)} <span class="badge red" style="font-size:9.5px;padding:1px 5px;margin-left:6px">${esc(c.kind)}</span></div>
+          <div class="overview-row-sub" style="margin-top:4px">${esc(c.command || c.exePath || c.source)}</div>
         </div>
       </div>
     `).join('');
   }
 
   if (diff.modified && diff.modified.length > 0) {
-    html += `<div style="font-weight:600;color:#fbbf24;margin:14px 0 6px 0;display:flex;align-items:center;gap:6px"><i data-lucide="alert-circle" style="width:14px;height:14px"></i> Modified State (${diff.modified.length})</div>`;
+    html += `<div style="font-weight:600;color:#fbbf24;margin:16px 0 8px 0;display:flex;align-items:center;gap:6px"><i data-lucide="alert-circle" style="width:14px;height:14px"></i> Modified State (${diff.modified.length})</div>`;
     html += diff.modified.map(m => `
-      <div class="overview-row" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);margin-bottom:6px;border-radius:6px;padding:8px 12px">
+      <div class="overview-row" style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.25);margin-bottom:8px;border-radius:6px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
         <div class="overview-row-copy">
-          <div class="overview-row-title">${esc(m.component.display || m.component.name)}</div>
-          <div class="overview-row-sub">Before: ${esc(m.beforeState)} → Now: ${esc(m.afterState)}</div>
+          <div class="overview-row-title" style="font-weight:600;font-size:12px">${esc(m.component.display || m.component.name)} <span class="badge blue" style="font-size:9.5px;padding:1px 5px;margin-left:6px">${esc(m.component.kind)}</span></div>
+          <div class="overview-row-sub" style="margin-top:4px">
+            <span style="color:#f87171">Previous: ${esc(m.beforeState)}</span> &nbsp;→&nbsp; <span style="color:#4ade80;font-weight:600">Current: ${esc(m.afterState)}</span>
+          </div>
         </div>
       </div>
     `).join('');

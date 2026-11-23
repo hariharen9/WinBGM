@@ -106,6 +106,12 @@ $('app-sort').addEventListener('change', e => { sortMode = e.target.value; rende
 $('svc-search').addEventListener('input', renderServices);
 $('svc-type').addEventListener('change', renderServices);
 $('task-search').addEventListener('input', renderTasks);
+if ($('inspector-search')) {
+  $('inspector-search').addEventListener('input', e => {
+    inspectorSearch = e.target.value;
+    renderSourceInspectorItems();
+  });
+}
 
 $('svc-body').addEventListener('click', e => rowToggle(e, renderServices));
 $('task-body').addEventListener('click', e => rowToggle(e, renderTasks));

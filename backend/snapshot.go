@@ -180,10 +180,29 @@ func DiffSnapshots(baseID string, currentInv *Inventory) (SnapshotDiff, error) {
 			diff.Added = append(diff.Added, currComp)
 		} else {
 			if baseComp.Enabled != currComp.Enabled || baseComp.AutoStart != currComp.AutoStart {
+				var beforeParts, afterParts []string
+				if baseComp.Enabled != currComp.Enabled {
+					if baseComp.Enabled {
+						beforeParts = append(beforeParts, "Enabled")
+						afterParts = append(afterParts, "Disabled")
+					} else {
+						beforeParts = append(beforeParts, "Disabled")
+						afterParts = append(afterParts, "Enabled")
+					}
+				}
+				if baseComp.AutoStart != currComp.AutoStart {
+					if baseComp.AutoStart {
+						beforeParts = append(beforeParts, "Autostart: Yes")
+						afterParts = append(afterParts, "Autostart: No")
+					} else {
+						beforeParts = append(beforeParts, "Autostart: No")
+						afterParts = append(afterParts, "Autostart: Yes")
+					}
+				}
 				diff.Modified = append(diff.Modified, ComponentDiff{
 					Component:   currComp,
-					BeforeState: fmt.Sprintf("enabled:%v", baseComp.Enabled),
-					AfterState:  fmt.Sprintf("enabled:%v", currComp.Enabled),
+					BeforeState: strings.Join(beforeParts, ", "),
+					AfterState:  strings.Join(afterParts, ", "),
 				})
 			}
 		}
