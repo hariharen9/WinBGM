@@ -351,6 +351,40 @@ export namespace backend {
 		}
 	}
 	
+	export class ComponentDiff {
+	    component: Component;
+	    beforeState: string;
+	    afterState: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ComponentDiff(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.component = this.convertValues(source["component"], Component);
+	        this.beforeState = source["beforeState"];
+	        this.afterState = source["afterState"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	
 	export class SourceInfo {
 	    id: string;
@@ -500,6 +534,96 @@ export namespace backend {
 	        this.activeExePaths = source["activeExePaths"];
 	        this.ramByExePath = source["ramByExePath"];
 	        this.ramFormattedByExe = source["ramFormattedByExe"];
+	    }
+	}
+	export class SentinelAlert {
+	    id: string;
+	    rootKey: string;
+	    subKey: string;
+	    name: string;
+	    command: string;
+	    timestamp: string;
+	    action: string;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SentinelAlert(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.rootKey = source["rootKey"];
+	        this.subKey = source["subKey"];
+	        this.name = source["name"];
+	        this.command = source["command"];
+	        this.timestamp = source["timestamp"];
+	        this.action = source["action"];
+	        this.message = source["message"];
+	    }
+	}
+	export class SnapshotDiff {
+	    baseId: string;
+	    targetId: string;
+	    baseName: string;
+	    targetName: string;
+	    added: Component[];
+	    removed: Component[];
+	    modified: ComponentDiff[];
+	    summary: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SnapshotDiff(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.baseId = source["baseId"];
+	        this.targetId = source["targetId"];
+	        this.baseName = source["baseName"];
+	        this.targetName = source["targetName"];
+	        this.added = this.convertValues(source["added"], Component);
+	        this.removed = this.convertValues(source["removed"], Component);
+	        this.modified = this.convertValues(source["modified"], ComponentDiff);
+	        this.summary = source["summary"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SnapshotMeta {
+	    id: string;
+	    name: string;
+	    createdAt: string;
+	    itemCount: number;
+	    appCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SnapshotMeta(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.createdAt = source["createdAt"];
+	        this.itemCount = source["itemCount"];
+	        this.appCount = source["appCount"];
 	    }
 	}
 	

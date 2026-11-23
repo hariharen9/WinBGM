@@ -1,6 +1,6 @@
 // --- View Renderers ---
 
-const CHANGEABLE = ['service', 'run', 'folder', 'task'];
+const CHANGEABLE = ['service', 'run', 'folder', 'task', 'shellex'];
 
 function render() {
   if (!inv) return;
@@ -14,12 +14,14 @@ function render() {
   if ($('set-ui-scale')) $('set-ui-scale').value = uiScale;
   if ($('set-always-admin')) $('set-always-admin').checked = !!inv.alwaysAdmin;
 
+  renderSentinelAlerts();
   renderBanners();
   renderApps();
   renderOverview();
   renderServices();
   renderTasks();
   renderSources();
+  renderSnapshots();
   refreshIcons();
 }
 
@@ -382,14 +384,28 @@ function controlHtml(c) {
 }
 
 function actionButtons(c) {
-  if (!CHANGEABLE.includes(c.kind)) return '';
-  const b = (a, t) => `<button class="win-btn" style="height:26px;font-size:10px" data-cid="${esc(c.id)}" onclick="requestChange(this.dataset.cid,'${a}')">${t}</button>`;
   let out = '';
-  if (c.control === 'yes') {
+  if (CHANGEABLE.includes(c.kind) && c.control === 'yes') {
+    const b = (a, t) => `<button class="win-btn" style="height:26px;font-size:10px" data-cid="${esc(c.id)}" onclick="requestChange(this.dataset.cid,'${a}')">${t}</button>`;
     if (c.kind === 'service') out += c.autoStart ? b('disable', 'Set to Manual') : b('enable', 'Set to Automatic');
+    else if (c.kind === 'shellex') out += c.enabled ? b('disable', 'Disable extension') : b('enable', 'Enable extension');
     else out += toggleOn(c) ? b('disable', c.kind === 'task' ? 'Disable task' : 'Disable at sign-in') : b('enable', c.kind === 'task' ? 'Enable task' : 'Enable at sign-in');
+    if (c.kind === 'service' && c.canStop) out += c.running ? b('stop', 'Stop now') : b('start', 'Start now');
   }
-  if (c.kind === 'service' && c.canStop) out += c.running ? b('stop', 'Stop now') : b('start', 'Start now');
+
+  // Graceful process management actions
+  if (c.running && c.pids && c.pids.length > 0) {
+    const pid = c.pids[0];
+    out += `
+      <div style="display:flex;gap:4px;align-items:center;margin-top:6px;flex-wrap:wrap">
+        <button class="win-btn" style="height:24px;font-size:10px;padding:2px 8px" onclick="doProcessAction('freeze', ${pid})" title="Freeze process threads without terminating"><i data-lucide="pause" style="width:11px;height:11px;margin-right:3px"></i>Freeze</button>
+        <button class="win-btn" style="height:24px;font-size:10px;padding:2px 8px" onclick="doProcessAction('resume', ${pid})" title="Resume frozen process"><i data-lucide="play" style="width:11px;height:11px;margin-right:3px"></i>Resume</button>
+        <button class="win-btn" style="height:24px;font-size:10px;padding:2px 8px" onclick="doProcessAction('close', ${pid})" title="Gracefully close application"><i data-lucide="x" style="width:11px;height:11px;margin-right:3px"></i>Close</button>
+        <button class="win-btn" style="height:24px;font-size:10px;padding:2px 8px;color:#f87171" onclick="doProcessAction('kill', ${pid})" title="Forcefully terminate process"><i data-lucide="square" style="width:11px;height:11px;margin-right:3px"></i>End task</button>
+      </div>
+    `;
+  }
+
   const note = c.control !== 'yes' && c.controlNote ? `<div class="howto">${esc(c.controlNote)}</div>` : '';
   const caution = c.control === 'yes' && c.caution ? `<div class="howto" style="color:#e6c27e">${esc(c.caution)}</div>` : '';
   return note + caution + (out ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${out}</div>` : '');
@@ -421,5 +437,113 @@ function requestFocusMode() {
     await doFocusMode();
   };
   openModal();
+  refreshIcons();
+}
+
+function renderSentinelAlerts() {
+  const host = $('sentinel-banner-host');
+  if (!host) return;
+  if (!sentinelAlerts || sentinelAlerts.length === 0) {
+    host.innerHTML = '';
+    return;
+  }
+  host.innerHTML = sentinelAlerts.map(a => `
+    <div class="banner warning" style="margin-bottom:8px;display:flex;align-items:center;background:#3b2a1a;border:1px solid #78491c;color:#fed7aa;padding:10px 14px;border-radius:6px">
+      <i data-lucide="shield-alert" style="width:16px;height:16px;flex:none;color:#f97316;margin-right:8px"></i>
+      <div style="flex:1">
+        <strong>Persistence Sentinel Alert:</strong> ${esc(a.message || a.name)} (${esc(a.timestamp)})
+      </div>
+      <button class="win-btn" style="height:24px;font-size:10px;margin-left:8px" onclick="doScan()">Scan PC</button>
+      <button class="win-btn" style="height:24px;font-size:10px;margin-left:4px" onclick="dismissSentinelAlert('${esc(a.id)}')">Dismiss</button>
+    </div>
+  `).join('');
+  refreshIcons();
+}
+
+function renderSnapshots() {
+  const list = snapshots || [];
+  const sumEl = $('snapshot-summary');
+  if (sumEl) {
+    sumEl.innerHTML = `
+      <div class="summary-item"><strong>${list.length}</strong> baseline snapshot${list.length === 1 ? '' : 's'} saved</div>
+      <span class="summary-separator"></span>
+      <div class="summary-item">Live inventory: <strong>${apps().length}</strong> applications</div>
+    `;
+  }
+
+  const el = $('snapshot-list');
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state">No baseline snapshots saved yet. Click "Create Baseline" to save current PC state.</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(s => `
+    <div class="overview-row" style="padding:12px 16px;border-bottom:1px solid var(--border)">
+      <div class="product-icon" style="background:#1e293b;color:#38bdf8;border-color:#334155">📷</div>
+      <div class="overview-row-copy">
+        <div class="overview-row-title">${esc(s.name)}</div>
+        <div class="overview-row-sub">Created ${esc(fmtTime(s.createdAt))} · ${s.appCount} apps · ${s.itemCount} background items</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-left:auto">
+        <button class="win-btn primary" style="height:26px;font-size:11px" onclick="doDiff('${esc(s.id)}')"><i data-lucide="git-compare" style="width:12px;height:12px;margin-right:4px"></i>Compare with Live</button>
+        <button class="win-btn" style="height:26px;font-size:11px;color:#f87171" onclick="doDeleteSnapshot('${esc(s.id)}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>
+      </div>
+    </div>
+  `).join('');
+
+  refreshIcons();
+}
+
+function renderDiffResults(diff) {
+  const container = $('diff-container');
+  const content = $('diff-content');
+  if (!container || !content) return;
+
+  $('diff-heading').textContent = `Diff vs. ${diff.baseName || 'Baseline'}`;
+  let html = `<div style="font-size:12px;color:var(--text-dim);margin-bottom:12px">${esc(diff.summary)}</div>`;
+
+  if (diff.added && diff.added.length > 0) {
+    html += `<div style="font-weight:600;color:#4ade80;margin:10px 0 6px 0;display:flex;align-items:center;gap:6px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> New Items Dropped / Added (${diff.added.length})</div>`;
+    html += diff.added.map(c => `
+      <div class="overview-row" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);margin-bottom:6px;border-radius:6px;padding:8px 12px">
+        <div class="overview-row-copy">
+          <div class="overview-row-title">${esc(c.display || c.name)} <span class="badge green">${esc(c.kind)}</span></div>
+          <div class="overview-row-sub">${esc(c.command || c.exePath || c.source)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  if (diff.removed && diff.removed.length > 0) {
+    html += `<div style="font-weight:600;color:#f87171;margin:14px 0 6px 0;display:flex;align-items:center;gap:6px"><i data-lucide="minus-circle" style="width:14px;height:14px"></i> Removed Items (${diff.removed.length})</div>`;
+    html += diff.removed.map(c => `
+      <div class="overview-row" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);margin-bottom:6px;border-radius:6px;padding:8px 12px">
+        <div class="overview-row-copy">
+          <div class="overview-row-title">${esc(c.display || c.name)} <span class="badge red">${esc(c.kind)}</span></div>
+          <div class="overview-row-sub">${esc(c.command || c.exePath || c.source)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  if (diff.modified && diff.modified.length > 0) {
+    html += `<div style="font-weight:600;color:#fbbf24;margin:14px 0 6px 0;display:flex;align-items:center;gap:6px"><i data-lucide="alert-circle" style="width:14px;height:14px"></i> Modified State (${diff.modified.length})</div>`;
+    html += diff.modified.map(m => `
+      <div class="overview-row" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);margin-bottom:6px;border-radius:6px;padding:8px 12px">
+        <div class="overview-row-copy">
+          <div class="overview-row-title">${esc(m.component.display || m.component.name)}</div>
+          <div class="overview-row-sub">Before: ${esc(m.beforeState)} → Now: ${esc(m.afterState)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  if (!diff.added?.length && !diff.removed?.length && !diff.modified?.length) {
+    html += '<div class="empty-state" style="padding:16px 0">No differences detected! Live system matches this baseline exactly.</div>';
+  }
+
+  content.innerHTML = html;
+  container.style.display = 'block';
   refreshIcons();
 }

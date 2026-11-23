@@ -83,6 +83,13 @@ if (window.runtime && window.runtime.EventsOn) {
       if (ramEl) ramEl.textContent = poll.totalRAMFormatted;
     }
   });
+
+  // Re-add Sentinel persistence watcher listener
+  window.runtime.EventsOn('sentinel_alert', alert => {
+    sentinelAlerts.unshift(alert);
+    renderSentinelAlerts();
+    toast('⚠️ Sentinel Alert: ' + (alert.name || 'Startup entry') + ' was modified or added!');
+  });
 }
 
 async function doExport() {
@@ -167,6 +174,100 @@ async function loadHistory() {
   }
   renderHistory();
   if (inv) renderOverview();
+}
+
+async function doProcessAction(action, pid) {
+  const a = api();
+  if (!a) return toast('Process actions are available in the desktop app.');
+  try {
+    if (action === 'freeze') {
+      await a.SuspendProcess(pid);
+      toast('Process ' + pid + ' suspended (threads frozen).');
+    } else if (action === 'resume') {
+      await a.ResumeProcess(pid);
+      toast('Process ' + pid + ' resumed.');
+    } else if (action === 'close') {
+      await a.GracefulCloseProcess(pid);
+      toast('Graceful close requested for process ' + pid);
+      setTimeout(doScan, 1500);
+    } else if (action === 'kill') {
+      await a.KillProcess(pid);
+      toast('Process ' + pid + ' terminated.');
+      setTimeout(doScan, 500);
+    }
+  } catch (err) {
+    toast('Process action failed: ' + err);
+  }
+}
+
+async function loadSnapshots() {
+  const a = api();
+  if (!a) return;
+  try {
+    snapshots = (await a.ListSnapshots()) || [];
+    renderSnapshots();
+  } catch (e) {
+    snapshots = [];
+  }
+}
+
+function promptCreateSnapshot() {
+  const defaultName = 'Snapshot ' + new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  $('modal-title').textContent = 'Create Baseline Snapshot';
+  $('modal-body').innerHTML = `
+    <p>Save a full snapshot of all current startup entries, scheduled tasks, and services to compare against in the future.</p>
+    <div style="margin-top:10px">
+      <input id="snap-name-input" class="filter-search" style="width:100%;padding:8px 12px" type="text" value="${esc(defaultName)}" placeholder="Baseline Name">
+    </div>
+  `;
+  $('modal-confirm').textContent = 'Save Baseline';
+  $('modal-confirm').onclick = async () => {
+    const inputVal = $('snap-name-input')?.value || defaultName;
+    closeModal();
+    await doCreateSnapshot(inputVal);
+  };
+  openModal();
+}
+
+async function doCreateSnapshot(name) {
+  const a = api();
+  if (!a) return toast('Snapshots available in the desktop app.');
+  try {
+    const meta = await a.SaveSnapshot(name);
+    toast('Snapshot "' + meta.name + '" saved (' + meta.itemCount + ' items).');
+    celebrateSuccess();
+    await loadSnapshots();
+  } catch (e) {
+    toast('Snapshot failed: ' + e);
+  }
+}
+
+async function doDiff(baseId) {
+  const a = api();
+  if (!a) return toast('Diff comparison available in the desktop app.');
+  try {
+    const diff = await a.DiffSnapshots(baseId);
+    renderDiffResults(diff);
+  } catch (e) {
+    toast('Diff failed: ' + e);
+  }
+}
+
+async function doDeleteSnapshot(id) {
+  const a = api();
+  if (!a) return;
+  try {
+    await a.DeleteSnapshot(id);
+    toast('Snapshot deleted.');
+    await loadSnapshots();
+  } catch (e) {
+    toast('Delete failed: ' + e);
+  }
+}
+
+function dismissSentinelAlert(id) {
+  sentinelAlerts = sentinelAlerts.filter(a => a.id !== id);
+  renderSentinelAlerts();
 }
 
 async function confirmChange() {

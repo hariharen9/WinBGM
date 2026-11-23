@@ -13,7 +13,8 @@ import (
 
 var kindOrder = map[string]int{
 	"service": 0, "run": 1, "folder": 2, "task": 3,
-	"process": 4, "storeapp": 5, "winlogon": 6, "wmi": 7,
+	"shellex": 4, "nativemessaging": 5, "driver": 6, "activesetup": 7,
+	"process": 8, "storeapp": 9, "winlogon": 10, "wmi": 11,
 }
 
 func BuildInventory() Inventory {
@@ -34,6 +35,10 @@ func BuildInventory() Inventory {
 		{"storeapp", scanStoreApps},
 		{"winlogon", scanWinlogon},
 		{"wmi", scanWMI},
+		{"shellex", scanShellExtensions},
+		{"nativemessaging", scanNativeMessaging},
+		{"driver", scanDrivers},
+		{"activesetup", scanActiveSetup},
 	}
 	results := make([][]Component, len(scanners))
 	errs := make([]error, len(scanners))
@@ -417,6 +422,10 @@ func sourceList(c map[string]int) []SourceInfo {
 		{"folder", "Startup folders", "Per-user and all-users Startup folders, with shortcut targets resolved.", c["folder"], "scanned"},
 		{"service", "Windows services", "Every service with its startup type, running state and reconfigurability.", c["service"], "scanned"},
 		{"task", "Task Scheduler", "Tasks outside Microsoft's own library, with triggers and actions.", c["task"], "scanned"},
+		{"shellex", "Explorer Shell Extensions", "Right-click context menu handlers loaded directly into explorer.exe.", c["shellex"], "scanned"},
+		{"nativemessaging", "Browser Native Messaging Hosts", "Desktop background binaries communicating with Chrome, Edge, and Firefox extensions.", c["nativemessaging"], "scanned"},
+		{"driver", "Third-party Kernel Drivers", "Hardware, anti-cheat, and peripheral kernel drivers running at ring 0.", c["driver"], "scanned"},
+		{"activesetup", "Active Setup Stubs", "Per-user initialization commands executing before the user desktop shell loads.", c["activesetup"], "scanned"},
 		{"winlogon", "Winlogon & logon shell", "Logon shell overrides, Userinit handlers, and logon startup hooks.", c["winlogon"], "scanned"},
 		{"wmi", "WMI event subscriptions", "Persistent WMI event filters and consumers that launch actions.", c["wmi"], "scanned"},
 		{"storeapp", "Store app permissions", "Per-app background permission records for packaged apps.", c["storeapp"], "partial"},

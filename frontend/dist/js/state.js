@@ -11,7 +11,11 @@ const KIND = {
   process: 'Background process',
   storeapp: 'Store app permission',
   winlogon: 'Winlogon configuration',
-  wmi: 'WMI event consumer'
+  wmi: 'WMI event consumer',
+  shellex: 'Shell extension',
+  nativemessaging: 'Browser messaging host',
+  driver: 'Kernel / hardware driver',
+  activesetup: 'Active Setup hook'
 };
 
 const KIND_ICON = {
@@ -22,7 +26,11 @@ const KIND_ICON = {
   process: 'activity',
   storeapp: 'package',
   winlogon: 'shield-alert',
-  wmi: 'terminal'
+  wmi: 'terminal',
+  shellex: 'mouse-pointer-click',
+  nativemessaging: 'globe',
+  driver: 'hard-drive',
+  activesetup: 'terminal'
 };
 
 const SOURCE_ICONS = {
@@ -33,7 +41,11 @@ const SOURCE_ICONS = {
   storeapp: 'package',
   process: 'activity',
   winlogon: 'shield-alert',
-  wmi: 'terminal'
+  wmi: 'terminal',
+  shellex: 'mouse-pointer-click',
+  nativemessaging: 'globe',
+  driver: 'hard-drive',
+  activesetup: 'terminal'
 };
 
 const HOWTO = {
@@ -44,7 +56,11 @@ const HOWTO = {
   process: 'Close it from Task Manager, or look for a “run in background” / “close to tray” option in the app. Windows may also start it for notifications.',
   storeapp: 'Settings → Apps → Installed apps → the app → Advanced options → Background apps permissions.',
   winlogon: 'Winlogon entries are system hooks executed during Windows logon. Investigate the key in Registry Editor under Microsoft\\Windows NT\\CurrentVersion\\Winlogon.',
-  wmi: 'WMI persistence can be queried and managed using PowerShell (Get-CimInstance -Namespace root/subscription -ClassName __EventConsumer).'
+  wmi: 'WMI persistence can be queried and managed using PowerShell (Get-CimInstance -Namespace root/subscription -ClassName __EventConsumer).',
+  shellex: 'Right-click context menu handlers load directly into File Explorer. Disable via WinBGM to block the CLSID without deleting registry keys.',
+  nativemessaging: 'Native messaging hosts allow browser extensions to launch local programs. Inspect under Software\\Google\\Chrome\\NativeMessagingHosts or equivalent.',
+  driver: 'Kernel filter or peripheral driver. Managed via Windows Device Manager and DriverQuery.',
+  activesetup: 'Per-user setup scripts executed once when creating user desktop sessions.'
 };
 
 const KNOWN = [
@@ -65,6 +81,8 @@ const SCALES = ['100%', '110%', '120%', '130%', '140%'];
 
 // State
 let history = [];
+let snapshots = [];
+let sentinelAlerts = [];
 let pending = null;
 let inv = null;
 let sel = null;
@@ -139,6 +157,10 @@ function describe(c, action) {
     task: {
       disable: ['Disable the task “' + n + '”?', 'It will stop running on its schedule or triggers. The task is kept, not deleted. Some updaters recreate their tasks.', 'Disable task'],
       enable: ['Enable the task “' + n + '”?', 'It will run again on its schedule or triggers.', 'Enable task']
+    },
+    shellex: {
+      disable: ['Disable context menu extension “' + n + '”?', 'It will no longer appear when right-clicking files in File Explorer. It is blocked safely via Shell Extensions\\Blocked without registry deletions.', 'Disable extension'],
+      enable: ['Enable context menu extension “' + n + '”?', 'It will appear in File Explorer right-click menus again.', 'Enable extension']
     },
     service: {
       disable: ['Set ' + n + ' to Manual start?', 'It will no longer start automatically with Windows. Windows or the app can still start it when needed. It is not stopped now.', 'Set to Manual'],

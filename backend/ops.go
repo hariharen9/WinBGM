@@ -103,6 +103,11 @@ func readTarget(t Target) (snapshot, error) {
 			return snapshot{State: "stopped"}, nil
 		}
 		return snapshot{State: start}, nil
+	case "shellex":
+		if isCLSIDBlocked(t.Name) {
+			return snapshot{State: "off", Existed: true}, nil
+		}
+		return snapshot{State: "on", Existed: false}, nil
 	}
 	return snapshot{}, errors.New("unsupported item")
 }
@@ -237,6 +242,17 @@ func writeTarget(t Target, desired string) error {
 			return scErr(code, out)
 		}
 		return waitService(t.Name, true)
+	case "shellex":
+		k, _, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked`, registry.SET_VALUE)
+		if err != nil {
+			return err
+		}
+		defer k.Close()
+		if desired == "off" {
+			return k.SetStringValue(t.Name, "")
+		}
+		_ = k.DeleteValue(t.Name)
+		return nil
 	}
 	return errors.New("unsupported item")
 }
@@ -384,7 +400,7 @@ func ApplyInternal(last *Inventory, req ChangeRequest, batchID string) ChangeRes
 	tgt := c.tgt
 	var desired string
 	switch c.Kind {
-	case "run", "folder":
+	case "run", "folder", "shellex":
 		desired = map[string]string{"disable": "off", "enable": "on"}[req.Action]
 	case "task":
 		desired = map[string]string{"disable": "disabled", "enable": "enabled"}[req.Action]

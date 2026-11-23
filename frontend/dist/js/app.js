@@ -18,12 +18,14 @@ function navigate(p) {
     services: 'Services',
     tasks: 'Scheduled tasks',
     sources: 'Startup locations',
+    snapshots: 'Snapshots & Diff Comparison',
     history: 'Change history',
     settings: 'Settings'
   };
   $('commandbar-label').textContent = labels[p] || 'WinBGM';
   $('content-host').scrollTop = 0;
   if (p === 'history') loadHistory();
+  if (p === 'snapshots') loadSnapshots();
   if (p === 'overview') animateCounters();
   refreshIcons();
 }
@@ -191,4 +193,7 @@ document.addEventListener('keydown', e => {
 
 // Bootstrap
 document.documentElement.style.zoom = uiScale;
-doScan().then(loadHistory);
+doScan().then(() => {
+  loadHistory();
+  loadSnapshots();
+});

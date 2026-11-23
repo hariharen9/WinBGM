@@ -61,39 +61,40 @@ A prioritized, phased roadmap to evolve WinBGM into the premier, safe, modern al
 ## 🔍 Phase 3: New Persistence & Extensibility Vectors
 *Goal: Equal and surpass Autoruns in coverage of common real-world clutter and stealth autostarts.*
 
-- [ ] **3.1: Explorer Shell Extensions & Context Menu Scanner**
+- [x] **3.1: Explorer Shell Extensions & Context Menu Scanner**
   - Scan `HKCR\*\shellex\ContextMenuHandlers`, `Directory\shellex`, and `Folder\shellex`.
   - Identify third-party context menu clutter loaded into `explorer.exe` (e.g. 7-Zip, WinRAR, Git, Dropbox, PowerToys).
-  - Add safe toggle to enable/disable sluggish shell extensions.
+  - Add safe toggle to enable/disable sluggish shell extensions via `Shell Extensions\Blocked`.
 
-- [ ] **3.2: Native Messaging Hosts Scanner**
+- [x] **3.2: Native Messaging Hosts Scanner**
   - Scan `HKCU`/`HKLM\Software\Google\Chrome\NativeMessagingHosts` (plus Edge, Brave, Firefox).
   - List desktop background binaries registered to communicate directly with browser extensions.
 
-- [ ] **3.3: Third-Party Kernel Drivers & Peripheral Services**
-  - Enumerate third-party non-Microsoft kernel drivers (`sc.exe type= kernel`).
+- [x] **3.3: Third-Party Kernel Drivers & Peripheral Services**
+  - Enumerate third-party non-Microsoft kernel drivers from `SYSTEM\CurrentControlSet\Services` (Type 1 and 2).
   - Categorize anti-cheat drivers (Vanguard, EasyAntiCheat, BattlEye) and peripheral software (Razer, Corsair, Logitech).
 
-- [ ] **3.4: Active Setup & Logon Scripts Scanner**
-  - Scan `HKLM\SOFTWARE\Microsoft\Active Setup\Installed Components`.
-  - Scan Group Policy user logon/logoff scripts.
+- [x] **3.4: Active Setup & Logon Scripts Scanner**
+  - Scan `HKLM\SOFTWARE\Microsoft\Active Setup\Installed Components` and 32-bit `Wow6432Node`.
+  - Detect stubborn per-user initialization stubs executing before shell load.
 
 ---
 
 ## 🛡️ Phase 4: Active Protection & App Management
 *Goal: Transform WinBGM into an active assistant that protects your system over time.*
 
-- [ ] **4.1: Background Persistence Watcher ("Re-Add Sentinel")**
-  - Background tray monitor detecting when updated apps (Spotify, Discord, Teams, Chrome) silently re-add themselves to startup.
-  - Prompt user with quick toast: *"Discord re-enabled itself at boot during update. Keep disabled?"*
+- [x] **4.1: Background Persistence Watcher ("Re-Add Sentinel")**
+  - Background registry watcher via `RegNotifyChangeKeyValue` on `Run` and `RunOnce` keys.
+  - Automatically emits real-time alert notifications when apps (Discord, Spotify, Teams, Chrome) silently re-add themselves at boot.
 
-- [ ] **4.2: Snapshot & Diff Comparison ("What Changed?")**
+- [x] **4.2: Snapshot & Diff Comparison ("What Changed?")**
   - Allow saving named baseline snapshots ("Clean Install", "Before installing Game").
   - Provide visual Diff viewer highlighting all new startup items, tasks, and services installed since baseline.
 
-- [ ] **4.3: Interactive Process Management (Graceful End & Suspend)**
-  - Add "Graceful Close" (`WM_CLOSE` followed by `TerminateProcess`).
-  - Add "Freeze / Suspend" (`NtSuspendProcess`) to pause resource-heavy background processes without killing them.
+- [x] **4.3: Interactive Process Management (Graceful End & Suspend)**
+  - Add "Graceful Close" (`WM_CLOSE` to top-level windows).
+  - Add "Freeze / Suspend" (`NtSuspendProcess` via `ntdll.dll`) and "Resume" (`NtResumeProcess`) to pause resource-heavy background processes without killing them.
+  - Provide forceful terminate fallback option.
 
-- [ ] **4.4: AppX/MSIX Manifest Deep Metadata**
-  - Query Windows Package Management APIs (`AppxManifest.xml`) for localized app names, official icons, and package architecture.
+- [x] **4.4: AppX/MSIX Manifest Deep Metadata**
+  - Parse `AppxManifest.xml` directly under `WindowsApps` to extract official human-readable display names, version, and publishers.

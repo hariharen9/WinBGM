@@ -10,6 +10,18 @@ export function ApplyFocusMode() {
   return window['go']['main']['App']['ApplyFocusMode']();
 }
 
+export function ClearSentinelAlerts() {
+  return window['go']['main']['App']['ClearSentinelAlerts']();
+}
+
+export function DeleteSnapshot(arg1) {
+  return window['go']['main']['App']['DeleteSnapshot'](arg1);
+}
+
+export function DiffSnapshots(arg1) {
+  return window['go']['main']['App']['DiffSnapshots'](arg1);
+}
+
 export function Export() {
   return window['go']['main']['App']['Export']();
 }
@@ -34,8 +46,28 @@ export function GetPowerReport() {
   return window['go']['main']['App']['GetPowerReport']();
 }
 
+export function GetSentinelAlerts() {
+  return window['go']['main']['App']['GetSentinelAlerts']();
+}
+
+export function GracefulCloseProcess(arg1) {
+  return window['go']['main']['App']['GracefulCloseProcess'](arg1);
+}
+
 export function History() {
   return window['go']['main']['App']['History']();
+}
+
+export function IsProcessSuspended(arg1) {
+  return window['go']['main']['App']['IsProcessSuspended'](arg1);
+}
+
+export function KillProcess(arg1) {
+  return window['go']['main']['App']['KillProcess'](arg1);
+}
+
+export function ListSnapshots() {
+  return window['go']['main']['App']['ListSnapshots']();
 }
 
 export function PollProcesses() {
@@ -54,8 +86,16 @@ export function RestoreBatch(arg1) {
   return window['go']['main']['App']['RestoreBatch'](arg1);
 }
 
+export function ResumeProcess(arg1) {
+  return window['go']['main']['App']['ResumeProcess'](arg1);
+}
+
 export function Reveal(arg1) {
   return window['go']['main']['App']['Reveal'](arg1);
+}
+
+export function SaveSnapshot(arg1) {
+  return window['go']['main']['App']['SaveSnapshot'](arg1);
 }
 
 export function Scan() {
@@ -64,4 +104,8 @@ export function Scan() {
 
 export function SetAlwaysAdmin(arg1) {
   return window['go']['main']['App']['SetAlwaysAdmin'](arg1);
+}
+
+export function SuspendProcess(arg1) {
+  return window['go']['main']['App']['SuspendProcess'](arg1);
 }

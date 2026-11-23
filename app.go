@@ -43,6 +43,74 @@ func (a *App) startup(ctx context.Context) {
 			}
 		}
 	}()
+
+	// Start Sentinel background persistence watcher
+	backend.StartSentinel(a.ctx, func(alert backend.SentinelAlert) {
+		runtime.EventsEmit(a.ctx, "sentinel_alert", alert)
+	})
+}
+
+// SuspendProcess freezes all threads of a running process without terminating it.
+func (a *App) SuspendProcess(pid uint32) error {
+	return backend.SuspendProcess(pid)
+}
+
+// ResumeProcess unfreezes a suspended process.
+func (a *App) ResumeProcess(pid uint32) error {
+	return backend.ResumeProcess(pid)
+}
+
+// GracefulCloseProcess sends WM_CLOSE to process windows.
+func (a *App) GracefulCloseProcess(pid uint32) error {
+	return backend.GracefulCloseProcess(pid)
+}
+
+// KillProcess forcefully terminates a process.
+func (a *App) KillProcess(pid uint32) error {
+	return backend.KillProcess(pid)
+}
+
+// IsProcessSuspended checks if a process was suspended by WinBGM.
+func (a *App) IsProcessSuspended(pid uint32) bool {
+	return backend.IsProcessSuspended(pid)
+}
+
+// SaveSnapshot saves a baseline snapshot to disk.
+func (a *App) SaveSnapshot(name string) (backend.SnapshotMeta, error) {
+	if a.last == nil {
+		inv := backend.BuildInventory()
+		a.last = &inv
+	}
+	return backend.SaveSnapshot(name, *a.last)
+}
+
+// ListSnapshots returns all saved baseline snapshots.
+func (a *App) ListSnapshots() ([]backend.SnapshotMeta, error) {
+	return backend.ListSnapshots()
+}
+
+// DeleteSnapshot removes a snapshot.
+func (a *App) DeleteSnapshot(id string) error {
+	return backend.DeleteSnapshot(id)
+}
+
+// DiffSnapshots compares a saved baseline snapshot against the live inventory.
+func (a *App) DiffSnapshots(baseID string) (backend.SnapshotDiff, error) {
+	if a.last == nil {
+		inv := backend.BuildInventory()
+		a.last = &inv
+	}
+	return backend.DiffSnapshots(baseID, a.last)
+}
+
+// GetSentinelAlerts returns active re-add sentinel notifications.
+func (a *App) GetSentinelAlerts() []backend.SentinelAlert {
+	return backend.GetSentinelAlerts()
+}
+
+// ClearSentinelAlerts clears active re-add alerts.
+func (a *App) ClearSentinelAlerts() {
+	backend.ClearSentinelAlerts()
 }
 
 // PollProcesses runs an immediate lightweight process & RAM snapshot (<5ms).

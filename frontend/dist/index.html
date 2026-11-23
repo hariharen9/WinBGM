@@ -48,6 +48,7 @@
       <div class="nav-divider"></div>
       <div class="nav-group-label">Other</div>
       <nav class="nav-list">
+        <button class="nav-item" data-page="snapshots"><i data-lucide="camera"></i><span>Snapshots & Diffs</span></button>
         <button class="nav-item" data-page="history"><i data-lucide="history"></i><span>Change history</span></button>
         <button class="nav-item" data-page="settings"><i data-lucide="sliders"></i><span>Settings</span></button>
       </nav>
@@ -75,6 +76,7 @@
       </div>
 
       <div class="content-host" id="content-host">
+        <div id="sentinel-banner-host" style="padding:10px 24px 0 24px"></div>
         <!-- Applications Page -->
         <section class="page active" id="page-applications">
           <div class="page-header">
@@ -214,6 +216,28 @@
           <div class="notice-line" style="margin-top:12px">
             <i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i>
             <span>Restore only runs if the item is still exactly as WinBGM left it, so it never overwrites a newer change you made elsewhere.</span>
+          </div>
+        </section>
+
+        <!-- Snapshots & Diff Page -->
+        <section class="page" id="page-snapshots">
+          <div class="page-header">
+            <div>
+              <h1>Snapshots & Diff Comparison</h1>
+              <p class="page-subtitle">Save baseline snapshots to audit what changes when new software, updates, or games are installed.</p>
+            </div>
+            <div class="header-actions">
+              <button class="win-btn primary" onclick="promptCreateSnapshot()"><i data-lucide="camera" style="width:13px;height:13px;margin-right:6px"></i>Create Baseline</button>
+            </div>
+          </div>
+          <div class="system-summary" id="snapshot-summary"></div>
+          <div class="page-section">
+            <div class="section-heading"><strong>Saved Baselines</strong><span>Compare with current PC state</span></div>
+            <div class="snapshot-list" id="snapshot-list"></div>
+          </div>
+          <div id="diff-container" style="display:none;margin-top:20px" class="page-section">
+            <div class="section-heading"><strong id="diff-heading">Comparison Results</strong><button class="win-btn" style="height:24px;font-size:11px" onclick="$('diff-container').style.display='none'">Close Diff</button></div>
+            <div id="diff-content" style="padding:14px 0"></div>
           </div>
         </section>
 

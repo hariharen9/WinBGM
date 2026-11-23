@@ -6,6 +6,12 @@ export function Apply(arg1:backend.ChangeRequest):Promise<backend.ChangeResult>;
 
 export function ApplyFocusMode():Promise<backend.BatchResult>;
 
+export function ClearSentinelAlerts():Promise<void>;
+
+export function DeleteSnapshot(arg1:string):Promise<void>;
+
+export function DiffSnapshots(arg1:string):Promise<backend.SnapshotDiff>;
+
 export function Export():Promise<string>;
 
 export function ExportCSV():Promise<string>;
@@ -18,7 +24,17 @@ export function GetBootProfile():Promise<backend.BootProfile>;
 
 export function GetPowerReport():Promise<backend.PowerReport>;
 
+export function GetSentinelAlerts():Promise<Array<backend.SentinelAlert>>;
+
+export function GracefulCloseProcess(arg1:number):Promise<void>;
+
 export function History():Promise<Array<backend.HistoryEntry>>;
+
+export function IsProcessSuspended(arg1:number):Promise<boolean>;
+
+export function KillProcess(arg1:number):Promise<void>;
+
+export function ListSnapshots():Promise<Array<backend.SnapshotMeta>>;
 
 export function PollProcesses():Promise<backend.ProcessPollResult>;
 
@@ -28,8 +44,14 @@ export function Restore(arg1:string):Promise<backend.ChangeResult>;
 
 export function RestoreBatch(arg1:string):Promise<backend.BatchResult>;
 
+export function ResumeProcess(arg1:number):Promise<void>;
+
 export function Reveal(arg1:string):Promise<void>;
+
+export function SaveSnapshot(arg1:string):Promise<backend.SnapshotMeta>;
 
 export function Scan():Promise<backend.Inventory>;
 
 export function SetAlwaysAdmin(arg1:boolean):Promise<boolean>;
+
+export function SuspendProcess(arg1:number):Promise<void>;

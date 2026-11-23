@@ -18,6 +18,9 @@ func ownerOf(p string) (string, string, bool) {
 	}
 	for i, s := range low {
 		if s == "windowsapps" && i+1 < len(parts) {
+			if info, ok := ResolveAppxFromPath(p); ok && info.DisplayName != "" {
+				return "pkg:" + strings.ToLower(info.PackageName), info.DisplayName, info.IsMicrosoft
+			}
 			name := strings.SplitN(parts[i+1], "_", 2)[0]
 			return "pkg:" + strings.ToLower(name), packageDisplay(name), isWindowsPackage(name)
 		}
