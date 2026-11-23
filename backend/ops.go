@@ -349,6 +349,10 @@ func targetNeedsAdmin(t Target) bool {
 
 // Apply changes one item after re-checking every safety rule on the Go side (the UI is never trusted).
 func Apply(last *Inventory, req ChangeRequest) ChangeResult {
+	return ApplyInternal(last, req, "")
+}
+
+func ApplyInternal(last *Inventory, req ChangeRequest, batchID string) ChangeResult {
 	opMu.Lock()
 	defer opMu.Unlock()
 	if last == nil {
@@ -417,7 +421,7 @@ func Apply(last *Inventory, req ChangeRequest) ChangeResult {
 	}
 
 	e := HistoryEntry{
-		ID: fmt.Sprint(time.Now().UnixNano()), Time: time.Now().Format(time.RFC3339),
+		ID: fmt.Sprint(time.Now().UnixNano()), BatchID: batchID, Time: time.Now().Format(time.RFC3339),
 		Title: orElse(c.Display, c.Name), AppName: appName, Kind: tgt.Kind, Action: req.Action,
 		Summary: summaryOf(tgt.Kind, cur.State, desired), Target: tgt, Before: cur.State, After: desired,
 		BeforeRaw: hex.EncodeToString(cur.Raw), BeforeExisted: cur.Existed, Status: "pending",
@@ -507,6 +511,7 @@ func orElse(s, d string) string {
 }
 
 type BatchResult struct {
+	BatchID  string   `json:"batchId,omitempty"`
 	Total    int      `json:"total"`
 	Modified int      `json:"modified"`
 	Failed   int      `json:"failed"`
@@ -535,9 +540,10 @@ func ApplyFocusMode(last *Inventory) BatchResult {
 		return BatchResult{Message: "No third-party automatic startup items to disable."}
 	}
 
-	res := BatchResult{Total: len(toDisable)}
+	batchID := fmt.Sprintf("focus-%d", time.Now().Unix())
+	res := BatchResult{BatchID: batchID, Total: len(toDisable)}
 	for _, req := range toDisable {
-		r := Apply(last, req)
+		r := ApplyInternal(last, req, batchID)
 		if r.OK {
 			res.Modified++
 			if r.Entry != nil {
@@ -548,6 +554,37 @@ func ApplyFocusMode(last *Inventory) BatchResult {
 		}
 	}
 	res.Message = fmt.Sprintf("Focus Mode: %d item(s) safely disabled and backed up. You can restore them anytime from Change history.", res.Modified)
+	return res
+}
+
+// RestoreBatch undoes all restorable entries in a batch session.
+func RestoreBatch(batchID string) BatchResult {
+	if batchID == "" {
+		return BatchResult{Message: "Invalid batch ID."}
+	}
+	all := loadHistory()
+	var toRestore []HistoryEntry
+	for _, h := range all {
+		if h.BatchID == batchID && h.Status == "applied" && h.Restorable {
+			toRestore = append(toRestore, h)
+		}
+	}
+	if len(toRestore) == 0 {
+		return BatchResult{BatchID: batchID, Message: "No restorable items found for this batch session."}
+	}
+
+	res := BatchResult{BatchID: batchID, Total: len(toRestore)}
+	// Restore in reverse order (newest first)
+	for i := len(toRestore) - 1; i >= 0; i-- {
+		r := Restore(toRestore[i].ID)
+		if r.OK {
+			res.Modified++
+			res.Entries = append(res.Entries, toRestore[i].ID)
+		} else {
+			res.Failed++
+		}
+	}
+	res.Message = fmt.Sprintf("Batch restore: %d restored, %d failed.", res.Modified, res.Failed)
 	return res
 }
 

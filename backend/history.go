@@ -9,6 +9,7 @@ import (
 
 type HistoryEntry struct {
 	ID            string `json:"id"`
+	BatchID       string `json:"batchId,omitempty"`
 	Time          string `json:"time"`
 	Title         string `json:"title"`
 	AppName       string `json:"appName"`

@@ -213,6 +213,10 @@ func enrich(comps []Component, pt procTable) {
 		}
 		info := infos[c.ExePath]
 		c.Publisher, c.Product = info.Company, info.Product
+		c.Signer = info.Signer
+		if c.Publisher == "" && info.Signer != "" {
+			c.Publisher = info.Signer
+		}
 		c.SHA256 = info.SHA256
 		if c.SHA256 != "" {
 			c.VirusTotalURL = "https://www.virustotal.com/gui/file/" + c.SHA256
@@ -221,10 +225,13 @@ func enrich(comps []Component, pt procTable) {
 		switch {
 		case !info.Exists:
 			c.Signature = "missing"
-		case info.Sig == "valid":
+		case info.Sig == "valid" || info.Sig == "catalog":
 			c.Signature = "valid"
 		default:
 			c.Signature = "unsigned"
+		}
+		if info.Expired {
+			c.Flags = append(c.Flags, "expired_cert")
 		}
 		low := strings.ToLower(c.ExePath)
 		if !info.Exists && c.Enabled && c.Kind != "process" && c.Kind != "storeapp" {
@@ -263,6 +270,7 @@ func group(comps []Component, pt procTable) []AppGroup {
 	groups := map[string]*AppGroup{}
 	prods := map[string]map[string]int{}
 	comps2 := map[string]map[string]int{}
+	signers := map[string]map[string]int{}
 	var keys []string
 	for i := range comps {
 		c := comps[i]
@@ -272,7 +280,7 @@ func group(comps []Component, pt procTable) []AppGroup {
 		if g == nil {
 			g = &AppGroup{ID: key, Name: label, System: true}
 			groups[key] = g
-			prods[key], comps2[key] = map[string]int{}, map[string]int{}
+			prods[key], comps2[key], signers[key] = map[string]int{}, map[string]int{}, map[string]int{}
 			keys = append(keys, key)
 		}
 		g.Components = append(g.Components, c)
@@ -282,6 +290,9 @@ func group(comps []Component, pt procTable) []AppGroup {
 		}
 		if c.Publisher != "" {
 			comps2[key][c.Publisher]++
+		}
+		if c.Signer != "" {
+			signers[key][c.Signer]++
 		}
 	}
 
@@ -302,6 +313,7 @@ func group(comps []Component, pt procTable) []AppGroup {
 			}
 		}
 		g.Publisher = top(comps2[key])
+		g.Signer = top(signers[key])
 		g.Letter = "?"
 		for _, r := range g.Name {
 			if unicode.IsLetter(r) || unicode.IsDigit(r) {

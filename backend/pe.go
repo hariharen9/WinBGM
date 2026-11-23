@@ -9,14 +9,16 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
 type exeInfo struct {
-	Company, Product, Sig, SHA256 string
-	Exists                        bool
+	Company, Product, Sig, Signer, SHA256 string
+	Expired                               bool
+	Exists                                bool
 }
 
 var (
@@ -30,6 +32,23 @@ var (
 
 	modWintrust = windows.NewLazySystemDLL("wintrust.dll")
 	pWinTrust   = modWintrust.NewProc("WinVerifyTrust")
+
+	procCryptCATAdminAcquireContext      = modWintrust.NewProc("CryptCATAdminAcquireContext")
+	procCryptCATAdminCalcHashFromFileH   = modWintrust.NewProc("CryptCATAdminCalcHashFromFileHandle")
+	procCryptCATAdminEnumCatalogFromHash = modWintrust.NewProc("CryptCATAdminEnumCatalogFromHash")
+	procCryptCATAdminReleaseCatalogCtx   = modWintrust.NewProc("CryptCATAdminReleaseCatalogContext")
+	procCryptCATAdminReleaseCtx          = modWintrust.NewProc("CryptCATAdminReleaseContext")
+
+	modCrypt32                      = windows.NewLazySystemDLL("crypt32.dll")
+	procCryptQueryObject            = modCrypt32.NewProc("CryptQueryObject")
+	procCryptMsgClose               = modCrypt32.NewProc("CryptMsgClose")
+	procCertEnumCertificatesInStore = modCrypt32.NewProc("CertEnumCertificatesInStore")
+)
+
+const (
+	certQueryObjectFile                    = 0x00000001
+	certQueryContentFlagPKCS7SignedEmbed   = 1 << 10
+	certQueryFormatFlagAll                 = 0x0000000E
 )
 
 func fileExists(p string) bool {
@@ -69,6 +88,12 @@ func lookupInfo(path string) exeInfo {
 		e.Exists = true
 		e.Company, e.Product = versionStrings(path)
 		e.Sig = verifySig(path)
+		if e.Sig == "valid" {
+			e.Signer, e.Expired = getCertSigner(path)
+		} else if verifyCatalogSig(path) {
+			e.Sig = "catalog"
+			e.Signer = "Microsoft Windows"
+		}
 		e.SHA256 = calcSHA256(path)
 	}
 	infoMu.Lock()
@@ -145,7 +170,6 @@ var actionGenericVerifyV2 = windows.GUID{Data1: 0x00AAC56B, Data2: 0xCD44, Data3
 	Data4: [8]byte{0x8C, 0xC2, 0x00, 0xC0, 0x4F, 0xC2, 0x95, 0xEE}}
 
 // verifySig checks an embedded Authenticode signature. No UI, no network.
-// Files signed via Windows catalogs (many OS files) report "unsigned" here; those live in \Windows and are treated as system.
 func verifySig(path string) string {
 	pp, err := windows.UTF16PtrFromString(path)
 	if err != nil {
@@ -171,3 +195,107 @@ func verifySig(path string) string {
 	}
 	return "unsigned"
 }
+
+// verifyCatalogSig checks Windows catalog file signature (.cat files under CatRoot).
+func verifyCatalogSig(path string) bool {
+	var hCatAdmin windows.Handle
+	r, _, _ := procCryptCATAdminAcquireContext.Call(uintptr(unsafe.Pointer(&hCatAdmin)), 0, 0)
+	if r == 0 || hCatAdmin == 0 {
+		return false
+	}
+	defer procCryptCATAdminReleaseCtx.Call(uintptr(hCatAdmin), 0)
+
+	pwsz, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return false
+	}
+	hFile, err := windows.CreateFile(pwsz, windows.GENERIC_READ, windows.FILE_SHARE_READ, nil, windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_NORMAL, 0)
+	if err != nil {
+		return false
+	}
+	defer windows.CloseHandle(hFile)
+
+	var cbHash uint32
+	r, _, _ = procCryptCATAdminCalcHashFromFileH.Call(uintptr(hFile), uintptr(unsafe.Pointer(&cbHash)), 0, 0)
+	if cbHash == 0 {
+		return false
+	}
+
+	hashBuf := make([]byte, cbHash)
+	r, _, _ = procCryptCATAdminCalcHashFromFileH.Call(uintptr(hFile), uintptr(unsafe.Pointer(&cbHash)), uintptr(unsafe.Pointer(&hashBuf[0])), 0)
+	if r == 0 {
+		return false
+	}
+
+	hCatInfo, _, _ := procCryptCATAdminEnumCatalogFromHash.Call(
+		uintptr(hCatAdmin),
+		uintptr(unsafe.Pointer(&hashBuf[0])),
+		uintptr(cbHash),
+		0,
+		0,
+	)
+	if hCatInfo != 0 {
+		procCryptCATAdminReleaseCatalogCtx.Call(uintptr(hCatAdmin), hCatInfo, 0)
+		return true
+	}
+	return false
+}
+
+// getCertSigner extracts the certificate subject display name and checks validity dates.
+func getCertSigner(filePath string) (signer string, expired bool) {
+	pwsz, err := windows.UTF16PtrFromString(filePath)
+	if err != nil {
+		return "", false
+	}
+
+	var encoding, contentType, formatType uint32
+	var hStore, hMsg windows.Handle
+
+	r, _, _ := procCryptQueryObject.Call(
+		certQueryObjectFile,
+		uintptr(unsafe.Pointer(pwsz)),
+		certQueryContentFlagPKCS7SignedEmbed,
+		certQueryFormatFlagAll,
+		0,
+		uintptr(unsafe.Pointer(&encoding)),
+		uintptr(unsafe.Pointer(&contentType)),
+		uintptr(unsafe.Pointer(&formatType)),
+		uintptr(unsafe.Pointer(&hStore)),
+		uintptr(unsafe.Pointer(&hMsg)),
+		0,
+	)
+	if r == 0 || hStore == 0 {
+		return "", false
+	}
+	defer func() {
+		windows.CertCloseStore(hStore, 0)
+		if hMsg != 0 {
+			procCryptMsgClose.Call(uintptr(hMsg))
+		}
+	}()
+
+	var pCertCtx *windows.CertContext
+	for {
+		pCertCtxRaw, _, _ := procCertEnumCertificatesInStore.Call(uintptr(hStore), uintptr(unsafe.Pointer(pCertCtx)))
+		if pCertCtxRaw == 0 {
+			break
+		}
+		pCertCtx = (*windows.CertContext)(unsafe.Pointer(pCertCtxRaw))
+		var buf [256]uint16
+		n := windows.CertGetNameString(pCertCtx, windows.CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nil, &buf[0], uint32(len(buf)))
+		if n > 1 {
+			name := windows.UTF16ToString(buf[:n])
+			if signer == "" {
+				signer = name
+				if pCertCtx.CertInfo != nil {
+					notAfter := time.Unix(0, pCertCtx.CertInfo.NotAfter.Nanoseconds())
+					if time.Now().After(notAfter) {
+						expired = true
+					}
+				}
+			}
+		}
+	}
+	return signer, expired
+}
+

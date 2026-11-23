@@ -24,6 +24,7 @@ type Component struct {
 	Publisher     string   `json:"publisher"`
 	Product       string   `json:"product"`
 	Signature     string   `json:"signature"` // valid | unsigned | missing | n/a
+	Signer        string   `json:"signer"`    // e.g. "Google LLC", "Valve Corp."
 	Locked        string   `json:"locked"`    // "" | "yes" | "unknown"
 	System        bool     `json:"system"`
 	Review        bool     `json:"review"`
@@ -42,6 +43,7 @@ type AppGroup struct {
 	ID           string      `json:"id"`
 	Name         string      `json:"name"`
 	Publisher    string      `json:"publisher"`
+	Signer       string      `json:"signer"`
 	Letter       string      `json:"letter"`
 	Signature    string      `json:"signature"` // verified | unverified | unknown
 	Path         string      `json:"path"`

@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,8 +58,6 @@ func scanRun(pt procTable, _ bool) ([]Component, error) {
 	return out, nil
 }
 
-type lnkInfo struct{ File, Target, Args string }
-
 func scanFolders(pt procTable, _ bool) ([]Component, error) {
 	dirs := []struct {
 		root  registry.Key
@@ -69,19 +66,6 @@ func scanFolders(pt procTable, _ bool) ([]Component, error) {
 	}{
 		{registry.CURRENT_USER, "Startup folder (user)", filepath.Join(os.Getenv("APPDATA"), `Microsoft\Windows\Start Menu\Programs\Startup`)},
 		{registry.LOCAL_MACHINE, "Startup folder (all users)", filepath.Join(os.Getenv("ProgramData"), `Microsoft\Windows\Start Menu\Programs\StartUp`)},
-	}
-
-	targets := map[string]lnkInfo{}
-	q := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
-	script := fmt.Sprintf(`$s = New-Object -ComObject WScript.Shell
-Get-ChildItem -LiteralPath %s,%s -Filter *.lnk -ErrorAction SilentlyContinue | ForEach-Object { $l = $s.CreateShortcut($_.FullName); [pscustomobject]@{ File = $_.FullName; Target = $l.TargetPath; Args = $l.Arguments } } | ConvertTo-Json -Compress`,
-		q(dirs[0].dir), q(dirs[1].dir))
-	if raw, err := ps(script); err == nil {
-		if list, err := parseList[lnkInfo](raw); err == nil {
-			for _, li := range list {
-				targets[strings.ToLower(li.File)] = li
-			}
-		}
 	}
 
 	var out []Component
@@ -97,13 +81,28 @@ Get-ChildItem -LiteralPath %s,%s -Filter *.lnk -ErrorAction SilentlyContinue | F
 			}
 			full := filepath.Join(d.dir, n)
 			on := approved(d.root, approvedBase+"StartupFolder", n)
-			c := Component{Kind: "folder", Name: n, Command: full, Source: d.label,
-				Trigger: "At sign-in", Enabled: on, AutoStart: on,
-				tgt: Target{Kind: "folder", Root: rootName(d.root), Path: approvedBase + "StartupFolder", Name: n}}
-			if li, ok := targets[strings.ToLower(full)]; ok && li.Target != "" {
-				c.Command = strings.TrimSpace(li.Target + " " + li.Args)
-				c.ExePath = li.Target
-				c.PIDs = pt.pidsFor(li.Target)
+			c := Component{
+				Kind:      "folder",
+				Name:      n,
+				Command:   full,
+				Source:    d.label,
+				Trigger:   "At sign-in",
+				Enabled:   on,
+				AutoStart: on,
+				tgt:       Target{Kind: "folder", Root: rootName(d.root), Path: approvedBase + "StartupFolder", Name: n},
+			}
+
+			if strings.EqualFold(filepath.Ext(n), ".lnk") {
+				target, args := resolveShortcut(full)
+				if target != "" {
+					c.Command = strings.TrimSpace(target + " " + args)
+					c.ExePath = target
+					c.PIDs = pt.pidsFor(target)
+					c.Running = len(c.PIDs) > 0
+				}
+			} else {
+				c.ExePath = full
+				c.PIDs = pt.pidsFor(full)
 				c.Running = len(c.PIDs) > 0
 			}
 			out = append(out, c)

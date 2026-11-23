@@ -26,8 +26,20 @@ export function GetAlwaysAdmin() {
   return window['go']['main']['App']['GetAlwaysAdmin']();
 }
 
+export function GetBootProfile() {
+  return window['go']['main']['App']['GetBootProfile']();
+}
+
+export function GetPowerReport() {
+  return window['go']['main']['App']['GetPowerReport']();
+}
+
 export function History() {
   return window['go']['main']['App']['History']();
+}
+
+export function PollProcesses() {
+  return window['go']['main']['App']['PollProcesses']();
 }
 
 export function RestartAsAdmin() {
@@ -36,6 +48,10 @@ export function RestartAsAdmin() {
 
 export function Restore(arg1) {
   return window['go']['main']['App']['Restore'](arg1);
+}
+
+export function RestoreBatch(arg1) {
+  return window['go']['main']['App']['RestoreBatch'](arg1);
 }
 
 export function Reveal(arg1) {

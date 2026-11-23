@@ -15,29 +15,29 @@ A prioritized, phased roadmap to evolve WinBGM into the premier, safe, modern al
 ## ⚡ Phase 1: High-Performance Engine & Core Strengthening
 *Goal: Eliminate external CLI bottlenecks, achieve sub-100ms scans, and deepen existing safety checks.*
 
-- [ ] **1.1: Native In-Process Shortcut (.lnk) Parser**
+- [x] **1.1: Native In-Process Shortcut (.lnk) Parser**
   - Implement binary MS-SHLLINK parser in pure Go.
   - Eliminate PowerShell COM `WScript.Shell` invocation in `scanFolders`.
   - Cut shortcut scan latency from ~600ms down to <2ms.
 
-- [ ] **1.2: Task Scheduler 2.0 COM Integration**
+- [x] **1.2: Task Scheduler 2.0 COM Integration**
   - Connect directly to `CLSID_TaskScheduler` via COM (`ITaskService`).
   - Query scheduled task definitions, actions, triggers, and state in-process.
   - Eliminate `powershell.exe Get-ScheduledTask` subprocess overhead.
 
-- [ ] **1.3: Windows Catalog File Signature Verification (`pe.go`)**
+- [x] **1.3: Windows Catalog File Signature Verification (`pe.go`)**
   - Integrate `CryptCATAdminAcquireContext` and `CryptCATAdminEnumCatalogFromHash`.
   - Accurately verify catalog-signed Windows system files (`.cat` in `CatRoot`) as `verified` rather than `unsigned`.
 
-- [ ] **1.4: Detailed Certificate Signer & Subject Identity**
+- [x] **1.4: Detailed Certificate Signer & Subject Identity**
   - Extract and display the actual certificate subject name (e.g., *"Signed by Google LLC"* vs *"Signed by Valve Corporation"*).
   - Detect and flag expired or revoked certificates.
 
-- [ ] **1.5: Lightweight Real-Time Background Process Polling**
+- [x] **1.5: Lightweight Real-Time Background Process Polling**
   - Add non-blocking 3-second background ticker checking only active PIDs and RAM (without disk/registry rescans).
   - Update running states and memory badges live with smooth UI transitions.
 
-- [ ] **1.6: Batch Session Rollback in History**
+- [x] **1.6: Batch Session Rollback in History**
   - Group batch changes (e.g., Focus Mode sessions) under a shared `BatchID`.
   - Add a 1-click "Restore Entire Session" button in Change History.
 
@@ -46,12 +46,12 @@ A prioritized, phased roadmap to evolve WinBGM into the premier, safe, modern al
 ## ⏱️ Phase 2: Boot & Sleep Performance Profiler (The Killer Features)
 *Goal: Show users real metrics on what delays their PC's startup and what keeps it awake.*
 
-- [ ] **2.1: Windows Event Log Boot Diagnostic Reader**
+- [x] **2.1: Windows Event Log Boot Diagnostic Reader**
   - Query Event Log channel `Microsoft-Windows-Diagnostics-Performance/Operational`.
   - Parse Event ID `100` (Boot Duration) and Event IDs `101-109` (Boot Degradation by App/Service).
   - Display exact startup delay in seconds/milliseconds per app (e.g., *"Docker: +4.2s delay at boot"*).
 
-- [ ] **2.2: Power & Sleep Blocker Scanner (`powercfg /requests`)**
+- [x] **2.2: Power & Sleep Blocker Scanner (`powercfg /requests`)**
   - Query active Windows Power Requests via Win32 API (`PowerReadRequestList` / `powercfg`).
   - Flag background apps and drivers that prevent Windows from entering sleep or display idle.
   - Show a "Sleep Blockers" indicator with explanation.

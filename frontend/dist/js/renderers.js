@@ -214,6 +214,81 @@ function renderOverview() {
   const revRow = a => `<div class="overview-row"><div class="product-icon" style="background:#39332a;color:#e4c27e;border-color:#5b5030">!</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}</div><div class="overview-row-sub">${esc(a.components.filter(c => c.review).map(c => c.flags.map(f => ({missing:'Target file missing', temp:'Temp/Downloads folder', unsigned:'Unsigned, user folder', impersonation:'Impersonation hazard'})[f] || f).join(', ')).join(' · '))}</div></div><span class="badge amber">Review</span></div>`;
   const nonSys = A.filter(a => a.autoStart).length;
 
+  let bootBlock = '';
+  if (bootProfile && bootProfile.available) {
+    const degs = (bootProfile.degradations || []).slice(0, 4);
+    bootBlock = `
+    <div class="overview-block">
+      <div class="overview-block-head">
+        <strong>Boot Performance Profiler</strong>
+        <span class="badge blue">${esc(bootProfile.bootFormatted || '—')}</span>
+      </div>
+      <div class="overview-row">
+        <div class="service-icon"><i data-lucide="gauge" style="width:14px;height:14px"></i></div>
+        <div class="overview-row-copy">
+          <div class="overview-row-title">Total Boot Time: ${esc(bootProfile.bootFormatted)}</div>
+          <div class="overview-row-sub">${esc(bootProfile.summary)}</div>
+        </div>
+      </div>
+      ${degs.map(d => `
+        <div class="overview-row">
+          <div class="product-icon" style="background:#202838;color:#60a5fa;border-color:#38507a">⚡</div>
+          <div class="overview-row-copy">
+            <div class="overview-row-title">${esc(d.name)}</div>
+            <div class="overview-row-sub">${esc(d.type)} degradation · delay caused</div>
+          </div>
+          <span class="badge red">${esc(d.formattedDelay)}</span>
+        </div>
+      `).join('')}
+    </div>`;
+  } else if (bootProfile && bootProfile.requiresAdmin) {
+    bootBlock = `
+    <div class="overview-block">
+      <div class="overview-block-head">
+        <strong>Boot Performance Profiler</strong>
+        <span class="badge amber">Admin Required</span>
+      </div>
+      <div class="overview-row">
+        <div class="service-icon"><i data-lucide="shield-alert" style="width:14px;height:14px"></i></div>
+        <div class="overview-row-copy">
+          <div class="overview-row-title">Measure Exact App Boot Delays</div>
+          <div class="overview-row-sub">Windows Event Diagnostics tracks boot delays (IDs 100-109). Administrator elevation is required to read this log.</div>
+        </div>
+        <button class="win-btn" style="height:26px;flex:none;margin-left:auto" onclick="doElevate()">Restart as Admin</button>
+      </div>
+    </div>`;
+  }
+
+  let powerBlock = '';
+  if (powerReport && powerReport.available) {
+    const blockers = (powerReport.blockers || []).slice(0, 4);
+    powerBlock = `
+    <div class="overview-block">
+      <div class="overview-block-head">
+        <strong>Power & Sleep Blockers</strong>
+        <span class="badge ${powerReport.hasBlockers ? 'amber' : 'green'}">${powerReport.hasBlockers ? blockers.length + ' active' : 'None'}</span>
+      </div>
+      ${powerReport.hasBlockers ? blockers.map(b => `
+        <div class="overview-row">
+          <div class="product-icon" style="background:#3d2c1d;color:#f59e0b;border-color:#78491c">☾</div>
+          <div class="overview-row-copy">
+            <div class="overview-row-title">${esc(b.exePath ? base(b.exePath) : b.caller)}</div>
+            <div class="overview-row-sub">${esc(b.category)} · ${esc(b.reason)}</div>
+          </div>
+          <span class="badge amber">Blocking Sleep</span>
+        </div>
+      `).join('') : `
+        <div class="overview-row">
+          <div class="service-icon"><i data-lucide="moon" style="width:14px;height:14px"></i></div>
+          <div class="overview-row-copy">
+            <div class="overview-row-title">No Sleep Blockers</div>
+            <div class="overview-row-sub">No background applications or audio streams are preventing your PC or display from sleeping.</div>
+          </div>
+        </div>
+      `}
+    </div>`;
+  }
+
   $('overview-content').innerHTML = `
   <div class="page-header"><div><h1>Overview</h1><p class="page-subtitle">A quick view of background activity and system impact on this PC.</p></div>
    <div class="header-actions">
@@ -228,6 +303,8 @@ function renderOverview() {
    <div class="overview-stat"><div class="overview-stat-label">Needs attention</div><div class="overview-stat-value" id="stat-rev">${rev.length}</div><div class="overview-stat-foot ${rev.length ? 'attention' : ''}">${rev.length ? 'Location or signature needs review' : 'Nothing flagged'}</div></div></div>
   <p class="overview-intro">Background components can run without an app window. This inventory groups related entries so you can see what owns them and how they are launched. ${nonSys} application${nonSys === 1 ? '' : 's'} start automatically.</p>
   <div class="overview-grid">
+   ${bootBlock}
+   ${powerBlock}
    <div class="overview-block"><div class="overview-block-head"><strong>Active applications</strong><button onclick="navigate('applications')">View all applications →</button></div>${running.length ? running.map(row).join('') : '<div class="empty-state">No running background apps found.</div>'}</div>
    <div class="overview-block"><div class="overview-block-head"><strong>Review recommended</strong><button onclick="filter='review';navigate('applications');renderApps()">Review →</button></div>${rev.length ? rev.slice(0, 4).map(revRow).join('') : '<div class="overview-row"><div class="service-icon"><i data-lucide="shield-check" style="width:14px;height:14px"></i></div><div class="overview-row-copy"><div class="overview-row-title">Nothing flagged</div><div class="overview-row-sub">No temp-folder launches, missing files, or unsigned user-folder programs.</div></div></div>'}
     <div class="overview-row"><div class="service-icon"><i data-lucide="info" style="width:14px;height:14px"></i></div><div class="overview-row-copy"><div class="overview-row-title">Changes are reversible</div><div class="overview-row-sub">Each one is backed up and can be undone from Change history.</div></div></div></div>
@@ -242,13 +319,34 @@ function renderOverview() {
 
 function renderHistory() {
   const ok = history.filter(h => h.status === 'applied' && h.restorable).length;
+  // Group restorable entries by batchId if available
+  const batchMap = {};
+  history.forEach(h => {
+    if (h.batchId && h.status === 'applied' && h.restorable) {
+      batchMap[h.batchId] = (batchMap[h.batchId] || 0) + 1;
+    }
+  });
+
+  let batchBanner = '';
+  const batchKeys = Object.keys(batchMap);
+  if (batchKeys.length > 0) {
+    batchBanner = batchKeys.map(bId => `
+      <div class="banner info" style="margin-bottom:12px">
+        <i data-lucide="zap" style="width:14px;height:14px;flex:none;margin-top:2px"></i>
+        <span>Focus Mode session (${batchMap[bId]} items can be reverted together)</span>
+        <button class="win-btn" style="margin-left:auto;height:24px;flex:none" onclick="doRestoreBatch('${esc(bId)}')">Restore entire session</button>
+      </div>
+    `).join('');
+  }
+
   $('history-summary').innerHTML = `<div class="summary-item"><strong>${history.length}</strong> changes recorded</div><span class="summary-separator"></span><div class="summary-item"><strong>${ok}</strong> can be restored</div>`;
   const ST = { applied: ['green', 'Applied'], restored: ['gray', 'Restored'], failed: ['red', 'Failed'], rolledback: ['amber', 'Rolled back'], pending: ['amber', 'Interrupted'] };
   
-  $('history-list').innerHTML = history.length ? history.map(h => {
+  $('history-list').innerHTML = batchBanner + (history.length ? history.map(h => {
     const st = ST[h.status] || ['gray', h.status];
-    return `<div class="history-row"><div class="history-symbol"><i data-lucide="history" style="width:13px;height:13px"></i></div><div class="history-copy"><div class="history-title">${esc(h.title)} <span class="badge ${st[0]}">${st[1]}</span></div><div class="history-meta">${esc(h.appName)} · ${esc(h.summary)}${h.error ? ' · ' + esc(h.error) : ''}</div></div><div class="history-time">${esc(fmtTime(h.time))}</div>${h.status === 'applied' && h.restorable ? `<button class="win-btn" data-hid="${esc(h.id)}" onclick="doRestore(this.dataset.hid)"><i data-lucide="rotate-ccw" style="width:11px;height:11px;margin-right:4px"></i>Restore</button>` : ''}</div>`;
-  }).join('') : '<div class="empty-state">No changes yet. Every change you make is saved here first, so you can undo it.</div>';
+    const batchBadge = h.batchId ? `<span class="badge blue" style="font-size:9px;padding:1px 5px;margin-left:4px">Batch</span>` : '';
+    return `<div class="history-row"><div class="history-symbol"><i data-lucide="history" style="width:13px;height:13px"></i></div><div class="history-copy"><div class="history-title">${esc(h.title)}${batchBadge} <span class="badge ${st[0]}">${st[1]}</span></div><div class="history-meta">${esc(h.appName)} · ${esc(h.summary)}${h.error ? ' · ' + esc(h.error) : ''}</div></div><div class="history-time">${esc(fmtTime(h.time))}</div>${h.status === 'applied' && h.restorable ? `<button class="win-btn" data-hid="${esc(h.id)}" onclick="doRestore(this.dataset.hid)"><i data-lucide="rotate-ccw" style="width:11px;height:11px;margin-right:4px"></i>Restore</button>` : ''}</div>`;
+  }).join('') : '<div class="empty-state">No changes yet. Every change you make is saved here first, so you can undo it.</div>');
 
   refreshIcons();
   animateList('#history-list .history-row');

@@ -14,11 +14,19 @@ export function ExportMarkdown():Promise<string>;
 
 export function GetAlwaysAdmin():Promise<boolean>;
 
+export function GetBootProfile():Promise<backend.BootProfile>;
+
+export function GetPowerReport():Promise<backend.PowerReport>;
+
 export function History():Promise<Array<backend.HistoryEntry>>;
+
+export function PollProcesses():Promise<backend.ProcessPollResult>;
 
 export function RestartAsAdmin():Promise<void>;
 
 export function Restore(arg1:string):Promise<backend.ChangeResult>;
+
+export function RestoreBatch(arg1:string):Promise<backend.BatchResult>;
 
 export function Reveal(arg1:string):Promise<void>;
 

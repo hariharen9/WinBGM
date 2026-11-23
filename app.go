@@ -27,7 +27,43 @@ type App struct {
 
 func NewApp() *App { return &App{} }
 
-func (a *App) startup(ctx context.Context) { a.ctx = ctx }
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+	// Lightweight real-time process & RAM polling every 3 seconds (takes <5ms, no disk/registry I/O)
+	go func() {
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-a.ctx.Done():
+				return
+			case <-ticker.C:
+				res := backend.PollProcesses()
+				runtime.EventsEmit(a.ctx, "process_poll", res)
+			}
+		}
+	}()
+}
+
+// PollProcesses runs an immediate lightweight process & RAM snapshot (<5ms).
+func (a *App) PollProcesses() backend.ProcessPollResult {
+	return backend.PollProcesses()
+}
+
+// RestoreBatch undoes all restorable changes from a batch session in a single action.
+func (a *App) RestoreBatch(batchID string) backend.BatchResult {
+	return backend.RestoreBatch(batchID)
+}
+
+// GetBootProfile returns boot duration metrics and app boot degradation delays from Windows Diagnostics.
+func (a *App) GetBootProfile() backend.BootProfile {
+	return backend.GetBootProfile()
+}
+
+// GetPowerReport checks active sleep and display turn-off blocker requests.
+func (a *App) GetPowerReport() backend.PowerReport {
+	return backend.GetPowerReport()
+}
 
 // Scan inspects the machine and returns the full inventory. It changes nothing.
 func (a *App) Scan() backend.Inventory {

@@ -8,7 +8,18 @@ async function doScan() {
   $('scan-status').textContent = 'Scanning…';
   try {
     const a = api();
-    inv = a ? await a.Scan() : DEMO;
+    if (a) {
+      const [newInv, boot, power] = await Promise.allSettled([
+        a.Scan(),
+        a.GetBootProfile(),
+        a.GetPowerReport()
+      ]);
+      inv = newInv.status === 'fulfilled' ? newInv.value : DEMO;
+      bootProfile = boot.status === 'fulfilled' ? boot.value : null;
+      powerReport = power.status === 'fulfilled' ? power.value : null;
+    } else {
+      inv = DEMO;
+    }
     if (!inv.apps) inv.apps = [];
     inv.apps.forEach(x => {
       x.components = x.components || [];
@@ -23,6 +34,55 @@ async function doScan() {
     const btnsDone = document.querySelectorAll('.btn-scan, #scan-btn');
     btnsDone.forEach(b => { b.disabled = false; b.classList.remove('is-scanning'); });
   }
+}
+
+async function doRestoreBatch(batchId) {
+  const a = api();
+  if (!a) return;
+  try {
+    const r = await a.RestoreBatch(batchId);
+    toast(r.message);
+    if (r.modified > 0) {
+      celebrateSuccess();
+      await doScan();
+    }
+    await loadHistory();
+  } catch (e) {
+    toast('Batch restore failed: ' + e);
+  }
+}
+
+// Live background process polling listener
+if (window.runtime && window.runtime.EventsOn) {
+  window.runtime.EventsOn('process_poll', poll => {
+    if (!inv || !inv.apps || !poll) return;
+    const activePaths = poll.activeExePaths || {};
+    const ramByPath = poll.ramByExePath || {};
+    const ramFmtByPath = poll.ramFormattedByExe || {};
+
+    inv.apps.forEach(app => {
+      let appRunning = false;
+      let appRAM = 0;
+      app.components.forEach(c => {
+        if (!c.exePath) return;
+        const low = c.exePath.toLowerCase();
+        const pids = activePaths[low] || [];
+        c.pids = pids;
+        c.running = pids.length > 0;
+        c.ramBytes = ramByPath[low] || 0;
+        c.ramFormatted = ramFmtByPath[low] || '';
+        if (c.running) appRunning = true;
+        appRAM += c.ramBytes;
+      });
+      app.running = appRunning;
+      app.ramBytes = appRAM;
+    });
+
+    if (poll.totalRAMFormatted) {
+      const ramEl = document.getElementById('stat-ram');
+      if (ramEl) ramEl.textContent = poll.totalRAMFormatted;
+    }
+  });
 }
 
 async function doExport() {

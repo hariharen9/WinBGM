@@ -22,6 +22,7 @@ export namespace backend {
 	    publisher: string;
 	    product: string;
 	    signature: string;
+	    signer: string;
 	    locked: string;
 	    system: boolean;
 	    review: boolean;
@@ -58,6 +59,7 @@ export namespace backend {
 	        this.publisher = source["publisher"];
 	        this.product = source["product"];
 	        this.signature = source["signature"];
+	        this.signer = source["signer"];
 	        this.locked = source["locked"];
 	        this.system = source["system"];
 	        this.review = source["review"];
@@ -72,6 +74,7 @@ export namespace backend {
 	    id: string;
 	    name: string;
 	    publisher: string;
+	    signer: string;
 	    letter: string;
 	    signature: string;
 	    path: string;
@@ -94,6 +97,7 @@ export namespace backend {
 	        this.id = source["id"];
 	        this.name = source["name"];
 	        this.publisher = source["publisher"];
+	        this.signer = source["signer"];
 	        this.letter = source["letter"];
 	        this.signature = source["signature"];
 	        this.path = source["path"];
@@ -127,6 +131,7 @@ export namespace backend {
 		}
 	}
 	export class BatchResult {
+	    batchId?: string;
 	    total: number;
 	    modified: number;
 	    failed: number;
@@ -139,12 +144,83 @@ export namespace backend {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.batchId = source["batchId"];
 	        this.total = source["total"];
 	        this.modified = source["modified"];
 	        this.failed = source["failed"];
 	        this.message = source["message"];
 	        this.entries = source["entries"];
 	    }
+	}
+	export class BootDegradationItem {
+	    eventId: number;
+	    type: string;
+	    name: string;
+	    path: string;
+	    totalTimeMs: number;
+	    delayMs: number;
+	    formattedDelay: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new BootDegradationItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.eventId = source["eventId"];
+	        this.type = source["type"];
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.totalTimeMs = source["totalTimeMs"];
+	        this.delayMs = source["delayMs"];
+	        this.formattedDelay = source["formattedDelay"];
+	    }
+	}
+	export class BootProfile {
+	    available: boolean;
+	    requiresAdmin: boolean;
+	    bootDurationMs: number;
+	    mainPathMs: number;
+	    bootFormatted: string;
+	    bootTime: string;
+	    degradations: BootDegradationItem[];
+	    summary: string;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new BootProfile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.requiresAdmin = source["requiresAdmin"];
+	        this.bootDurationMs = source["bootDurationMs"];
+	        this.mainPathMs = source["mainPathMs"];
+	        this.bootFormatted = source["bootFormatted"];
+	        this.bootTime = source["bootTime"];
+	        this.degradations = this.convertValues(source["degradations"], BootDegradationItem);
+	        this.summary = source["summary"];
+	        this.error = source["error"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class ChangeRequest {
 	    id: string;
@@ -180,6 +256,7 @@ export namespace backend {
 	}
 	export class HistoryEntry {
 	    id: string;
+	    batchId?: string;
 	    time: string;
 	    title: string;
 	    appName: string;
@@ -203,6 +280,7 @@ export namespace backend {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
+	        this.batchId = source["batchId"];
 	        this.time = source["time"];
 	        this.title = source["title"];
 	        this.appName = source["appName"];
@@ -343,6 +421,86 @@ export namespace backend {
 		    }
 		    return a;
 		}
+	}
+	export class PowerBlocker {
+	    category: string;
+	    caller: string;
+	    reason: string;
+	    exePath: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PowerBlocker(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.category = source["category"];
+	        this.caller = source["caller"];
+	        this.reason = source["reason"];
+	        this.exePath = source["exePath"];
+	    }
+	}
+	export class PowerReport {
+	    available: boolean;
+	    requiresAdmin: boolean;
+	    hasBlockers: boolean;
+	    blockers: PowerBlocker[];
+	    summary: string;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PowerReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.requiresAdmin = source["requiresAdmin"];
+	        this.hasBlockers = source["hasBlockers"];
+	        this.blockers = this.convertValues(source["blockers"], PowerBlocker);
+	        this.summary = source["summary"];
+	        this.error = source["error"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ProcessPollResult {
+	    totalRAMBytes: number;
+	    totalRAMFormatted: string;
+	    runningPIDs: number[];
+	    activeExePaths: Record<string, Array<number>>;
+	    ramByExePath: Record<string, number>;
+	    ramFormattedByExe: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProcessPollResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalRAMBytes = source["totalRAMBytes"];
+	        this.totalRAMFormatted = source["totalRAMFormatted"];
+	        this.runningPIDs = source["runningPIDs"];
+	        this.activeExePaths = source["activeExePaths"];
+	        this.ramByExePath = source["ramByExePath"];
+	        this.ramFormattedByExe = source["ramFormattedByExe"];
+	    }
 	}
 	
 

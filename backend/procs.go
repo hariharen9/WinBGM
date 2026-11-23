@@ -58,6 +58,46 @@ type procTable struct {
 	byPID  map[uint32]procInfo
 }
 
+type ProcessPollResult struct {
+	TotalRAMBytes     uint64              `json:"totalRAMBytes"`
+	TotalRAMFormatted string              `json:"totalRAMFormatted"`
+	RunningPIDs       []uint32            `json:"runningPIDs"`
+	ActiveExePaths    map[string][]uint32 `json:"activeExePaths"`
+	RAMByExePath      map[string]uint64   `json:"ramByExePath"`
+	RAMFormattedByExe map[string]string   `json:"ramFormattedByExe"`
+}
+
+func PollProcesses() ProcessPollResult {
+	pt := snapshotProcs()
+	var totalRAM uint64
+	activePaths := make(map[string][]uint32)
+	ramByPath := make(map[string]uint64)
+	ramFmtByPath := make(map[string]string)
+	pids := make([]uint32, 0, len(pt.list))
+
+	for _, p := range pt.list {
+		pids = append(pids, p.PID)
+		totalRAM += p.RAM
+		if p.Path != "" {
+			low := strings.ToLower(p.Path)
+			activePaths[low] = append(activePaths[low], p.PID)
+			ramByPath[low] += p.RAM
+		}
+	}
+	for low, bytes := range ramByPath {
+		ramFmtByPath[low] = formatRAM(bytes)
+	}
+
+	return ProcessPollResult{
+		TotalRAMBytes:     totalRAM,
+		TotalRAMFormatted: formatRAM(totalRAM),
+		RunningPIDs:       pids,
+		ActiveExePaths:    activePaths,
+		RAMByExePath:      ramByPath,
+		RAMFormattedByExe: ramFmtByPath,
+	}
+}
+
 func snapshotProcs() procTable {
 	pt := procTable{byPath: map[string][]uint32{}, byPID: map[uint32]procInfo{}}
 	wins := visibleWindowPIDs()

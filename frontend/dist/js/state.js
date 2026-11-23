@@ -107,7 +107,15 @@ function fmtTime(iso) {
 function cfgText(c) {
   return c.kind === 'service' ? c.startType : c.kind === 'process' ? 'Running now' : c.kind === 'storeapp' ? (c.enabled ? 'Allowed' : 'Blocked') : (c.enabled ? 'Enabled' : 'Disabled');
 }
+let bootProfile = null;
+let powerReport = null;
+
 function sigText(c) {
+  if (c.signer) {
+    const isExp = (c.flags || []).includes('expired_cert');
+    if (isExp) return 'Expired certificate (' + c.signer + ')';
+    return (c.signature === 'valid' ? 'Signed by ' + c.signer : 'Unverified (' + c.signer + ')');
+  }
   return ({valid:'Valid digital signature', unsigned:'Signature not verified', missing:'File not found', 'n/a':'Not applicable'})[c.signature] || '—';
 }
 function findComp(id) {
