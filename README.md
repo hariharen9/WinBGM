@@ -1,9 +1,11 @@
 <div align="center">
 
-<img src="WinBGM.png" alt="WinBGM Preview" width="720" style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.35);" />
+<img src="WinBGM.png" alt="WinBGM Preview" width="720" style="max-width: 20%; height: auto; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.35);" />
 
 # WinBGM
 
+**Windows Background Manager**
+<br/>
 **The safe, modern background application & persistence manager for Windows 10 and 11.**
 
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://go.dev/)
@@ -34,19 +36,19 @@
 
 ### Feature Comparison
 
-| Capability | Task Manager | Sysinternals Autoruns | WinBGM |
-| :--- | :---: | :---: | :---: |
-| **Deep Persistence** | ⚠️ Basic Run keys only | ⚠️ 100+ raw entries (ungrouped) | **✅ 12 Vectors Grouped by App** |
-| **100% Reversible Changes** | ⚠️ Partial | ❌ Deletes / renames registry keys | **✅ Native Bitmasks (Zero Deletions)** |
-| **Audit Trail & 1-Click Rollback** | ❌ None | ❌ None | **✅ Full JSON History & Instant Undo** |
-| **Critical OS / Antivirus Lock** | ❌ None | ❌ None (Can unboot system) | **✅ 8 Hard Kernel & AV Guardrails** |
-| **Live RAM Telemetry** | ⚠️ Inflated across shared DLLs | ❌ No live telemetry | **✅ Deduplicated `psapi.dll` Working Sets** |
-| **Boot Event Profiler** | Basic "Impact" label | ❌ None | **✅ Event IDs 100–109 Milisecond Audit** |
-| **Sleep Blocker Detection** | ❌ None | ❌ None | **✅ Real-time `powercfg /requests`** |
-| **VirusTotal Integration** | ❌ None | ⚠️ Hashes only | **✅ 1-Click SHA-256 Lookup Everywhere** |
-| **Baseline Snapshots & Diffing** | ❌ None | ⚠️ Text diff only | **✅ Visual State Diffs & Rollbacks** |
-| **Process Controls** | ⚠️ End Task only | ❌ None | **✅ Freeze, Resume, Close, End Task** |
-| **Modern Fluent UI** | Standard OS | Legacy Win32 | **✅ Dark / Light / AMOLED + Accents** |
+| Capability                         |          Task Manager          |       Sysinternals Autoruns        |                    WinBGM                    |
+| :--------------------------------- | :----------------------------: | :--------------------------------: | :------------------------------------------: |
+| **Deep Persistence**               |     ⚠️ Basic Run keys only     |  ⚠️ 100+ raw entries (ungrouped)   |       **✅ 12 Vectors Grouped by App**       |
+| **100% Reversible Changes**        |           ⚠️ Partial           | ❌ Deletes / renames registry keys |   **✅ Native Bitmasks (Zero Deletions)**    |
+| **Audit Trail & 1-Click Rollback** |            ❌ None             |              ❌ None               |   **✅ Full JSON History & Instant Undo**    |
+| **Critical OS / Antivirus Lock**   |            ❌ None             |    ❌ None (Can unboot system)     |     **✅ 8 Hard Kernel & AV Guardrails**     |
+| **Live RAM Telemetry**             | ⚠️ Inflated across shared DLLs |        ❌ No live telemetry        | **✅ Deduplicated `psapi.dll` Working Sets** |
+| **Boot Event Profiler**            |      Basic "Impact" label      |              ❌ None               |  **✅ Event IDs 100–109 Milisecond Audit**   |
+| **Sleep Blocker Detection**        |            ❌ None             |              ❌ None               |    **✅ Real-time `powercfg /requests`**     |
+| **VirusTotal Integration**         |            ❌ None             |           ⚠️ Hashes only           |   **✅ 1-Click SHA-256 Lookup Everywhere**   |
+| **Baseline Snapshots & Diffing**   |            ❌ None             |         ⚠️ Text diff only          |    **✅ Visual State Diffs & Rollbacks**     |
+| **Process Controls**               |        ⚠️ End Task only        |              ❌ None               |    **✅ Freeze, Resume, Close, End Task**    |
+| **Modern Fluent UI**               |          Standard OS           |            Legacy Win32            |    **✅ Dark / Light / AMOLED + Accents**    |
 
 ---
 
@@ -65,16 +67,16 @@ flowchart TD
     Action["User Action (Toggle / Disable)"] --> Check{"1. Protected Item?"}
     Check -- "System / Antivirus / Self" --> Deny["🚫 Blocked by Safety Policy"]
     Check -- "Safe Third-Party" --> UAC{"2. Needs Admin?"}
-    
+
     UAC -- "Unprivileged" --> Elevate["🔑 Request UAC Elevation"]
     UAC -- "Authorized" --> State{"3. State Changed Since Scan?"}
-    
+
     State -- "Yes (Stale Data)" --> Abort["⚠️ Abort & Force Rescan"]
     State -- "No (Verified)" --> Backup["4. Atomic Pre-Flight Backup (history.json)"]
-    
+
     Backup --> Apply["5. Apply Native State (Manual / Bitmask / COM)"]
     Apply --> Verify{"6. Read-Back Verification"}
-    
+
     Verify -- "Mismatch / Failed" --> Rollback["🔄 Auto-Revert to Original State"]
     Verify -- "Success" --> Done["✅ Operation Complete (Reversible)"]
 ```
@@ -84,30 +86,36 @@ flowchart TD
 ## ✨ Key Capabilities
 
 ### 🔍 Deep Autostart Discovery
+
 - **Aggregated App View**: Unifies background processes, autostart registry entries, scheduled tasks, and services into a single clean application card.
 - **Explorer Shell Extensions**: Detects in-process DLL context menu handlers loaded directly into `explorer.exe`.
 - **Browser Native Messaging**: Audits background IPC bridges registered by Chrome, Edge, Brave, and Firefox.
 - **WMI & Winlogon**: Inspects stealth persistence (`root/subscription` event consumers and `Userinit` / `Shell` hooks).
 
 ### 🧪 1-Click VirusTotal & Security Audits
+
 - **Instant SHA-256 Lookup**: One-click hash audit integrated across **Scheduled Tasks**, **Services**, **Startup Locations**, **Diff Views**, and **Action Modals**.
 - **Impersonation Alerts**: Detects stealth binaries posing as Windows system files (e.g., non-System32 `svchost.exe` or `explorer.exe`).
 - **Authenticode Signature Check**: Verifies digital certificates via `wintrust.dll`.
 
 ### ⏱️ Boot Profiler & Battery Sleep Blockers
+
 - **Boot Breakdown (Event IDs 100–109)**: Millisecond analysis of **MainPathBootTime** (kernel to desktop) and **PostBootTime** (desktop to idle), pinpointing startup-degrading apps and drivers.
 - **Sleep Blocker Inspector**: Queries `powercfg /requests` in real time to show which audio drivers or background processes keep your laptop awake.
 
 ### 📸 Baseline Snapshots & Differential Engine
+
 - **Instant Snapshot**: Capture your PC's autostart footprint before installing new software.
 - **Visual Diff**: Compare against any baseline to reveal stealth persistence, with 1-click rollbacks.
 
 ### ⏸️ Precision Process Controls
+
 - **Freeze (Suspend)**: Temporarily pause resource hogs using `NtSuspendProcess` without losing unsaved application state.
 - **Resume / Close / End**: Restore frozen apps, gracefully exit via `WM_CLOSE`, or force-terminate hung processes.
 - **Precise RAM Metrics**: Deduplicated `psapi.dll` working set calculations for true background memory usage.
 
 ### 🎨 Fluent Design & Customization
+
 - **4 Themes**: **Dark**, **Light**, **AMOLED** (pure `#000000` black for OLED), and **System Sync** (mirrors Windows setting).
 - **6 Accent Colors**: Windows Blue, Cyber Emerald, Neon Purple, Sunset Amber, Rose Crimson, and Electric Cyan.
 - **UI Scaling**: Scalable from 80% to 140% with hotkeys (<kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd>).
@@ -115,46 +123,29 @@ flowchart TD
 
 ---
 
-## 🗂️ 12 Persistence Locations
-
-| Vector | Path / API | How WinBGM Toggles It |
-| :--- | :--- | :--- |
-| **User Run** | `HKCU\...\CurrentVersion\Run` | Native `StartupApproved\Run` bitmask |
-| **System Run** | `HKLM\...\CurrentVersion\Run` | Native `StartupApproved\Run32` bitmask |
-| **User Startup** | `%APPDATA%\...\Startup` | `StartupApproved\StartupFolder` bitmask |
-| **Common Startup** | `%PROGRAMDATA%\...\Startup` | `StartupApproved\StartupFolder` bitmask |
-| **Scheduled Tasks** | COM `ITaskService` | Native COM `Task.Enabled = false` |
-| **Windows Services** | SCM (`advapi32.dll`) | Safe demotion to `Manual` (never Disabled) |
-| **Shell Extensions** | `CLSID\{GUID}\InprocServer32` | Registry state backup & inspection |
-| **Native Messaging** | Browser host registries | Manifest inspection & hash validation |
-| **Active Setup** | `HKLM\...\Active Setup` | Stub verification & integrity check |
-| **Winlogon Hooks** | `HKLM\...\Winlogon` | Audited for hijacked `Userinit` / `Shell` |
-| **WMI Subscriptions** | `root/subscription` | Audited for persistent WQL event consumers |
-| **Kernel Drivers** | SCM driver database | Inspected and flagged for third-party additions |
-
----
-
 ## ⌨️ Shortcuts
 
-| Shortcut | Action |
-| :--- | :--- |
-| <kbd>Ctrl</kbd> + <kbd>K</kbd> | Open Search & Command Palette |
-| <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>=</kbd> | Increase UI Scale (+10%) |
-| <kbd>Ctrl</kbd> + <kbd>-</kbd> | Decrease UI Scale (-10%) |
-| <kbd>Ctrl</kbd> + <kbd>0</kbd> | Reset UI Scale to Default (100%) |
-| <kbd>Esc</kbd> | Close Modals & Slide-Over Panes |
+| Shortcut                                      | Action                           |
+| :-------------------------------------------- | :------------------------------- |
+| <kbd>Ctrl</kbd> + <kbd>K</kbd>                | Open Search & Command Palette    |
+| <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>=</kbd> | Increase UI Scale (+10%)         |
+| <kbd>Ctrl</kbd> + <kbd>-</kbd>                | Decrease UI Scale (-10%)         |
+| <kbd>Ctrl</kbd> + <kbd>0</kbd>                | Reset UI Scale to Default (100%) |
+| <kbd>Esc</kbd>                                | Close Modals & Slide-Over Panes  |
 
 ---
 
 ## 🚀 Quick Start
 
 ### Pre-Built Binaries
-Download the standalone executable from [GitHub Releases](https://github.com/your-username/WinBGM/releases):
+
+Download the standalone executable from [GitHub Releases](https://github.com/hariharen9/WinBGM/releases):
+
 - **`WinBGM-windows-amd64.exe`** (Standard Intel/AMD 64-bit)
 - **`WinBGM-windows-arm64.exe`** (ARM64 Windows on Snapdragon / Surface)
 - **`WinBGM-windows-386.exe`** (Legacy 32-bit)
 
-*Portable single binary. No installation required.*
+_Portable single binary. No installation required._
 
 ---
 
@@ -165,7 +156,7 @@ Download the standalone executable from [GitHub Releases](https://github.com/you
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
 # 2. Clone repo & build production binary
-git clone https://github.com/your-username/WinBGM.git
+git clone https://github.com/hariharen9/WinBGM.git
 cd WinBGM
 go mod tidy
 wails build -clean -trimpath -ldflags "-s -w"
