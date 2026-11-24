@@ -444,3 +444,161 @@
 .accent-swatch[data-color="amber"] { background: #f59e0b; }
 .accent-swatch[data-color="rose"] { background: #f43f5e; }
 .accent-swatch[data-color="cyan"] { background: #06b6d4; }
+
+/* --- Uninstaller & Residual Cleanup --- */
+.uninstaller-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.uninstaller-badge.heavy {
+  background: rgba(245, 158, 11, 0.16);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.uninstaller-badge.user {
+  background: rgba(59, 130, 246, 0.14);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.uninstaller-badge.sys {
+  background: rgba(148, 163, 184, 0.14);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.residual-modal-dialog {
+  width: min(650px, 100%) !important;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.residual-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.residual-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.residual-icon-badge svg {
+  width: 22px;
+  height: 22px;
+}
+.residual-body {
+  overflow-y: auto;
+  max-height: 52vh;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.residual-category-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-top: 10px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.residual-item-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 13px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: border-color 0.15s ease;
+  cursor: pointer;
+}
+.residual-item-card:hover {
+  border-color: var(--border-hover);
+}
+.residual-item-card.is-heavy {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.04);
+}
+.residual-item-copy {
+  flex: 1;
+  min-width: 0;
+}
+.residual-item-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.residual-item-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.residual-item-size {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.residual-item-card.is-heavy .residual-item-size {
+  color: #f59e0b;
+}
+.residual-item-path {
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-all;
+  font-family: var(--font-mono, monospace);
+  margin-bottom: 4px;
+}
+.residual-item-desc {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+.residual-footer {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.residual-safety-note {
+  font-size: 11px;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.residual-safety-note svg {
+  width: 14px;
+  height: 14px;
+  color: #10b981;
+}
+.residual-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+

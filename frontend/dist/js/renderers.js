@@ -22,6 +22,7 @@ function render() {
   renderTasks();
   renderSources();
   renderSnapshots();
+  if (installedApps && installedApps.length) renderUninstaller();
   refreshIcons();
 }
 
@@ -718,3 +719,160 @@ function renderDiffResults(diff) {
   container.style.display = 'block';
   refreshIcons();
 }
+
+// --- Installed Apps & Deep Uninstaller View ---
+
+function renderUninstaller() {
+  const sumEl = $('uninstaller-summary');
+  const countMeta = $('uninstaller-count-meta');
+  const tbody = $('uninstaller-body');
+
+  if (!installedApps || !installedApps.length) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No installed programs detected.</div></td></tr>';
+    return;
+  }
+
+  // Summary Metrics
+  const totalApps = installedApps.length;
+  const totalBytes = installedApps.reduce((acc, a) => acc + (a.sizeBytes || 0), 0);
+  const heavyCount = installedApps.filter(a => a.hasHeavyProfile && a.heavyEstimatedBytes > 0).length;
+  const userCount = installedApps.filter(a => a.isUserInstall).length;
+
+  let totalSizeStr = '0 B';
+  const kb = 1024, mb = kb * 1024, gb = mb * 1024;
+  if (totalBytes >= gb) totalSizeStr = (totalBytes / gb).toFixed(1) + ' GB';
+  else if (totalBytes >= mb) totalSizeStr = (totalBytes / mb).toFixed(1) + ' MB';
+  else totalSizeStr = (totalBytes / kb).toFixed(1) + ' KB';
+
+  if (sumEl) {
+    sumEl.innerHTML = `
+      <div class="summary-item"><strong>${totalApps}</strong> programs installed</div>
+      <span class="summary-separator"></span>
+      <div class="summary-item">Total footprint: <strong>${totalSizeStr}</strong></div>
+      <span class="summary-separator"></span>
+      <div class="summary-item"><span class="badge amber" style="font-size:10px;padding:1px 6px">🔥 ${heavyCount} heavy dependencies</span></div>
+      <span class="summary-separator"></span>
+      <div class="summary-item">User space: <strong>${userCount}</strong></div>
+    `;
+  }
+
+  // Filter items
+  const q = (uninstallerSearch || '').toLowerCase();
+  let list = installedApps.filter(a => {
+    if (uninstallerFilter === 'heavy' && (!a.hasHeavyProfile || a.heavyEstimatedBytes === 0)) return false;
+    if (uninstallerFilter === 'large' && a.sizeBytes < 1024 * 1024 * 1024) return false;
+    if (uninstallerFilter === 'user' && !a.isUserInstall) return false;
+    if (q) {
+      const hay = (a.name + ' ' + a.publisher + ' ' + (a.installLocation || '')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Sort items
+  if (uninstallerSort === 'size') {
+    list.sort((a, b) => (b.sizeBytes || 0) - (a.sizeBytes || 0));
+  } else if (uninstallerSort === 'name') {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (uninstallerSort === 'date') {
+    list.sort((a, b) => (b.installDate || '').localeCompare(a.installDate || ''));
+  }
+
+  if (countMeta) {
+    countMeta.textContent = `Showing ${list.length} of ${totalApps} programs`;
+  }
+
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No installed programs match this filter or search.</div></td></tr>';
+    refreshIcons();
+    return;
+  }
+
+  tbody.innerHTML = list.map(a => {
+    const isExpanded = expanded.has('uninst_' + a.id);
+    const heavyBadge = (a.hasHeavyProfile && a.heavyEstimatedBytes > 0)
+      ? `<span class="uninstaller-badge heavy" title="External models / cache detected"><i data-lucide="flame" style="width:11px;height:11px"></i>${esc(a.heavyDisplaySize)} models/data</span>`
+      : '';
+    const userBadge = a.isUserInstall ? `<span class="uninstaller-badge user">User</span>` : '';
+    const sysBadge = a.isSystemComponent ? `<span class="uninstaller-badge sys">System</span>` : '';
+    const letter = (a.name || 'A').slice(0, 2).toUpperCase();
+
+    // VirusTotal button if executable exists
+    const vtBtn = a.exePath
+      ? `<button class="win-btn subtle" style="height:26px;padding:0 6px" onclick="event.stopPropagation();window.open('https://www.virustotal.com/gui/search/' + encodeURIComponent('${esc(base(a.exePath))}'), '_blank')" title="Search ${esc(base(a.exePath))} on VirusTotal"><i data-lucide="shield-check" style="width:13px;height:13px;color:var(--accent)"></i></button>`
+      : '';
+
+    // Reveal button if path exists
+    const loc = a.installLocation || a.exePath;
+    const revealBtn = loc
+      ? `<button class="win-btn subtle" style="height:26px;padding:0 6px" onclick="event.stopPropagation();if(api()&&api().OpenLocation){api().OpenLocation('${esc(loc).replace(/\\/g, '\\\\')}')}" title="Open folder in File Explorer"><i data-lucide="folder-open" style="width:13px;height:13px"></i></button>`
+      : '';
+
+    let expandedRow = '';
+    if (isExpanded) {
+      const heavyDetails = (a.hasHeavyProfile && a.heavyEstimatedBytes > 0)
+        ? `<div style="margin-top:8px;padding:8px 12px;border-radius:6px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:var(--text)">
+            <strong style="color:#f59e0b">🔥 Smart Heavy Dependency Profile:</strong> Holds approx <strong>${esc(a.heavyDisplaySize)}</strong> of external data (e.g. LLM model weights, emulators, or media cache). Standard uninstallation will leave these behind; WinBGM's Deep Clean will clean them completely!
+           </div>`
+        : '';
+
+      expandedRow = `
+        <tr class="detail-row">
+          <td colspan="5" style="padding:12px 18px;background:var(--surface-hover)">
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:11.5px">
+              <div><strong style="color:var(--text-dim)">Installation Directory:</strong> <code>${esc(a.installLocation || 'Not specified in registry')}</code></div>
+              ${a.exePath ? `<div><strong style="color:var(--text-dim)">Main Executable:</strong> <code>${esc(a.exePath)}</code></div>` : ''}
+              <div><strong style="color:var(--text-dim)">Uninstall Command:</strong> <code>${esc(a.uninstallString || 'None')}</code></div>
+              ${a.quietUninstall ? `<div><strong style="color:var(--text-dim)">Silent Uninstall Command:</strong> <code>${esc(a.quietUninstall)}</code></div>` : ''}
+              <div><strong style="color:var(--text-dim)">Registry Location:</strong> <code>${esc(a.registryPath)}</code></div>
+              ${heavyDetails}
+              <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+                <button class="win-btn primary" onclick="event.stopPropagation();promptUninstall('${esc(a.id)}')"><i data-lucide="trash-2"></i>Deep Uninstall</button>
+                <button class="win-btn" onclick="event.stopPropagation();scanAndCleanOnly('${esc(a.id)}')"><i data-lucide="sparkles"></i>Clean Leftovers Only</button>
+                ${loc ? `<button class="win-btn" onclick="event.stopPropagation();if(api()&&api().OpenLocation){api().OpenLocation('${esc(loc).replace(/\\/g, '\\\\')}')}"><i data-lucide="folder-search"></i>Open Install Directory</button>` : ''}
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    return `
+      <tr class="clickable" data-id="uninst_${esc(a.id)}" onclick="rowToggle(event, renderUninstaller)">
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="product-icon" style="${iconStyle(a.name)};width:26px;height:26px;font-size:10px;flex:none">${esc(letter)}</div>
+            <div style="min-width:0">
+              <div style="font-weight:600;font-size:12px;color:var(--text);display:flex;align-items:center;flex-wrap:wrap">
+                ${esc(a.name)}
+                ${heavyBadge}
+                ${userBadge}
+                ${sysBadge}
+              </div>
+              ${a.version ? `<div style="font-size:10.5px;color:var(--text-dim)">v${esc(a.version)}</div>` : ''}
+            </div>
+          </div>
+        </td>
+        <td><span style="font-size:11.5px;color:var(--text-2)">${esc(a.publisher || '—')}</span></td>
+        <td><span style="font-size:11px;color:var(--text-dim)">${esc(a.installDate || '—')}</span></td>
+        <td style="text-align:right">
+          <strong style="font-size:12px;color:var(--accent)">${esc(a.displaySize)}</strong>
+        </td>
+        <td style="text-align:right">
+          <div style="display:inline-flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+            ${vtBtn}
+            ${revealBtn}
+            <button class="win-btn" style="height:26px;padding:0 8px;font-size:11px" onclick="scanAndCleanOnly('${esc(a.id)}')" title="Audit and clean leftover caches & dependencies without uninstalling"><i data-lucide="sparkles" style="width:12px;height:12px;color:#10b981"></i>Clean</button>
+            <button class="win-btn primary" style="height:26px;padding:0 9px;font-size:11px" onclick="promptUninstall('${esc(a.id)}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i>Uninstall</button>
+          </div>
+        </td>
+      </tr>
+      ${expandedRow}
+    `;
+  }).join('');
+
+  refreshIcons();
+}
+

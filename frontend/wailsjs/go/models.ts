@@ -350,6 +350,26 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class CleanResult {
+	    freedBytes: number;
+	    freedSizeFormatted: string;
+	    deletedFilesCount: number;
+	    deletedKeysCount: number;
+	    errors: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new CleanResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.freedBytes = source["freedBytes"];
+	        this.freedSizeFormatted = source["freedSizeFormatted"];
+	        this.deletedFilesCount = source["deletedFilesCount"];
+	        this.deletedKeysCount = source["deletedKeysCount"];
+	        this.errors = source["errors"];
+	    }
+	}
 	
 	export class ComponentDiff {
 	    component: Component;
@@ -386,6 +406,58 @@ export namespace backend {
 		}
 	}
 	
+	export class InstalledApp {
+	    id: string;
+	    name: string;
+	    version: string;
+	    publisher: string;
+	    installDate: string;
+	    estimatedSizeKB: number;
+	    sizeBytes: number;
+	    displaySize: string;
+	    installLocation: string;
+	    uninstallString: string;
+	    quietUninstall: string;
+	    displayIcon: string;
+	    registryPath: string;
+	    isUserInstall: boolean;
+	    is64Bit: boolean;
+	    isSystemComponent: boolean;
+	    exePath: string;
+	    hasHeavyProfile: boolean;
+	    heavyProfileKey: string;
+	    heavyEstimatedBytes: number;
+	    heavyDisplaySize: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InstalledApp(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.version = source["version"];
+	        this.publisher = source["publisher"];
+	        this.installDate = source["installDate"];
+	        this.estimatedSizeKB = source["estimatedSizeKB"];
+	        this.sizeBytes = source["sizeBytes"];
+	        this.displaySize = source["displaySize"];
+	        this.installLocation = source["installLocation"];
+	        this.uninstallString = source["uninstallString"];
+	        this.quietUninstall = source["quietUninstall"];
+	        this.displayIcon = source["displayIcon"];
+	        this.registryPath = source["registryPath"];
+	        this.isUserInstall = source["isUserInstall"];
+	        this.is64Bit = source["is64Bit"];
+	        this.isSystemComponent = source["isSystemComponent"];
+	        this.exePath = source["exePath"];
+	        this.hasHeavyProfile = source["hasHeavyProfile"];
+	        this.heavyProfileKey = source["heavyProfileKey"];
+	        this.heavyEstimatedBytes = source["heavyEstimatedBytes"];
+	        this.heavyDisplaySize = source["heavyDisplaySize"];
+	    }
+	}
 	export class SourceInfo {
 	    id: string;
 	    title: string;
@@ -538,6 +610,80 @@ export namespace backend {
 	        this.ramByPID = source["ramByPID"];
 	    }
 	}
+	export class ResidualItem {
+	    id: string;
+	    category: string;
+	    categoryTitle: string;
+	    title: string;
+	    path: string;
+	    sizeBytes: number;
+	    sizeFormatted: string;
+	    itemCount: number;
+	    description: string;
+	    isSelected: boolean;
+	    isRegistry: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ResidualItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.category = source["category"];
+	        this.categoryTitle = source["categoryTitle"];
+	        this.title = source["title"];
+	        this.path = source["path"];
+	        this.sizeBytes = source["sizeBytes"];
+	        this.sizeFormatted = source["sizeFormatted"];
+	        this.itemCount = source["itemCount"];
+	        this.description = source["description"];
+	        this.isSelected = source["isSelected"];
+	        this.isRegistry = source["isRegistry"];
+	    }
+	}
+	export class ResidualReport {
+	    appId: string;
+	    appName: string;
+	    totalSizeBytes: number;
+	    totalSizeFormatted: string;
+	    heavySizeBytes: number;
+	    heavySizeFormatted: string;
+	    items: ResidualItem[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ResidualReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.appId = source["appId"];
+	        this.appName = source["appName"];
+	        this.totalSizeBytes = source["totalSizeBytes"];
+	        this.totalSizeFormatted = source["totalSizeFormatted"];
+	        this.heavySizeBytes = source["heavySizeBytes"];
+	        this.heavySizeFormatted = source["heavySizeFormatted"];
+	        this.items = this.convertValues(source["items"], ResidualItem);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class SentinelAlert {
 	    id: string;
 	    rootKey: string;
@@ -629,6 +775,29 @@ export namespace backend {
 	    }
 	}
 	
+	
+	export class UninstallerSummary {
+	    totalApps: number;
+	    totalSizeBytes: number;
+	    totalSizeFormatted: string;
+	    heavyAppsCount: number;
+	    userAppsCount: number;
+	    systemAppsCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new UninstallerSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalApps = source["totalApps"];
+	        this.totalSizeBytes = source["totalSizeBytes"];
+	        this.totalSizeFormatted = source["totalSizeFormatted"];
+	        this.heavyAppsCount = source["heavyAppsCount"];
+	        this.userAppsCount = source["userAppsCount"];
+	        this.systemAppsCount = source["systemAppsCount"];
+	    }
+	}
 
 }
 

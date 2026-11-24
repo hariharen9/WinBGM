@@ -176,6 +176,23 @@ function cfgText(c) {
 let bootProfile = null;
 let powerReport = null;
 
+// Uninstaller & Residual Cleanup State
+let installedApps = [];
+let uninstallerSummary = {
+  totalApps: 0,
+  totalSizeBytes: 0,
+  totalSizeFormatted: '0 B',
+  heavyAppsCount: 0,
+  userAppsCount: 0,
+  systemAppsCount: 0
+};
+let uninstallerFilter = 'all'; // 'all', 'heavy', 'large', 'user'
+let uninstallerSearch = '';
+let uninstallerSort = 'size'; // 'size', 'name', 'date'
+let currentResidualReport = null;
+let selectedResidualIds = new Set();
+
+
 function sigText(c) {
   if (c.signer) {
     const isExp = (c.flags || []).includes('expired_cert');

@@ -6,6 +6,8 @@ export function Apply(arg1:backend.ChangeRequest):Promise<backend.ChangeResult>;
 
 export function ApplyFocusMode():Promise<backend.BatchResult>;
 
+export function CleanResidualItems(arg1:Array<backend.ResidualItem>):Promise<backend.CleanResult>;
+
 export function ClearSentinelAlerts():Promise<void>;
 
 export function DeleteSnapshot(arg1:string):Promise<void>;
@@ -22,6 +24,8 @@ export function GetAlwaysAdmin():Promise<boolean>;
 
 export function GetBootProfile():Promise<backend.BootProfile>;
 
+export function GetInstalledApps():Promise<Array<backend.InstalledApp>>;
+
 export function GetPowerReport():Promise<backend.PowerReport>;
 
 export function GetSentinelAlerts():Promise<Array<backend.SentinelAlert>>;
@@ -33,6 +37,8 @@ export function History():Promise<Array<backend.HistoryEntry>>;
 export function IsProcessSuspended(arg1:number):Promise<boolean>;
 
 export function KillProcess(arg1:number):Promise<void>;
+
+export function LaunchUninstaller(arg1:string,arg2:boolean):Promise<number>;
 
 export function ListSnapshots():Promise<Array<backend.SnapshotMeta>>;
 
@@ -51,6 +57,8 @@ export function Reveal(arg1:string):Promise<void>;
 export function SaveSnapshot(arg1:string):Promise<backend.SnapshotMeta>;
 
 export function Scan():Promise<backend.Inventory>;
+
+export function ScanAppResiduals(arg1:string):Promise<backend.ResidualReport>;
 
 export function SetAlwaysAdmin(arg1:boolean):Promise<boolean>;
 

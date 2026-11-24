@@ -10,6 +10,10 @@ export function ApplyFocusMode() {
   return window['go']['main']['App']['ApplyFocusMode']();
 }
 
+export function CleanResidualItems(arg1) {
+  return window['go']['main']['App']['CleanResidualItems'](arg1);
+}
+
 export function ClearSentinelAlerts() {
   return window['go']['main']['App']['ClearSentinelAlerts']();
 }
@@ -42,6 +46,10 @@ export function GetBootProfile() {
   return window['go']['main']['App']['GetBootProfile']();
 }
 
+export function GetInstalledApps() {
+  return window['go']['main']['App']['GetInstalledApps']();
+}
+
 export function GetPowerReport() {
   return window['go']['main']['App']['GetPowerReport']();
 }
@@ -64,6 +72,10 @@ export function IsProcessSuspended(arg1) {
 
 export function KillProcess(arg1) {
   return window['go']['main']['App']['KillProcess'](arg1);
+}
+
+export function LaunchUninstaller(arg1, arg2) {
+  return window['go']['main']['App']['LaunchUninstaller'](arg1, arg2);
 }
 
 export function ListSnapshots() {
@@ -100,6 +112,10 @@ export function SaveSnapshot(arg1) {
 
 export function Scan() {
   return window['go']['main']['App']['Scan']();
+}
+
+export function ScanAppResiduals(arg1) {
+  return window['go']['main']['App']['ScanAppResiduals'](arg1);
 }
 
 export function SetAlwaysAdmin(arg1) {

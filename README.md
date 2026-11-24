@@ -45,6 +45,7 @@
 | **VirusTotal Integration**         |            ❌ None             |           ⚠️ Hashes only           |   **✅ 1-Click SHA-256 Lookup Everywhere**   |
 | **Baseline Snapshots & Diffing**   |            ❌ None             |         ⚠️ Text diff only          |    **✅ Visual State Diffs & Rollbacks**     |
 | **Process Controls**               |        ⚠️ End Task only        |              ❌ None               |    **✅ Freeze, Resume, Close, End Task**    |
+| **Deep Uninstaller & Cache Clean** | ⚠️ Leaves GBs of data behind   |              ❌ None               | **✅ Smart Heavy Dependency Clean (Recycle Bin Safe)** |
 | **Modern Fluent UI**               |          Standard OS           |            Legacy Win32            |    **✅ Dark / Light / AMOLED + Accents**    |
 
 ---
@@ -110,6 +111,13 @@ flowchart TD
 - **Freeze (Suspend)**: Temporarily pause resource hogs using `NtSuspendProcess` without losing unsaved application state.
 - **Resume / Close / End**: Restore frozen apps, gracefully exit via `WM_CLOSE`, or force-terminate hung processes.
 - **Precise RAM Metrics**: Deduplicated `psapi.dll` working set calculations for true background memory usage.
+
+### 🧹 Installed Programs & Deep Uninstaller
+
+- **Complete Inventory**: Discovers all 64-bit and 32-bit system software (`HKLM`) and per-user installations (`HKCU`), calculating true disk space footprints.
+- **Smart Heavy Dependency Profiles**: Identifies massive external payloads left behind by standard vendor uninstallers—including AI model weights (Ollama, LM Studio, Jan, ComfyUI), developer emulators & SDKs (Android Studio, Gradle), IDE extension trees (VS Code, Cursor), and media caches.
+- **Interactive Review & Control**: An itemized review modal gives you full control with per-item checkboxes and exact file sizes before cleaning.
+- **Recycle Bin Safety**: Deleted leftover files are safely sent to the **Windows Recycle Bin** via Win32 `SHFileOperationW` (`FOF_ALLOWUNDO`) so you can restore them anytime.
 
 ### 🎨 Fluent Design & Customization
 

@@ -52,6 +52,7 @@
       <nav class="nav-list" aria-label="Main navigation">
         <button class="nav-item active" data-page="overview"><i data-lucide="layout-grid"></i><span>Overview</span></button>
         <button class="nav-item" data-page="applications"><i data-lucide="layers"></i><span>Applications</span><span class="nav-count" id="nav-apps"></span></button>
+        <button class="nav-item" data-page="uninstaller"><i data-lucide="trash-2"></i><span>Uninstaller</span><span class="nav-count" id="nav-uninstaller"></span></button>
         <button class="nav-item" data-page="services"><i data-lucide="cog"></i><span>Services</span><span class="nav-count" id="nav-services"></span></button>
         <button class="nav-item" data-page="tasks"><i data-lucide="calendar-clock"></i><span>Scheduled tasks</span><span class="nav-count" id="nav-tasks"></span></button>
         <button class="nav-item" data-page="sources"><i data-lucide="compass"></i><span>Startup locations</span></button>
@@ -123,6 +124,58 @@
             <aside class="detail-pane">
               <div class="detail-inner" id="detail-content"></div>
             </aside>
+          </div>
+        </section>
+
+        <!-- Uninstaller Page -->
+        <section class="page" id="page-uninstaller">
+          <div class="page-header">
+            <div>
+              <h1>Installed Programs & Deep Uninstaller</h1>
+              <p class="page-subtitle">Audit installed Win32 & user software, track true disk footprints, and completely clean leftover caches and heavy dependencies (like Ollama models and SDKs).</p>
+            </div>
+            <div class="header-actions">
+              <button class="win-btn" onclick="loadInstalledApps()"><i data-lucide="refresh-cw" style="width:13px;height:13px;margin-right:4px"></i>Refresh</button>
+            </div>
+          </div>
+          <div class="system-summary" id="uninstaller-summary"></div>
+          <div class="content-toolbar">
+            <div class="segmented" id="uninstaller-filters">
+              <button class="segmented-btn active" data-filter="all">All Programs</button>
+              <button class="segmented-btn" data-filter="heavy">🔥 Heavy Dependencies</button>
+              <button class="segmented-btn" data-filter="large">Gigabyte Apps (>1 GB)</button>
+              <button class="segmented-btn" data-filter="user">User Space</button>
+            </div>
+            <div class="toolbar-flex"></div>
+            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="uninstaller-search" type="search" placeholder="Search installed apps or publishers"></label>
+            <select class="select-control" id="uninstaller-sort" aria-label="Sort installed apps">
+              <option value="size">Size (Largest first)</option>
+              <option value="name">Name A–Z</option>
+              <option value="date">Install Date (Newest first)</option>
+            </select>
+          </div>
+          <div class="page-section">
+            <div class="section-heading"><strong>Installed software inventory</strong><span id="uninstaller-count-meta">Auditing…</span></div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="min-width:240px">Program</th>
+                    <th>Publisher</th>
+                    <th>Installed On</th>
+                    <th style="text-align:right">Size</th>
+                    <th style="text-align:right;min-width:180px">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="uninstaller-body">
+                  <tr><td colspan="5"><div class="loading">Auditing installed software…</div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="notice-line" style="margin-top:14px">
+            <i data-lucide="shield-check" style="width:14px;height:14px;flex:none;color:#10b981;margin-top:1px"></i>
+            <span><strong>WinBGM Safety Guarantee</strong>: Leftover cleanup safely moves files to the Windows Recycle Bin (restorable anytime). Registry keys are backed up to history before removal.</span>
           </div>
         </section>
 
@@ -406,6 +459,27 @@
     <div class="modal-actions">
       <button class="win-btn" id="modal-cancel">Cancel</button>
       <button class="win-btn primary" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Residual & Dependency Cleanup Modal -->
+<div class="modal-backdrop" id="residual-modal">
+  <div class="modal residual-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="residual-title">
+    <div class="residual-header">
+      <div class="residual-icon-badge"><i data-lucide="sparkles"></i></div>
+      <div>
+        <h2 class="modal-title" id="residual-title" style="margin-bottom:2px">Deep Clean Leftovers & Dependencies</h2>
+        <div class="modal-subtitle" id="residual-subtitle" style="font-size:12px;color:var(--text-2)"></div>
+      </div>
+    </div>
+    <div class="residual-body" id="residual-body"></div>
+    <div class="residual-footer">
+      <div class="residual-safety-note"><i data-lucide="shield-check"></i> Files are moved safely to the Windows Recycle Bin</div>
+      <div class="residual-actions">
+        <button class="win-btn" id="residual-cancel" onclick="closeResidualModal()">Keep Leftovers</button>
+        <button class="win-btn primary" id="residual-confirm" onclick="executeResidualClean()">Clean Selected (<span id="residual-selected-size">0 B</span>)</button>
+      </div>
     </div>
   </div>
 </div>

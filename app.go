@@ -335,3 +335,42 @@ func (a *App) ExportCSV() (string, error) {
 
 	return p, os.WriteFile(p, buf.Bytes(), 0o644)
 }
+
+// GetInstalledApps returns all installed programs on the machine along with aggregate size and counts.
+func (a *App) GetInstalledApps() ([]backend.InstalledApp, backend.UninstallerSummary, error) {
+	return backend.ScanInstalledApps()
+}
+
+// ScanAppResiduals audits leftover directories, heavy models, caches, and registry keys for an app.
+func (a *App) ScanAppResiduals(appID string) (backend.ResidualReport, error) {
+	apps, _, err := backend.ScanInstalledApps()
+	if err != nil {
+		return backend.ResidualReport{}, err
+	}
+	for _, app := range apps {
+		if app.ID == appID {
+			return backend.ScanResiduals(app)
+		}
+	}
+	return backend.ScanResiduals(backend.InstalledApp{ID: appID, Name: appID})
+}
+
+// LaunchUninstaller triggers the official uninstaller for an app and waits for completion.
+func (a *App) LaunchUninstaller(appID string, quiet bool) (int, error) {
+	apps, _, err := backend.ScanInstalledApps()
+	if err != nil {
+		return -1, err
+	}
+	for _, app := range apps {
+		if app.ID == appID {
+			return backend.LaunchUninstaller(app, quiet)
+		}
+	}
+	return -1, fmt.Errorf("application %s not found", appID)
+}
+
+// CleanResidualItems safely cleans selected leftover files (to Recycle Bin) and registry keys.
+func (a *App) CleanResidualItems(items []backend.ResidualItem) (backend.CleanResult, error) {
+	return backend.CleanResidualItems(items)
+}
+

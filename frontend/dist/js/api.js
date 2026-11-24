@@ -548,3 +548,383 @@ DEMO.apps.forEach(a => a.components.forEach(c => {
     c.canStop = c.kind === 'service';
   }
 }));
+
+// --- Uninstaller & Residual Cleanup API ---
+
+const DEMO_INSTALLED_APPS = [
+  {
+    id: 'HKCU_Ollama',
+    name: 'Ollama',
+    version: '0.5.12',
+    publisher: 'Ollama Inc.',
+    installDate: '2026-05-18',
+    estimatedSizeKB: 104857,
+    sizeBytes: 107374182,
+    displaySize: '102.4 MB',
+    installLocation: 'C:\\Users\\Admin\\AppData\\Local\\Programs\\Ollama',
+    uninstallString: '"C:\\Users\\Admin\\AppData\\Local\\Programs\\Ollama\\uninstall.exe"',
+    quietUninstall: '"C:\\Users\\Admin\\AppData\\Local\\Programs\\Ollama\\uninstall.exe" /S',
+    displayIcon: 'C:\\Users\\Admin\\AppData\\Local\\Programs\\Ollama\\ollama.exe',
+    registryPath: 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Ollama',
+    isUserInstall: true,
+    is64Bit: true,
+    isSystemComponent: false,
+    exePath: 'C:\\Users\\Admin\\AppData\\Local\\Programs\\Ollama\\ollama.exe',
+    hasHeavyProfile: true,
+    heavyProfileKey: 'ollama',
+    heavyEstimatedBytes: 22880000000,
+    heavyDisplaySize: '21.3 GB'
+  },
+  {
+    id: 'HKLM_CapCut',
+    name: 'CapCut',
+    version: '9.6.0.4097',
+    publisher: 'Bytedance Pte. Ltd.',
+    installDate: '2026-10-25',
+    estimatedSizeKB: 846720,
+    sizeBytes: 867041280,
+    displaySize: '826.9 MB',
+    installLocation: 'C:\\Program Files\\CapCut',
+    uninstallString: '"C:\\Program Files\\CapCut\\Uninstall.exe"',
+    quietUninstall: '',
+    displayIcon: 'C:\\Program Files\\CapCut\\CapCut.exe',
+    registryPath: 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CapCut',
+    isUserInstall: false,
+    is64Bit: true,
+    isSystemComponent: false,
+    exePath: 'C:\\Program Files\\CapCut\\CapCut.exe',
+    hasHeavyProfile: true,
+    heavyProfileKey: 'capcut',
+    heavyEstimatedBytes: 6871947673,
+    heavyDisplaySize: '6.40 GB'
+  },
+  {
+    id: 'HKLM_7Zip',
+    name: '7-Zip 26.01 (x64)',
+    version: '26.01',
+    publisher: 'Igor Pavlov',
+    installDate: '2026-05-20',
+    estimatedSizeKB: 5771,
+    sizeBytes: 5909504,
+    displaySize: '5.63 MB',
+    installLocation: 'C:\\Program Files\\7-Zip',
+    uninstallString: '"C:\\Program Files\\7-Zip\\Uninstall.exe"',
+    quietUninstall: '',
+    displayIcon: 'C:\\Program Files\\7-Zip\\7zFM.exe',
+    registryPath: 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\7-Zip',
+    isUserInstall: false,
+    is64Bit: true,
+    isSystemComponent: false,
+    exePath: 'C:\\Program Files\\7-Zip\\7zFM.exe',
+    hasHeavyProfile: false,
+    heavyProfileKey: '',
+    heavyEstimatedBytes: 0,
+    heavyDisplaySize: '—'
+  }
+];
+
+const DEMO_UNINSTALLER_SUMMARY = {
+  totalApps: 119,
+  totalSizeBytes: 399431475200,
+  totalSizeFormatted: '372.0 GB',
+  heavyAppsCount: 6,
+  userAppsCount: 38,
+  systemAppsCount: 14
+};
+
+async function loadInstalledApps() {
+  const metaEl = $('uninstaller-count-meta');
+  if (metaEl) metaEl.textContent = 'Auditing installed programs…';
+  
+  const a = api();
+  if (a && a.GetInstalledApps) {
+    try {
+      const res = await a.GetInstalledApps();
+      if (Array.isArray(res)) {
+        installedApps = res[0] || [];
+        uninstallerSummary = res[1] || null;
+      } else if (res && res.apps) {
+        installedApps = res.apps;
+        uninstallerSummary = res.summary;
+      }
+    } catch (e) {
+      console.error('Failed to query installed apps:', e);
+      toast('Failed to load installed apps: ' + e);
+    }
+  } else {
+    installedApps = DEMO_INSTALLED_APPS;
+    uninstallerSummary = DEMO_UNINSTALLER_SUMMARY;
+  }
+
+  const badge = $('nav-uninstaller');
+  if (badge) badge.textContent = installedApps.length || '';
+
+  renderUninstaller();
+}
+
+async function scanAppResiduals(appId) {
+  const a = api();
+  if (a && a.ScanAppResiduals) {
+    try {
+      return await a.ScanAppResiduals(appId);
+    } catch (e) {
+      toast('Failed to audit residuals: ' + e);
+      return null;
+    }
+  }
+  // Demo fallback
+  return {
+    appId: appId,
+    appName: 'Ollama',
+    totalSizeBytes: 22881200000,
+    totalSizeFormatted: '21.3 GB',
+    heavySizeBytes: 22880000000,
+    heavySizeFormatted: '21.3 GB',
+    items: [
+      {
+        id: 'heavy_0',
+        category: 'heavy',
+        categoryTitle: 'AI Models & Weights',
+        title: 'Ollama Downloaded Model Weights',
+        path: 'C:\\Users\\Admin\\.ollama\\models',
+        sizeBytes: 22880000000,
+        sizeFormatted: '21.3 GB',
+        itemCount: 4,
+        description: 'Trained LLM model weight blobs (GGUF, safetensors, manifests).',
+        isSelected: true,
+        isRegistry: false
+      },
+      {
+        id: 'appdata_1',
+        category: 'appdata',
+        categoryTitle: 'Local AppData Cache & Storage',
+        title: 'LocalAppData Folder (Ollama)',
+        path: 'C:\\Users\\Admin\\AppData\\Local\\Ollama',
+        sizeBytes: 1200000,
+        sizeFormatted: '1.14 MB',
+        itemCount: 8,
+        description: 'Application data, log files, and configuration buffers.',
+        isSelected: true,
+        isRegistry: false
+      },
+      {
+        id: 'reg_2',
+        category: 'registry',
+        categoryTitle: 'Registry Configurations',
+        title: 'HKCU Settings Key',
+        path: 'HKCU\\Software\\Ollama',
+        sizeBytes: 0,
+        sizeFormatted: '6 values, 1 subkeys',
+        itemCount: 7,
+        description: 'Application preferences, environment flags, and user settings.',
+        isSelected: true,
+        isRegistry: true
+      }
+    ]
+  };
+}
+
+function promptUninstall(appId) {
+  const app = installedApps.find(a => a.id === appId);
+  if (!app) return;
+
+  const hasHeavy = app.hasHeavyProfile && app.heavyDisplaySize !== '—';
+  const heavyNote = hasHeavy
+    ? `<div style="margin-top:12px;padding:10px 12px;border-radius:6px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;font-size:11.5px">
+        <strong>🔥 Heavy Dependencies Detected:</strong> This program has external data/models (${esc(app.heavyDisplaySize)}) that standard uninstallers leave behind. WinBGM will automatically audit and offer to clean them after the uninstaller runs.
+       </div>`
+    : '';
+
+  $('modal-title').textContent = 'Uninstall ' + app.name;
+  $('modal-body').innerHTML = `
+    <p>Are you sure you want to uninstall <strong>${esc(app.name)}</strong> (${esc(app.displaySize)})?</p>
+    <p style="margin-top:6px;color:var(--text-2);font-size:11px">WinBGM will launch the official uninstaller and then immediately scan for leftover folders, cached files, and heavy dependencies to ensure a 100% clean removal.</p>
+    ${heavyNote}
+    <div style="margin-top:14px;display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="uninst-quiet-toggle" ${app.quietUninstall ? 'checked' : 'disabled'}>
+      <label for="uninst-quiet-toggle" style="font-size:11.5px;cursor:pointer">
+        Attempt silent/quiet uninstallation ${app.quietUninstall ? '' : '<span style="color:var(--muted)">(silent flag not provided by vendor)</span>'}
+      </label>
+    </div>
+  `;
+
+  $('modal-confirm').textContent = 'Proceed with Uninstall';
+  $('modal-confirm').style.display = 'inline-flex';
+  $('modal-confirm').onclick = async () => {
+    closeModal();
+    const quiet = $('uninst-quiet-toggle') ? $('uninst-quiet-toggle').checked : false;
+    await triggerUninstall(appId, quiet);
+  };
+  $('modal-cancel').textContent = 'Cancel';
+  openModal();
+  refreshIcons();
+}
+
+async function triggerUninstall(appId, quiet = false) {
+  const app = installedApps.find(a => a.id === appId);
+  const appName = app ? app.name : 'Application';
+
+  toast(`Launching official uninstaller for ${appName}…`);
+  const a = api();
+  if (a && a.LaunchUninstaller) {
+    try {
+      const code = await a.LaunchUninstaller(appId, quiet);
+      toast(`Uninstaller completed (code: ${code}). Auditing leftovers & dependencies…`);
+    } catch (e) {
+      toast(`Uninstaller note: ${e}`);
+    }
+  }
+
+  // Scan residuals post-uninstall
+  const report = await scanAppResiduals(appId);
+  if (report && report.items && report.items.length > 0) {
+    showResidualModal(report);
+  } else {
+    toast(`Clean removal verified! No leftover data found for ${appName}.`);
+    celebrateSuccess();
+    await loadInstalledApps();
+  }
+}
+
+async function scanAndCleanOnly(appId) {
+  const app = installedApps.find(a => a.id === appId);
+  if (!app) return;
+  toast(`Auditing leftover files, models & cache for ${app.name}…`);
+  const report = await scanAppResiduals(appId);
+  if (report && report.items && report.items.length > 0) {
+    showResidualModal(report);
+  } else {
+    toast(`No leftover cache or model dependencies detected for ${app.name}.`);
+  }
+}
+
+function showResidualModal(report) {
+  currentResidualReport = report;
+  selectedResidualIds = new Set(report.items.filter(it => it.isSelected).map(it => it.id));
+
+  $('residual-title').textContent = `Clean Leftovers & Dependencies (${esc(report.appName)})`;
+  $('residual-subtitle').textContent = `Discovered ${report.items.length} residual items totaling ${report.totalSizeFormatted}`;
+
+  renderResidualBody();
+
+  const modal = $('residual-modal');
+  if (modal) modal.classList.add('show');
+  refreshIcons();
+}
+
+function renderResidualBody() {
+  if (!currentResidualReport) return;
+  const items = currentResidualReport.items;
+
+  // Group by category
+  const categories = {};
+  items.forEach(it => {
+    categories[it.categoryTitle] = categories[it.categoryTitle] || [];
+    categories[it.categoryTitle].push(it);
+  });
+
+  let html = '';
+  for (const [catTitle, catItems] of Object.entries(categories)) {
+    const isHeavyCat = catItems.some(it => it.category === 'heavy');
+    html += `
+      <div class="residual-category-title">
+        <span>${esc(catTitle)}</span>
+        <span style="font-size:10.5px;color:var(--text-dim)">${catItems.length} items</span>
+      </div>
+    `;
+
+    catItems.forEach(it => {
+      const isChecked = selectedResidualIds.has(it.id);
+      const isHeavy = it.category === 'heavy';
+      html += `
+        <div class="residual-item-card ${isHeavy ? 'is-heavy' : ''}" onclick="toggleResidualItem('${esc(it.id)}')">
+          <input type="checkbox" id="chk-${esc(it.id)}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation();toggleResidualItem('${esc(it.id)}')" style="margin-top:2px;cursor:pointer">
+          <div class="residual-item-copy">
+            <div class="residual-item-title-row">
+              <span class="residual-item-title">${esc(it.title)}</span>
+              <span class="residual-item-size">${esc(it.sizeFormatted)}</span>
+            </div>
+            <div class="residual-item-path">${esc(it.path)}</div>
+            <div class="residual-item-desc">${esc(it.description)}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  $('residual-body').innerHTML = html;
+  updateResidualSelectedSize();
+}
+
+function toggleResidualItem(id) {
+  if (selectedResidualIds.has(id)) {
+    selectedResidualIds.delete(id);
+  } else {
+    selectedResidualIds.add(id);
+  }
+  const chk = $('chk-' + id);
+  if (chk) chk.checked = selectedResidualIds.has(id);
+  updateResidualSelectedSize();
+}
+
+function updateResidualSelectedSize() {
+  if (!currentResidualReport) return;
+  let totalBytes = 0;
+  currentResidualReport.items.forEach(it => {
+    if (selectedResidualIds.has(it.id)) {
+      totalBytes += it.sizeBytes;
+    }
+  });
+
+  let sizeStr = '0 B';
+  const kb = 1024, mb = kb * 1024, gb = mb * 1024;
+  if (totalBytes >= gb) sizeStr = (totalBytes / gb).toFixed(2) + ' GB';
+  else if (totalBytes >= mb) sizeStr = (totalBytes / mb).toFixed(1) + ' MB';
+  else if (totalBytes >= kb) sizeStr = (totalBytes / kb).toFixed(1) + ' KB';
+  else if (totalBytes > 0) sizeStr = totalBytes + ' B';
+
+  $('residual-selected-size').textContent = sizeStr;
+
+  const btn = $('residual-confirm');
+  if (btn) btn.disabled = selectedResidualIds.size === 0;
+}
+
+function closeResidualModal() {
+  const modal = $('residual-modal');
+  if (modal) modal.classList.remove('show');
+  currentResidualReport = null;
+  selectedResidualIds.clear();
+}
+
+async function executeResidualClean() {
+  if (!currentResidualReport || selectedResidualIds.size === 0) return;
+
+  const itemsToClean = currentResidualReport.items.filter(it => selectedResidualIds.has(it.id));
+  const confirmBtn = $('residual-confirm');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Moving to Recycle Bin…';
+  }
+
+  const a = api();
+  if (a && a.CleanResidualItems) {
+    try {
+      const res = await a.CleanResidualItems(itemsToClean);
+      toast(`Cleaned ${res.freedSizeFormatted || 'selected data'} (${res.deletedFilesCount} files, ${res.deletedKeysCount} keys) safely to Recycle Bin!`);
+      celebrateSuccess();
+      closeResidualModal();
+      await loadInstalledApps();
+    } catch (e) {
+      toast('Cleanup failed: ' + e);
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Retry Clean';
+      }
+    }
+  } else {
+    toast(`Cleaned ${itemsToClean.length} items safely to Recycle Bin!`);
+    celebrateSuccess();
+    closeResidualModal();
+  }
+}
+

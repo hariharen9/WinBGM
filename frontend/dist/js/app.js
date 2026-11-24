@@ -15,6 +15,7 @@ function navigate(p) {
   const labels = {
     overview: 'Overview',
     applications: 'Applications',
+    uninstaller: 'Installed Programs & Deep Uninstaller',
     services: 'Services',
     tasks: 'Scheduled tasks',
     sources: 'Startup locations',
@@ -24,6 +25,7 @@ function navigate(p) {
   };
   $('commandbar-label').textContent = labels[p] || 'WinBGM';
   $('content-host').scrollTop = 0;
+  if (p === 'uninstaller') loadInstalledApps();
   if (p === 'history') loadHistory();
   if (p === 'snapshots') loadSnapshots();
   if (p === 'overview') animateCounters();
@@ -110,6 +112,33 @@ if ($('inspector-search')) {
   $('inspector-search').addEventListener('input', e => {
     inspectorSearch = e.target.value;
     renderSourceInspectorItems();
+  });
+}
+
+// Uninstaller Toolbar Listeners
+if ($('uninstaller-filters')) {
+  $('uninstaller-filters').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-filter]');
+    if (btn) {
+      document.querySelectorAll('#uninstaller-filters button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      uninstallerFilter = btn.dataset.filter;
+      renderUninstaller();
+    }
+  });
+}
+
+if ($('uninstaller-search')) {
+  $('uninstaller-search').addEventListener('input', e => {
+    uninstallerSearch = e.target.value;
+    renderUninstaller();
+  });
+}
+
+if ($('uninstaller-sort')) {
+  $('uninstaller-sort').addEventListener('change', e => {
+    uninstallerSort = e.target.value;
+    renderUninstaller();
   });
 }
 
@@ -232,4 +261,5 @@ navigate('overview');
 doScan().then(() => {
   loadHistory();
   loadSnapshots();
+  loadInstalledApps();
 });
