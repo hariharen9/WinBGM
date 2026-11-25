@@ -8,6 +8,64 @@ function toast(m) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
 }
 
+function renderCommandBar(p) {
+  const host = $('commandbar-actions');
+  if (!host) return;
+  const presets = {
+    overview: [
+      { id: 'scan-btn', cls: 'btn-scan', icon: 'refresh-cw', label: 'Scan now', fn: 'doScan()' },
+      { icon: 'zap', label: 'Focus Mode', fn: 'requestFocusMode()' },
+      { icon: 'download', label: 'Export', fn: 'openExportModal()' },
+    ],
+    processes: [
+      { icon: 'refresh-cw', label: 'Refresh', fn: 'loadLiveProcesses()' },
+      { icon: 'zap', label: 'Focus Mode', fn: 'requestFocusMode()' },
+    ],
+    applications: [
+      { id: 'scan-btn', cls: 'btn-scan', icon: 'refresh-cw', label: 'Scan now', fn: 'doScan()' },
+      { icon: 'zap', label: 'Focus Mode', fn: 'requestFocusMode()' },
+      { icon: 'folder-search', label: 'Open location', fn: 'doReveal()' },
+      { icon: 'download', label: 'Export', fn: 'openExportModal()' },
+    ],
+    uninstaller: [
+      { icon: 'refresh-cw', label: 'Rescan Programs', fn: 'loadInstalledApps()' },
+      { icon: 'download', label: 'Export', fn: 'openExportModal()' },
+    ],
+    services: [
+      { id: 'scan-btn', cls: 'btn-scan', icon: 'refresh-cw', label: 'Scan now', fn: 'doScan()' },
+      { icon: 'download', label: 'Export', fn: 'openExportModal()' },
+    ],
+    tasks: [
+      { id: 'scan-btn', cls: 'btn-scan', icon: 'refresh-cw', label: 'Scan now', fn: 'doScan()' },
+      { icon: 'download', label: 'Export', fn: 'openExportModal()' },
+    ],
+    sources: [
+      { id: 'scan-btn', cls: 'btn-scan', icon: 'refresh-cw', label: 'Scan now', fn: 'doScan()' },
+      { icon: 'download', label: 'Export', fn: 'openExportModal()' },
+    ],
+    locks: [
+      { icon: 'folder-open', label: 'Browse File', fn: 'browseLockedFile()' },
+      { icon: 'search', label: 'Check Locks', fn: 'checkFileLocks()' },
+    ],
+    snapshots: [
+      { icon: 'camera', label: 'Take Snapshot', fn: 'promptCreateSnapshot()' },
+      { icon: 'refresh-cw', label: 'Refresh', fn: 'loadSnapshots()' },
+    ],
+    history: [
+      { icon: 'refresh-cw', label: 'Refresh', fn: 'loadHistory()' },
+      { icon: 'download', label: 'Export', fn: 'openExportModal()' },
+    ],
+    settings: [
+      { icon: 'shield-plus', label: 'Create Restore Point', fn: 'doCreateRestorePoint()' },
+      { icon: 'monitor', label: 'System Info', fn: 'openSystemAboutModal()' },
+    ],
+  };
+  const items = presets[p] || presets.overview;
+  host.innerHTML = items.map(b =>
+    `<button class="command-btn ${b.cls || ''}"${b.id ? ` id="${b.id}"` : ''} onclick="${b.fn}"><i data-lucide="${b.icon}"></i>${b.label}</button>`
+  ).join('');
+}
+
 function navigate(p) {
   page = p;
   document.querySelectorAll('.page').forEach(x => x.classList.toggle('active', x.id === 'page-' + p));
@@ -26,6 +84,7 @@ function navigate(p) {
     settings: 'Settings'
   };
   $('commandbar-label').textContent = labels[p] || 'WinBGM';
+  renderCommandBar(p);
   $('content-host').scrollTop = 0;
   if (p === 'applications') renderApps();
   if (p === 'processes') loadLiveProcesses();

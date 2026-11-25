@@ -127,22 +127,7 @@
           <div class="commandbar">
             <span class="commandbar-label" id="commandbar-label">Overview</span>
             <span class="commandbar-sep"></span>
-            <button
-              class="command-btn btn-scan"
-              id="scan-btn"
-              onclick="doScan()"
-            >
-              <i data-lucide="refresh-cw"></i>Scan now
-            </button>
-            <button class="command-btn" onclick="requestFocusMode()">
-              <i data-lucide="zap"></i>Focus Mode
-            </button>
-            <button class="command-btn" onclick="doReveal()">
-              <i data-lucide="folder-search"></i>Open location
-            </button>
-            <button class="command-btn" onclick="openExportModal()">
-              <i data-lucide="download"></i>Export
-            </button>
+            <div class="commandbar-actions" id="commandbar-actions"></div>
             <div class="command-spacer"></div>
             <div class="command-state">
               <span class="state-led"></span

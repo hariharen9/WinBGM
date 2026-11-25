@@ -506,6 +506,12 @@
   border-color: var(--border-hover);
   background: var(--surface-card);
 }
+.commandbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
 
 /* System > About Modal */
 .sysabout-modal-dialog {
