@@ -1098,6 +1098,15 @@
         aria-modal="true"
         aria-labelledby="modal-title"
       >
+        <button
+          class="modal-close-btn"
+          id="modal-close-x"
+          onclick="closeModal()"
+          aria-label="Close dialog"
+          title="Close (Esc)"
+        >
+          <i data-lucide="x"></i>
+        </button>
         <h2 class="modal-title" id="modal-title"></h2>
         <div class="modal-body" id="modal-body"></div>
         <div class="modal-actions">
@@ -1115,6 +1124,15 @@
         aria-modal="true"
         aria-labelledby="residual-title"
       >
+        <button
+          class="modal-close-btn"
+          id="residual-close-x"
+          onclick="closeResidualModal()"
+          aria-label="Close leftovers dialog"
+          title="Close (Esc)"
+        >
+          <i data-lucide="x"></i>
+        </button>
         <div class="residual-header">
           <div class="residual-icon-badge"><i data-lucide="sparkles"></i></div>
           <div>
