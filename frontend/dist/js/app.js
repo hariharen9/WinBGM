@@ -225,6 +225,28 @@ if ($('set-always-admin')) {
   });
 }
 
+if ($('set-minimize-tray')) {
+  const a = api();
+  if (a && a.GetMinimizeToTray) {
+    a.GetMinimizeToTray().then(v => { $('set-minimize-tray').checked = !!v; }).catch(() => {});
+  }
+  $('set-minimize-tray').addEventListener('change', async e => {
+    const on = e.target.checked;
+    const a = api();
+    if (!a || !a.SetMinimizeToTray) {
+      toast(on ? 'Minimize to System Tray enabled (sample preview).' : 'Minimize to System Tray disabled (sample preview).');
+      return;
+    }
+    try {
+      await a.SetMinimizeToTray(on);
+      toast(on ? 'WinBGM will stay active in the System Tray when closed.' : 'Closing the window will now exit WinBGM.');
+    } catch (err) {
+      toast('Failed to update tray setting: ' + err);
+      e.target.checked = !on;
+    }
+  });
+}
+
 $('global-search').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     navigate('applications');

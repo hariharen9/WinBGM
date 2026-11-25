@@ -44,9 +44,10 @@ function renderApps() {
     all: all.length,
     running: all.filter(a => a.running).length,
     enabled: all.filter(a => a.autoStart).length,
+    network: all.filter(a => a.connections && a.connections.length > 0).length,
     review: all.filter(a => a.review).length
   };
-  $('app-filters').innerHTML = [['all','All apps'],['running','Running'],['enabled','Auto-start'],['review','Needs review']].map(([k, l]) =>
+  $('app-filters').innerHTML = [['all','All apps'],['running','Running'],['enabled','Auto-start'],['network','🌐 Network'],['review','Needs review']].map(([k, l]) =>
     `<button data-filter="${k}" class="${filter === k ? 'active' : ''}">${l} <span>${cnt[k]}</span></button>`
   ).join('');
 
@@ -56,7 +57,7 @@ function renderApps() {
 
   const q = query.toLowerCase();
   let list = all.filter(a =>
-    (filter === 'all' || (filter === 'running' && a.running) || (filter === 'enabled' && a.autoStart) || (filter === 'review' && a.review)) &&
+    (filter === 'all' || (filter === 'running' && a.running) || (filter === 'enabled' && a.autoStart) || (filter === 'network' && a.connections && a.connections.length > 0) || (filter === 'review' && a.review)) &&
     (!q || (a.name + ' ' + a.publisher + ' ' + a.components.map(c => c.name + ' ' + c.display).join(' ')).toLowerCase().includes(q))
   );
 
@@ -74,9 +75,11 @@ function renderApps() {
 
   $('app-list').innerHTML = list.length ? list.map(a => {
     const ramBadge = a.ramFormatted ? `<span class="badge blue" style="font-size:10px;padding:1px 6px;margin-left:6px">${esc(a.ramFormatted)}</span>` : '';
+    const connCount = (a.connections || []).length;
+    const netBadge = connCount > 0 ? `<span class="badge ${a.telemetryCount > 0 ? 'amber' : 'green'}" style="font-size:10px;padding:1px 6px;margin-left:4px" title="${a.telemetryCount > 0 ? a.telemetryCount + ' telemetry endpoint(s) detected' : 'Active network sockets'}">🌐 ${connCount}</span>` : '';
     const reviewBadge = a.review ? `<span class="state-text review">Review</span>` : a.running ? `<span class="state-text">Running</span>` : `<span class="state-text stopped">Not running</span>`;
     return `<button class="app-row ${a.id === sel ? 'selected' : ''}" data-id="${esc(a.id)}">
-      <div class="app-cell"><div class="app-name-wrap"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="app-name">${esc(a.name)}${ramBadge}</div><div class="app-publisher">${esc(a.publisher || 'Publisher unknown')}</div></div></div></div>
+      <div class="app-cell"><div class="app-name-wrap"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="app-name">${esc(a.name)}${ramBadge}${netBadge}</div><div class="app-publisher">${esc(a.publisher || 'Publisher unknown')}</div></div></div></div>
       <div class="app-cell cell-secondary">${a.components.length}</div>
       <div class="app-cell">${reviewBadge}</div>
       <div class="app-cell behavior">${esc(a.behavior)}<small>${esc(a.behaviorNote)}</small></div></button>`;
@@ -97,6 +100,21 @@ function explain(a) {
   t += a.autoStart ? 'At least one component starts by itself when Windows boots or you sign in.' : 'None of its components is set to start by itself at boot or sign-in.';
   if (a.review) t += ' Something about its location or signature is worth a closer look; that does not mean it is harmful.';
   return t;
+}
+
+function renderDetailNetwork(a) {
+  const conns = a && a.connections ? a.connections : [];
+  if (!conns.length) return '';
+  const rows = conns.slice(0, 15).map(cn => {
+    const dest = cn.remoteHost ? `${esc(cn.remoteHost)} (${esc(cn.remoteAddr)})` : (cn.remotePort ? `${esc(cn.remoteAddr)}:${cn.remotePort}` : esc(cn.remoteAddr));
+    const telTag = cn.isTelemetry ? `<span class="badge amber" style="font-size:9px;padding:1px 5px;margin-left:5px">Telemetry</span>` : '';
+    return `<div class="detail-kv" style="align-items:center">
+      <span><span class="badge" style="font-size:9px;padding:1px 5px;margin-right:4px">${esc(cn.protocol)}</span>${esc(cn.state)}</span>
+      <span style="word-break:break-all;text-align:right">${dest}${cn.remotePort && cn.remoteHost ? ':' + cn.remotePort : ''}${telTag}</span>
+    </div>`;
+  }).join('');
+  const extra = conns.length > 15 ? `<div style="font-size:10.5px;color:var(--muted);margin-top:4px">+ ${conns.length - 15} more socket(s)</div>` : '';
+  return `<div class="detail-section"><div class="detail-section-title">Live network &amp; telemetry (${conns.length})</div>${rows}${extra}</div>`;
 }
 
 function renderDetail(a) {
@@ -133,6 +151,7 @@ function renderDetail(a) {
        <div class="howto">How to change: ${esc(HOWTO[c.kind] || HOWTO.process)}</div></details></div>`;
    }).join('')}
   </div>
+  <div id="detail-network-host">${renderDetailNetwork(a)}</div>
   <div class="detail-section"><div class="detail-section-title">About this application</div><div class="detail-explain">${esc(explain(a))}</div></div>
   <div class="detail-section"><div class="detail-section-title">Application details</div>
    <div class="detail-kv"><span>Publisher</span><span>${esc(a.publisher || 'Unknown')}</span></div>
@@ -610,10 +629,10 @@ function renderSentinelAlerts() {
     <div class="banner" style="margin-bottom:8px;display:flex;align-items:center;padding:10px 14px">
       <i data-lucide="shield-alert" style="width:16px;height:16px;flex:none;color:var(--amber);margin-right:8px"></i>
       <div style="flex:1">
-        <strong>Persistence Sentinel Alert:</strong> ${esc(a.message || a.name)} (${esc(a.timestamp)})
+        <strong>Watchdog Alert:</strong> ${esc(a.message || a.name)} (${esc(a.timestamp)})
       </div>
-      <button class="win-btn" style="height:24px;font-size:10px;margin-left:8px" onclick="doScan()">Scan PC</button>
-      <button class="win-btn" style="height:24px;font-size:10px;margin-left:4px" onclick="dismissSentinelAlert('${esc(a.id)}')">Dismiss</button>
+      <button class="win-btn primary" style="height:24px;font-size:10px;margin-left:8px" onclick="disableSentinelEntry('${esc(a.id)}')">Disable Safely</button>
+      <button class="win-btn" style="height:24px;font-size:10px;margin-left:4px" onclick="dismissSentinelEntry('${esc(a.id)}')">Keep</button>
     </div>
   `).join('');
   refreshIcons();

@@ -59,13 +59,14 @@ type procTable struct {
 }
 
 type ProcessPollResult struct {
-	TotalRAMBytes     uint64              `json:"totalRAMBytes"`
-	TotalRAMFormatted string              `json:"totalRAMFormatted"`
-	RunningPIDs       []uint32            `json:"runningPIDs"`
-	ActiveExePaths    map[string][]uint32 `json:"activeExePaths"`
-	RAMByExePath      map[string]uint64   `json:"ramByExePath"`
-	RAMFormattedByExe map[string]string   `json:"ramFormattedByExe"`
-	RAMByPID          map[uint32]uint64   `json:"ramByPID"`
+	TotalRAMBytes     uint64                         `json:"totalRAMBytes"`
+	TotalRAMFormatted string                         `json:"totalRAMFormatted"`
+	RunningPIDs       []uint32                       `json:"runningPIDs"`
+	ActiveExePaths    map[string][]uint32            `json:"activeExePaths"`
+	RAMByExePath      map[string]uint64              `json:"ramByExePath"`
+	RAMFormattedByExe map[string]string              `json:"ramFormattedByExe"`
+	RAMByPID          map[uint32]uint64              `json:"ramByPID"`
+	ConnsByPID        map[uint32][]NetworkConnection `json:"connsByPID"`
 }
 
 func PollProcesses() ProcessPollResult {
@@ -91,6 +92,8 @@ func PollProcesses() ProcessPollResult {
 		ramFmtByPath[low] = formatRAM(bytes)
 	}
 
+	connsByPID := GetConnectionsByPID()
+
 	return ProcessPollResult{
 		TotalRAMBytes:     totalRAM,
 		TotalRAMFormatted: formatRAM(totalRAM),
@@ -99,6 +102,7 @@ func PollProcesses() ProcessPollResult {
 		RAMByExePath:      ramByPath,
 		RAMFormattedByExe: ramFmtByPath,
 		RAMByPID:          ramByPID,
+		ConnsByPID:        connsByPID,
 	}
 }
 

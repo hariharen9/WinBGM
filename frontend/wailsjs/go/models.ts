@@ -582,6 +582,34 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class NetworkConnection {
+	    pid: number;
+	    protocol: string;
+	    localAddr: string;
+	    localPort: number;
+	    remoteAddr: string;
+	    remotePort: number;
+	    remoteHost: string;
+	    state: string;
+	    isTelemetry: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new NetworkConnection(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pid = source["pid"];
+	        this.protocol = source["protocol"];
+	        this.localAddr = source["localAddr"];
+	        this.localPort = source["localPort"];
+	        this.remoteAddr = source["remoteAddr"];
+	        this.remotePort = source["remotePort"];
+	        this.remoteHost = source["remoteHost"];
+	        this.state = source["state"];
+	        this.isTelemetry = source["isTelemetry"];
+	    }
+	}
 	export class PowerBlocker {
 	    category: string;
 	    caller: string;
@@ -648,6 +676,7 @@ export namespace backend {
 	    ramByExePath: Record<string, number>;
 	    ramFormattedByExe: Record<string, string>;
 	    ramByPID: Record<number, number>;
+	    connsByPID: Record<number, Array<NetworkConnection>>;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProcessPollResult(source);
@@ -662,7 +691,26 @@ export namespace backend {
 	        this.ramByExePath = source["ramByExePath"];
 	        this.ramFormattedByExe = source["ramFormattedByExe"];
 	        this.ramByPID = source["ramByPID"];
+	        this.connsByPID = this.convertValues(source["connsByPID"], Array<NetworkConnection>, true);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class ResidualItem {
 	    id: string;
@@ -737,6 +785,26 @@ export namespace backend {
 		    }
 		    return a;
 		}
+	}
+	export class RestorePointResult {
+	    success: boolean;
+	    sequenceNumber: number;
+	    description: string;
+	    message: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RestorePointResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.sequenceNumber = source["sequenceNumber"];
+	        this.description = source["description"];
+	        this.message = source["message"];
+	        this.createdAt = source["createdAt"];
+	    }
 	}
 	export class SentinelAlert {
 	    id: string;

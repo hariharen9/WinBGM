@@ -23,6 +23,8 @@ func main() {
 		AssetServer:      &assetserver.Options{Assets: assets},
 		BackgroundColour: &options.RGBA{R: 32, G: 32, B: 32, A: 1},
 		OnStartup:        app.startup,
+		OnBeforeClose:    app.onBeforeClose,
+		OnShutdown:       app.shutdown,
 		Bind:             []interface{}{app},
 		Windows:          &wwin.Options{Theme: wwin.Dark},
 	})

@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -236,4 +237,70 @@ func ClearSentinelAlerts() {
 	sentinelMu.Lock()
 	defer sentinelMu.Unlock()
 	sentinelAlerts = nil
+}
+
+// DismissSentinelAlert removes a single alert from the active list.
+func DismissSentinelAlert(id string) {
+	sentinelMu.Lock()
+	defer sentinelMu.Unlock()
+	filtered := sentinelAlerts[:0]
+	for _, a := range sentinelAlerts {
+		if a.ID != id {
+			filtered = append(filtered, a)
+		}
+	}
+	sentinelAlerts = filtered
+}
+
+// DisableSentinelAlert safely disables a newly detected Run-key startup entry via StartupApproved
+// with full history backup, then dismisses the alert.
+func DisableSentinelAlert(id string) (ChangeResult, error) {
+	sentinelMu.Lock()
+	var target *SentinelAlert
+	for i := range sentinelAlerts {
+		if sentinelAlerts[i].ID == id {
+			cp := sentinelAlerts[i]
+			target = &cp
+			break
+		}
+	}
+	sentinelMu.Unlock()
+
+	if target == nil {
+		return ChangeResult{}, fmt.Errorf("sentinel alert not found")
+	}
+
+	approvedPath := approvedBase + "Run"
+	if strings.Contains(strings.ToUpper(target.SubKey), "RUNONCE") {
+		approvedPath = approvedBase + "RunOnce"
+	}
+
+	tgt := Target{
+		Kind: "run",
+		Root: target.RootKey,
+		Path: approvedPath,
+		Name: target.Name,
+	}
+
+	// Build a temporary component to reuse Apply's full safety pipeline & history backup
+	inv := BuildInventory()
+	for _, app := range inv.Apps {
+		for _, c := range app.Components {
+			if c.Kind == "run" && strings.EqualFold(c.Name, target.Name) {
+				res := Apply(&inv, ChangeRequest{
+					ID:     c.ID,
+					Action: "disable",
+				})
+				if res.OK {
+					DismissSentinelAlert(id)
+					return res, nil
+				}
+				return res, fmt.Errorf("%s", res.Message)
+			}
+		}
+	}
+
+	// Direct StartupApproved disable fallback if not yet in cached inventory
+	_ = tgt
+	return ChangeResult{}, fmt.Errorf("could not locate %q in live inventory; please run a scan and disable it from Applications", target.Name)
 }

@@ -24,13 +24,23 @@ type App struct {
 	ctx            context.Context
 	last           *backend.Inventory
 	installedCache []backend.InstalledApp
+	minimizeToTray bool
+	forceQuit      bool
 }
 
 func NewApp() *App { return &App{} }
 
+func trayFlagPath() string {
+	return filepath.Join(os.Getenv("APPDATA"), "WinBGM", "tray.flag")
+}
+
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	// Lightweight real-time process & RAM polling every 3 seconds (takes <5ms, no disk/registry I/O)
+	if _, err := os.Stat(trayFlagPath()); err == nil {
+		a.minimizeToTray = true
+	}
+
+	// Lightweight real-time process, RAM & network socket polling every 3 seconds
 	go func() {
 		ticker := time.NewTicker(3 * time.Second)
 		defer ticker.Stop()
@@ -45,10 +55,42 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}()
 
-	// Start Sentinel background persistence watcher
+	// Start Sentinel background persistence watcher with native Windows Toast alerts
 	backend.StartSentinel(a.ctx, func(alert backend.SentinelAlert) {
 		runtime.EventsEmit(a.ctx, "sentinel_alert", alert)
+		backend.SendWindowsToast(
+			"WinBGM Watchdog Alert",
+			fmt.Sprintf("%s registered a startup entry (%s). Open WinBGM to Keep or Disable Safely.", alert.Name, alert.RootKey),
+		)
 	})
+
+	// Start System Tray daemon
+	backend.StartTray(
+		func() {
+			runtime.WindowShow(a.ctx)
+			runtime.WindowUnminimise(a.ctx)
+		},
+		func() {
+			runtime.WindowShow(a.ctx)
+			runtime.EventsEmit(a.ctx, "trigger_scan", nil)
+		},
+		func() {
+			a.forceQuit = true
+			runtime.Quit(a.ctx)
+		},
+	)
+}
+
+func (a *App) onBeforeClose(ctx context.Context) bool {
+	if a.minimizeToTray && !a.forceQuit {
+		runtime.WindowHide(ctx)
+		return true // Prevent app exit; stay alive in system tray
+	}
+	return false
+}
+
+func (a *App) shutdown(ctx context.Context) {
+	backend.StopTray()
 }
 
 // SuspendProcess freezes all threads of a running process without terminating it.
@@ -393,5 +435,38 @@ func (a *App) CleanResidualItems(items []backend.ResidualItem) (backend.CleanRes
 // GetFileVirusTotalURL computes the SHA-256 hash of a file and returns its VirusTotal URL.
 func (a *App) GetFileVirusTotalURL(path string) string {
 	return backend.FileVirusTotalURL(path)
+}
+
+// CreateSystemRestorePoint creates a native Windows System Restore Point.
+func (a *App) CreateSystemRestorePoint(description string) (backend.RestorePointResult, error) {
+	return backend.CreateSystemRestorePoint(description)
+}
+
+// DisableSentinelAlert safely disables a newly added startup entry flagged by Watchdog.
+func (a *App) DisableSentinelAlert(id string) (backend.ChangeResult, error) {
+	return backend.DisableSentinelAlert(id)
+}
+
+// DismissSentinelAlert dismisses a single Watchdog alert.
+func (a *App) DismissSentinelAlert(id string) {
+	backend.DismissSentinelAlert(id)
+}
+
+// GetMinimizeToTray returns whether closing the window minimizes WinBGM to the system tray.
+func (a *App) GetMinimizeToTray() bool {
+	return a.minimizeToTray
+}
+
+// SetMinimizeToTray enables or disables minimizing to the system tray on window close.
+func (a *App) SetMinimizeToTray(enabled bool) bool {
+	a.minimizeToTray = enabled
+	p := trayFlagPath()
+	if enabled {
+		_ = os.MkdirAll(filepath.Dir(p), 0o755)
+		_ = os.WriteFile(p, []byte("1"), 0o644)
+	} else {
+		_ = os.Remove(p)
+	}
+	return a.minimizeToTray
 }
 

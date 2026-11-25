@@ -404,10 +404,24 @@
               </div>
               <input class="toggle" id="set-always-admin" type="checkbox" aria-label="Always start as administrator">
             </div>
+            <div class="overview-row">
+              <div class="overview-row-copy">
+                <div class="overview-row-title">Minimize to System Tray on close (Watchdog Daemon)</div>
+                <div class="overview-row-sub">Keep WinBGM running quietly in the Windows notification tray so the Persistence Watchdog can alert you via Windows Toast notifications if an installer adds a startup entry.</div>
+              </div>
+              <input class="toggle" id="set-minimize-tray" type="checkbox" aria-label="Minimize to system tray">
+            </div>
           </div>
 
           <div class="page-section" style="margin-top:13px">
             <div class="section-heading"><strong>Safety & Guardrails</strong><span>Always active</span></div>
+            <div class="overview-row">
+              <div class="overview-row-copy">
+                <div class="overview-row-title">Windows System Restore Point</div>
+                <div class="overview-row-sub">Create a native Windows System Restore checkpoint before making major service, task, or uninstall changes for maximum peace of mind.</div>
+              </div>
+              <button class="win-btn" id="btn-create-restore-point" onclick="doCreateRestorePoint()"><i data-lucide="shield-plus"></i>Create Restore Point</button>
+            </div>
             <div class="overview-row">
               <div class="overview-row-copy">
                 <div class="overview-row-title">Backup before every change</div>

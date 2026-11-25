@@ -60,6 +60,7 @@ if (window.runtime && window.runtime.EventsOn) {
     const ramByPath = poll.ramByExePath || {};
     const ramFmtByPath = poll.ramFormattedByExe || {};
     const ramByPID = poll.ramByPID || {};
+    const connsByPID = poll.connsByPID || {};
 
     let totalBgRAMBytes = 0;
     const globalCountedPIDs = new Set();
@@ -68,6 +69,8 @@ if (window.runtime && window.runtime.EventsOn) {
       let appRunning = false;
       let appRAMBytes = 0;
       const appCountedPIDs = new Set();
+      const appConns = [];
+      let telemetryCount = 0;
 
       app.components.forEach(c => {
         if (!c.exePath) return;
@@ -84,6 +87,11 @@ if (window.runtime && window.runtime.EventsOn) {
           if (!appCountedPIDs.has(pid)) {
             appCountedPIDs.add(pid);
             appRAMBytes += pidRAM;
+            const pConns = connsByPID[pid] || [];
+            pConns.forEach(conn => {
+              appConns.push(conn);
+              if (conn.isTelemetry) telemetryCount++;
+            });
           }
           if (!globalCountedPIDs.has(pid)) {
             globalCountedPIDs.add(pid);
@@ -95,6 +103,8 @@ if (window.runtime && window.runtime.EventsOn) {
       app.running = appRunning;
       app.ramBytes = appRAMBytes;
       app.ramFormatted = formatRAM(appRAMBytes);
+      app.connections = appConns;
+      app.telemetryCount = telemetryCount;
     });
 
     inv.totalRAMBytes = totalBgRAMBytes;
@@ -104,14 +114,69 @@ if (window.runtime && window.runtime.EventsOn) {
     if (ramEl && inv.totalRAMFormatted) {
       ramEl.textContent = inv.totalRAMFormatted;
     }
+    if (page === 'applications' && sel) {
+      const activeApp = apps().find(x => x.id === sel);
+      if (activeApp) {
+        const netEl = $('detail-network-host');
+        if (netEl && typeof renderDetailNetwork === 'function') {
+          netEl.innerHTML = renderDetailNetwork(activeApp);
+          refreshIcons();
+        }
+      }
+    }
   });
 
   // Re-add Sentinel persistence watcher listener
   window.runtime.EventsOn('sentinel_alert', alert => {
     sentinelAlerts.unshift(alert);
     renderSentinelAlerts();
-    toast('⚠️ Sentinel Alert: ' + (alert.name || 'Startup entry') + ' was modified or added!');
+    toast('⚠️ Watchdog Alert: ' + (alert.name || 'Startup entry') + ' was modified or added!');
   });
+
+  window.runtime.EventsOn('trigger_scan', () => {
+    doScan();
+  });
+}
+
+async function doCreateRestorePoint(description) {
+  const a = api();
+  if (!a || !a.CreateSystemRestorePoint) return toast('System Restore Point is available in the desktop app.');
+  const btn = $('btn-create-restore-point');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating checkpoint…'; }
+  toast('Creating Windows System Restore Point…');
+  try {
+    const res = await a.CreateSystemRestorePoint(description || 'WinBGM Safety Checkpoint');
+    toast(res.message || 'System Restore Point created!');
+    celebrateSuccess();
+  } catch (e) {
+    toast('Restore point failed: ' + e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="shield-plus"></i>Create Restore Point'; refreshIcons(); }
+  }
+}
+
+async function disableSentinelEntry(alertId) {
+  const a = api();
+  if (!a || !a.DisableSentinelAlert) return;
+  try {
+    const res = await a.DisableSentinelAlert(alertId);
+    sentinelAlerts = sentinelAlerts.filter(x => x.id !== alertId);
+    renderSentinelAlerts();
+    toast(res.message || 'Startup entry disabled safely and backed up.');
+    celebrateSuccess();
+    await doScan();
+  } catch (e) {
+    toast('Could not disable entry: ' + e);
+  }
+}
+
+async function dismissSentinelEntry(alertId) {
+  const a = api();
+  if (a && a.DismissSentinelAlert) {
+    try { await a.DismissSentinelAlert(alertId); } catch (e) {}
+  }
+  sentinelAlerts = sentinelAlerts.filter(x => x.id !== alertId);
+  renderSentinelAlerts();
 }
 
 async function doExport() {

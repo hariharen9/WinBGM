@@ -18,12 +18,24 @@ export function ClearSentinelAlerts() {
   return window['go']['main']['App']['ClearSentinelAlerts']();
 }
 
+export function CreateSystemRestorePoint(arg1) {
+  return window['go']['main']['App']['CreateSystemRestorePoint'](arg1);
+}
+
 export function DeleteSnapshot(arg1) {
   return window['go']['main']['App']['DeleteSnapshot'](arg1);
 }
 
 export function DiffSnapshots(arg1) {
   return window['go']['main']['App']['DiffSnapshots'](arg1);
+}
+
+export function DisableSentinelAlert(arg1) {
+  return window['go']['main']['App']['DisableSentinelAlert'](arg1);
+}
+
+export function DismissSentinelAlert(arg1) {
+  return window['go']['main']['App']['DismissSentinelAlert'](arg1);
 }
 
 export function Export() {
@@ -52,6 +64,10 @@ export function GetFileVirusTotalURL(arg1) {
 
 export function GetInstalledApps() {
   return window['go']['main']['App']['GetInstalledApps']();
+}
+
+export function GetMinimizeToTray() {
+  return window['go']['main']['App']['GetMinimizeToTray']();
 }
 
 export function GetPowerReport() {
@@ -124,6 +140,10 @@ export function ScanAppResiduals(arg1) {
 
 export function SetAlwaysAdmin(arg1) {
   return window['go']['main']['App']['SetAlwaysAdmin'](arg1);
+}
+
+export function SetMinimizeToTray(arg1) {
+  return window['go']['main']['App']['SetMinimizeToTray'](arg1);
 }
 
 export function SuspendProcess(arg1) {

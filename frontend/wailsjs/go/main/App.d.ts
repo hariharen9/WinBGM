@@ -10,9 +10,15 @@ export function CleanResidualItems(arg1:Array<backend.ResidualItem>):Promise<bac
 
 export function ClearSentinelAlerts():Promise<void>;
 
+export function CreateSystemRestorePoint(arg1:string):Promise<backend.RestorePointResult>;
+
 export function DeleteSnapshot(arg1:string):Promise<void>;
 
 export function DiffSnapshots(arg1:string):Promise<backend.SnapshotDiff>;
+
+export function DisableSentinelAlert(arg1:string):Promise<backend.ChangeResult>;
+
+export function DismissSentinelAlert(arg1:string):Promise<void>;
 
 export function Export():Promise<string>;
 
@@ -27,6 +33,8 @@ export function GetBootProfile():Promise<backend.BootProfile>;
 export function GetFileVirusTotalURL(arg1:string):Promise<string>;
 
 export function GetInstalledApps():Promise<backend.InstalledAppsResponse>;
+
+export function GetMinimizeToTray():Promise<boolean>;
 
 export function GetPowerReport():Promise<backend.PowerReport>;
 
@@ -63,5 +71,7 @@ export function Scan():Promise<backend.Inventory>;
 export function ScanAppResiduals(arg1:string):Promise<backend.ResidualReport>;
 
 export function SetAlwaysAdmin(arg1:boolean):Promise<boolean>;
+
+export function SetMinimizeToTray(arg1:boolean):Promise<boolean>;
 
 export function SuspendProcess(arg1:number):Promise<void>;
