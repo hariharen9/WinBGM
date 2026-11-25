@@ -118,34 +118,36 @@ type ProcessGroup struct {
 }
 
 var (
-	pmMu           sync.Mutex
-	prevSysIdle    uint64
-	prevSysKernel  uint64
-	prevSysUser    uint64
-	prevProcCPU    = make(map[uint32]uint64)
-	prevProcIO     = make(map[uint32]uint64)
-	prevSampleTime time.Time
-	ecoModeMap     = make(map[uint32]bool)
+	pmMu              sync.Mutex
+	prevSysIdle       uint64
+	prevSysKernel     uint64
+	prevSysUser       uint64
+	prevGroupSysTotal uint64
+	prevProcCPU       = make(map[uint32]uint64)
+	prevProcIO        = make(map[uint32]uint64)
+	prevSampleTime    time.Time
+	ecoModeMap        = make(map[uint32]bool)
 )
 
 var protectedProcessNames = map[string]bool{
-	"system":               true,
-	"idle":                 true,
-	"registry":             true,
-	"smss.exe":             true,
-	"csrss.exe":            true,
-	"wininit.exe":          true,
-	"services.exe":         true,
-	"lsass.exe":            true,
-	"lsm.exe":              true,
-	"winlogon.exe":         true,
-	"dwm.exe":              true,
-	"fontdrvhost.exe":      true,
-	"memory compression":   true,
-	"msmpeng.exe":          true,
-	"nissrv.exe":           true,
+	"system":                    true,
+	"idle":                      true,
+	"registry":                  true,
+	"smss.exe":                  true,
+	"csrss.exe":                 true,
+	"wininit.exe":               true,
+	"services.exe":              true,
+	"svchost.exe":               true,
+	"lsass.exe":                 true,
+	"lsm.exe":                   true,
+	"winlogon.exe":              true,
+	"dwm.exe":                   true,
+	"fontdrvhost.exe":           true,
+	"memory compression":        true,
+	"msmpeng.exe":               true,
+	"nissrv.exe":                true,
 	"securityhealthservice.exe": true,
-	"winbgm.exe":           true,
+	"winbgm.exe":                true,
 }
 
 func ftToUint64(ft windows.Filetime) uint64 {
@@ -279,7 +281,46 @@ func GetLiveProcessGroups() ([]ProcessGroup, SystemTelemetry) {
 		elapsedSec = 3.0
 	}
 
-	sysTel, sysDelta := querySystemTelemetryLocked()
+	// Read system telemetry without disturbing prevGroupSysTotal, and compute dedicated group sysDelta
+	var sysTel SystemTelemetry
+	var mem memoryStatusEx
+	mem.dwLength = uint32(unsafe.Sizeof(mem))
+	if ret, _, _ := procGlobalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&mem))); ret != 0 {
+		sysTel.TotalPhysBytes = mem.ullTotalPhys
+		sysTel.UsedPhysBytes = mem.ullTotalPhys - mem.ullAvailPhys
+		sysTel.TotalPhysFmt = FormatBytes(sysTel.TotalPhysBytes)
+		sysTel.UsedPhysFmt = FormatBytes(sysTel.UsedPhysBytes)
+		sysTel.MemoryLoadPercent = mem.dwMemoryLoad
+	}
+
+	var sysDelta uint64
+	var idleFT, kernelFT, userFT windows.Filetime
+	if ret, _, _ := procGetSystemTimes.Call(
+		uintptr(unsafe.Pointer(&idleFT)),
+		uintptr(unsafe.Pointer(&kernelFT)),
+		uintptr(unsafe.Pointer(&userFT)),
+	); ret != 0 {
+		idle := ftToUint64(idleFT)
+		kernel := ftToUint64(kernelFT)
+		user := ftToUint64(userFT)
+		curTotal := kernel + user
+
+		if prevGroupSysTotal != 0 && curTotal > prevGroupSysTotal {
+			sysDelta = curTotal - prevGroupSysTotal
+		}
+		prevGroupSysTotal = curTotal
+
+		if prevSysKernel != 0 || prevSysUser != 0 {
+			telDelta := (kernel - prevSysKernel) + (user - prevSysUser)
+			idleDelta := idle - prevSysIdle
+			if telDelta > 0 && telDelta >= idleDelta {
+				sysTel.CPUPercent = float64(telDelta-idleDelta) / float64(telDelta) * 100.0
+				if sysTel.CPUPercent > 100 {
+					sysTel.CPUPercent = 100
+				}
+			}
+		}
+	}
 	sysTel.ProcessCount = len(pt.list)
 
 	totalSockets := 0
@@ -398,6 +439,9 @@ func GetLiveProcessGroups() ([]ProcessGroup, SystemTelemetry) {
 
 	groups := make([]ProcessGroup, 0, len(groupsMap))
 	for _, grp := range groupsMap {
+		if grp.CPUPercent > 100.0 {
+			grp.CPUPercent = 100.0
+		}
 		grp.RAMFormatted = formatRAM(grp.RAMBytes)
 		grp.IOFormatted = formatIORate(grp.IOBytesPerSec)
 		sort.Slice(grp.Children, func(i, j int) bool {
