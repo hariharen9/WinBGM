@@ -10,7 +10,7 @@ import (
 )
 
 // AppVersion is the current WinBGM release version.
-const AppVersion = "1.0.0"
+const AppVersion = "1.1.0"
 
 const githubLatestReleaseURL = "https://api.github.com/repos/hariharen9/WinBGM/releases/latest"
 const githubReleasesPageURL = "https://github.com/hariharen9/WinBGM/releases"
