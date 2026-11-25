@@ -67,6 +67,7 @@ type ProcessPollResult struct {
 	RAMFormattedByExe map[string]string              `json:"ramFormattedByExe"`
 	RAMByPID          map[uint32]uint64              `json:"ramByPID"`
 	ConnsByPID        map[uint32][]NetworkConnection `json:"connsByPID"`
+	Telemetry         SystemTelemetry                `json:"telemetry"`
 }
 
 func PollProcesses() ProcessPollResult {
@@ -94,6 +95,19 @@ func PollProcesses() ProcessPollResult {
 
 	connsByPID := GetConnectionsByPID()
 
+	pmMu.Lock()
+	sysTel, _ := querySystemTelemetryLocked()
+	pmMu.Unlock()
+	sysTel.ProcessCount = len(pt.list)
+	for _, list := range connsByPID {
+		sysTel.TotalSockets += len(list)
+		for _, c := range list {
+			if c.IsTelemetry {
+				sysTel.TelemetrySockets++
+			}
+		}
+	}
+
 	return ProcessPollResult{
 		TotalRAMBytes:     totalRAM,
 		TotalRAMFormatted: formatRAM(totalRAM),
@@ -103,6 +117,7 @@ func PollProcesses() ProcessPollResult {
 		RAMFormattedByExe: ramFmtByPath,
 		RAMByPID:          ramByPID,
 		ConnsByPID:        connsByPID,
+		Telemetry:         sysTel,
 	}
 }
 

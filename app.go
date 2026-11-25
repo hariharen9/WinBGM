@@ -470,3 +470,59 @@ func (a *App) SetMinimizeToTray(enabled bool) bool {
 	return a.minimizeToTray
 }
 
+// LiveProcessesResponse wraps grouped running processes and system telemetry for Wails IPC.
+type LiveProcessesResponse struct {
+	Groups    []backend.ProcessGroup  `json:"groups"`
+	Telemetry backend.SystemTelemetry `json:"telemetry"`
+}
+
+// GetLiveProcesses returns all running processes grouped by application alongside CPU/RAM/socket telemetry.
+func (a *App) GetLiveProcesses() LiveProcessesResponse {
+	groups, tel := backend.GetLiveProcessGroups()
+	return LiveProcessesResponse{Groups: groups, Telemetry: tel}
+}
+
+// SetProcessEcoMode toggles Windows 11 Efficiency Mode (EcoQoS) on a single PID.
+func (a *App) SetProcessEcoMode(pid uint32, enable bool) error {
+	return backend.SetProcessEcoMode(pid, enable)
+}
+
+// SetGroupEcoMode toggles Windows 11 Efficiency Mode (EcoQoS) across all PIDs of an app group.
+func (a *App) SetGroupEcoMode(pids []uint32, enable bool) error {
+	var lastErr error
+	for _, pid := range pids {
+		if err := backend.SetProcessEcoMode(pid, enable); err != nil {
+			lastErr = err
+		}
+	}
+	return lastErr
+}
+
+// SetProcessPriority updates the scheduling priority class of a PID.
+func (a *App) SetProcessPriority(pid uint32, level string) error {
+	return backend.SetProcessPriority(pid, level)
+}
+
+// KillProcessTree terminates all PIDs belonging to a process group.
+func (a *App) KillProcessTree(pids []uint32) error {
+	var lastErr error
+	for _, pid := range pids {
+		if err := backend.KillProcess(pid); err != nil {
+			lastErr = err
+		}
+	}
+	return lastErr
+}
+
+// FindLockingProcesses queries Windows Restart Manager to identify processes locking a file or folder.
+func (a *App) FindLockingProcesses(targetPath string) ([]backend.LockingProcess, error) {
+	return backend.FindLockingProcesses(targetPath)
+}
+
+// BrowseForLockedFile opens a native Windows file picker dialog for the Lock Finder tool.
+func (a *App) BrowseForLockedFile() (string, error) {
+	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select a locked file to inspect",
+	})
+}
+

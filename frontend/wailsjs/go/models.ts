@@ -582,6 +582,26 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class LockingProcess {
+	    pid: number;
+	    appName: string;
+	    serviceName: string;
+	    exePath: string;
+	    protected: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new LockingProcess(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pid = source["pid"];
+	        this.appName = source["appName"];
+	        this.serviceName = source["serviceName"];
+	        this.exePath = source["exePath"];
+	        this.protected = source["protected"];
+	    }
+	}
 	export class NetworkConnection {
 	    pid: number;
 	    protocol: string;
@@ -668,6 +688,138 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class ProcessEntry {
+	    pid: number;
+	    ppid: number;
+	    name: string;
+	    exePath: string;
+	    cpuPercent: number;
+	    ramBytes: number;
+	    ramFormatted: string;
+	    ioBytesPerSec: number;
+	    ioFormatted: string;
+	    priority: string;
+	    ecoMode: boolean;
+	    suspended: boolean;
+	    hasWindow: boolean;
+	    protected: boolean;
+	    connCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProcessEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pid = source["pid"];
+	        this.ppid = source["ppid"];
+	        this.name = source["name"];
+	        this.exePath = source["exePath"];
+	        this.cpuPercent = source["cpuPercent"];
+	        this.ramBytes = source["ramBytes"];
+	        this.ramFormatted = source["ramFormatted"];
+	        this.ioBytesPerSec = source["ioBytesPerSec"];
+	        this.ioFormatted = source["ioFormatted"];
+	        this.priority = source["priority"];
+	        this.ecoMode = source["ecoMode"];
+	        this.suspended = source["suspended"];
+	        this.hasWindow = source["hasWindow"];
+	        this.protected = source["protected"];
+	        this.connCount = source["connCount"];
+	    }
+	}
+	export class ProcessGroup {
+	    id: string;
+	    name: string;
+	    exePath: string;
+	    pids: number[];
+	    processCount: number;
+	    cpuPercent: number;
+	    ramBytes: number;
+	    ramFormatted: string;
+	    ioBytesPerSec: number;
+	    ioFormatted: string;
+	    priority: string;
+	    ecoMode: boolean;
+	    suspended: boolean;
+	    hasWindow: boolean;
+	    protected: boolean;
+	    connCount: number;
+	    telemetryCount: number;
+	    children: ProcessEntry[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ProcessGroup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.exePath = source["exePath"];
+	        this.pids = source["pids"];
+	        this.processCount = source["processCount"];
+	        this.cpuPercent = source["cpuPercent"];
+	        this.ramBytes = source["ramBytes"];
+	        this.ramFormatted = source["ramFormatted"];
+	        this.ioBytesPerSec = source["ioBytesPerSec"];
+	        this.ioFormatted = source["ioFormatted"];
+	        this.priority = source["priority"];
+	        this.ecoMode = source["ecoMode"];
+	        this.suspended = source["suspended"];
+	        this.hasWindow = source["hasWindow"];
+	        this.protected = source["protected"];
+	        this.connCount = source["connCount"];
+	        this.telemetryCount = source["telemetryCount"];
+	        this.children = this.convertValues(source["children"], ProcessEntry);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SystemTelemetry {
+	    cpuPercent: number;
+	    totalPhysBytes: number;
+	    usedPhysBytes: number;
+	    totalPhysFormatted: string;
+	    usedPhysFormatted: string;
+	    memoryLoadPercent: number;
+	    totalSockets: number;
+	    telemetrySockets: number;
+	    processCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SystemTelemetry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cpuPercent = source["cpuPercent"];
+	        this.totalPhysBytes = source["totalPhysBytes"];
+	        this.usedPhysBytes = source["usedPhysBytes"];
+	        this.totalPhysFormatted = source["totalPhysFormatted"];
+	        this.usedPhysFormatted = source["usedPhysFormatted"];
+	        this.memoryLoadPercent = source["memoryLoadPercent"];
+	        this.totalSockets = source["totalSockets"];
+	        this.telemetrySockets = source["telemetrySockets"];
+	        this.processCount = source["processCount"];
+	    }
+	}
 	export class ProcessPollResult {
 	    totalRAMBytes: number;
 	    totalRAMFormatted: string;
@@ -677,6 +829,7 @@ export namespace backend {
 	    ramFormattedByExe: Record<string, string>;
 	    ramByPID: Record<number, number>;
 	    connsByPID: Record<number, Array<NetworkConnection>>;
+	    telemetry: SystemTelemetry;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProcessPollResult(source);
@@ -692,6 +845,7 @@ export namespace backend {
 	        this.ramFormattedByExe = source["ramFormattedByExe"];
 	        this.ramByPID = source["ramByPID"];
 	        this.connsByPID = this.convertValues(source["connsByPID"], Array<NetworkConnection>, true);
+	        this.telemetry = this.convertValues(source["telemetry"], SystemTelemetry);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -898,6 +1052,44 @@ export namespace backend {
 	}
 	
 	
+	
+
+}
+
+export namespace main {
+	
+	export class LiveProcessesResponse {
+	    groups: backend.ProcessGroup[];
+	    telemetry: backend.SystemTelemetry;
+	
+	    static createFrom(source: any = {}) {
+	        return new LiveProcessesResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.groups = this.convertValues(source["groups"], backend.ProcessGroup);
+	        this.telemetry = this.convertValues(source["telemetry"], backend.SystemTelemetry);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 
 }
 

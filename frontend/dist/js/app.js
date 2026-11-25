@@ -14,17 +14,20 @@ function navigate(p) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === p));
   const labels = {
     overview: 'Overview',
+    processes: 'Live Processes & Efficiency Mode',
     applications: 'Applications',
     uninstaller: 'Installed Programs & Deep Uninstaller',
     services: 'Services',
     tasks: 'Scheduled tasks',
     sources: 'Startup locations',
+    locks: 'File Lock Finder',
     snapshots: 'Snapshots & Diff Comparison',
     history: 'Change history',
     settings: 'Settings'
   };
   $('commandbar-label').textContent = labels[p] || 'WinBGM';
   $('content-host').scrollTop = 0;
+  if (p === 'processes') loadLiveProcesses();
   if (p === 'uninstaller') loadInstalledApps();
   if (p === 'history') loadHistory();
   if (p === 'snapshots') loadSnapshots();
@@ -139,6 +142,39 @@ if ($('uninstaller-sort')) {
   $('uninstaller-sort').addEventListener('change', e => {
     uninstallerSort = e.target.value;
     renderUninstaller();
+  });
+}
+
+// Live Processes Toolbar Listeners
+if ($('proc-filters')) {
+  $('proc-filters').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-filter]');
+    if (btn) {
+      document.querySelectorAll('#proc-filters button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      procFilter = btn.dataset.filter;
+      renderLiveProcesses();
+    }
+  });
+}
+
+if ($('proc-search')) {
+  $('proc-search').addEventListener('input', e => {
+    procSearch = e.target.value;
+    renderLiveProcesses();
+  });
+}
+
+if ($('proc-sort')) {
+  $('proc-sort').addEventListener('change', e => {
+    procSort = e.target.value;
+    renderLiveProcesses();
+  });
+}
+
+if ($('lock-path-input')) {
+  $('lock-path-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkFileLocks();
   });
 }
 

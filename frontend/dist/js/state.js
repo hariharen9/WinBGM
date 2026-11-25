@@ -192,6 +192,19 @@ let uninstallerSort = 'size'; // 'size', 'name', 'date'
 let currentResidualReport = null;
 let selectedResidualIds = new Set();
 
+// Live Process Manager, Telemetry Sparklines & File Lock Finder State
+let liveProcessGroups = [];
+let liveTelemetry = null;
+let procFilter = 'all';
+let procSearch = '';
+let procSort = 'ram';
+const telemetryHistory = {
+  cpu: [],
+  ram: [],
+  net: []
+};
+let lockResults = [];
+
 
 function sigText(c) {
   if (c.signer) {

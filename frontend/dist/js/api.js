@@ -114,6 +114,22 @@ if (window.runtime && window.runtime.EventsOn) {
     if (ramEl && inv.totalRAMFormatted) {
       ramEl.textContent = inv.totalRAMFormatted;
     }
+
+    if (poll.telemetry) {
+      liveTelemetry = poll.telemetry;
+      const pushHist = (arr, v) => { arr.push(v); if (arr.length > 24) arr.shift(); };
+      pushHist(telemetryHistory.cpu, Math.round(poll.telemetry.cpuPercent || 0));
+      pushHist(telemetryHistory.ram, poll.telemetry.memoryLoadPercent || 0);
+      pushHist(telemetryHistory.net, poll.telemetry.totalSockets || 0);
+      if (typeof updateOverviewTelemetryUI === 'function') {
+        updateOverviewTelemetryUI();
+      }
+    }
+
+    if (page === 'processes' && typeof loadLiveProcesses === 'function') {
+      loadLiveProcesses();
+    }
+
     if (page === 'applications' && sel) {
       const activeApp = apps().find(x => x.id === sel);
       if (activeApp) {
@@ -1034,4 +1050,178 @@ async function executeResidualClean() {
     closeResidualModal();
   }
 }
+
+// --- Live Process Manager & Efficiency Mode API ---
+
+async function loadLiveProcesses() {
+  const a = api();
+  if (a && a.GetLiveProcesses) {
+    try {
+      const res = await a.GetLiveProcesses();
+      liveProcessGroups = (res && res.groups) ? res.groups : [];
+      if (res && res.telemetry) liveTelemetry = res.telemetry;
+    } catch (e) {
+      console.error('Failed to load live processes:', e);
+    }
+  } else {
+    liveProcessGroups = [
+      {
+        id: 'brave.exe', name: 'Brave Browser', exePath: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+        pids: [1240, 2248, 3310], processCount: 12, cpuPercent: 4.8, ramBytes: 1450000000, ramFormatted: '1.35 GB',
+        ioBytesPerSec: 128000, ioFormatted: '125.0 KB/s', priority: 'Normal', ecoMode: false, suspended: false,
+        hasWindow: true, protected: false, connCount: 8, telemetryCount: 0,
+        children: [{ pid: 1240, ppid: 800, name: 'brave.exe', cpuPercent: 2.1, ramFormatted: '420.0 MB', ioFormatted: '80.0 KB/s', priority: 'Normal', ecoMode: false, suspended: false, protected: false }]
+      }
+    ];
+  }
+  const nav = $('nav-processes');
+  if (nav) nav.textContent = liveProcessGroups.length || '';
+  if (typeof renderLiveProcesses === 'function') renderLiveProcesses();
+}
+
+async function toggleGroupEcoMode(groupId, enable) {
+  const grp = liveProcessGroups.find(g => g.id === groupId);
+  if (!grp) return;
+  const a = api();
+  if (!a || !a.SetGroupEcoMode) return toast('Efficiency Mode is available in the desktop app.');
+  try {
+    await a.SetGroupEcoMode(grp.pids, enable);
+    toast((enable ? '🍃 Enabled Efficiency Mode (EcoQoS) for ' : 'Disabled Efficiency Mode for ') + grp.name);
+    await loadLiveProcesses();
+  } catch (e) {
+    toast('EcoQoS error: ' + e);
+  }
+}
+
+async function togglePidEcoMode(pid, enable) {
+  const a = api();
+  if (!a || !a.SetProcessEcoMode) return;
+  try {
+    await a.SetProcessEcoMode(pid, enable);
+    toast((enable ? '🍃 Enabled Efficiency Mode for PID ' : 'Disabled Efficiency Mode for PID ') + pid);
+    await loadLiveProcesses();
+  } catch (e) {
+    toast('EcoQoS error: ' + e);
+  }
+}
+
+async function changePidPriority(pid, level) {
+  const a = api();
+  if (!a || !a.SetProcessPriority) return;
+  try {
+    await a.SetProcessPriority(pid, level);
+    toast(`Set PID ${pid} priority to ${level}`);
+    await loadLiveProcesses();
+  } catch (e) {
+    toast('Priority error: ' + e);
+  }
+}
+
+async function freezeProcessGroup(groupId, freeze) {
+  const grp = liveProcessGroups.find(g => g.id === groupId);
+  if (!grp) return;
+  const a = api();
+  if (!a) return;
+  try {
+    for (const pid of grp.pids) {
+      if (freeze && a.SuspendProcess) await a.SuspendProcess(pid);
+      else if (!freeze && a.ResumeProcess) await a.ResumeProcess(pid);
+    }
+    toast((freeze ? '❄️ Frozen ' : 'Resumed ') + grp.name);
+    await loadLiveProcesses();
+  } catch (e) {
+    toast('Process control error: ' + e);
+  }
+}
+
+async function killProcessGroup(groupId) {
+  const grp = liveProcessGroups.find(g => g.id === groupId);
+  if (!grp || grp.protected) return;
+  const a = api();
+  if (!a || !a.KillProcessTree) return;
+  try {
+    await a.KillProcessTree(grp.pids);
+    toast('Ended process tree for ' + grp.name);
+    await loadLiveProcesses();
+  } catch (e) {
+    toast('End task error: ' + e);
+  }
+}
+
+async function openProcLocation(exePath) {
+  const a = api();
+  if (a && a.Reveal && exePath) {
+    try { await a.Reveal(exePath); } catch (e) { toast('Could not open location: ' + e); }
+  }
+}
+
+async function openProcVT(exePath) {
+  if (!exePath) return;
+  const a = api();
+  if (a && a.GetFileVirusTotalURL) {
+    try {
+      const url = await a.GetFileVirusTotalURL(exePath);
+      if (url) { window.open(url, '_blank'); return; }
+    } catch (e) {}
+  }
+  window.open('https://www.virustotal.com/gui/search/' + encodeURIComponent(base(exePath)), '_blank');
+}
+
+// --- File Lock Finder (Restart Manager) API ---
+
+async function browseLockedFile() {
+  const a = api();
+  if (!a || !a.BrowseForLockedFile) return toast('File picker is available in the desktop app.');
+  try {
+    const p = await a.BrowseForLockedFile();
+    if (p) {
+      const inp = $('lock-path-input');
+      if (inp) inp.value = p;
+      await checkFileLocks();
+    }
+  } catch (e) {
+    toast('Browse failed: ' + e);
+  }
+}
+
+async function checkFileLocks() {
+  const inp = $('lock-path-input');
+  const target = inp ? inp.value.trim().replace(/^"|"$/g, '') : '';
+  if (!target) return toast('Enter or browse a file/folder path first.');
+
+  const meta = $('lock-count-meta');
+  if (meta) meta.textContent = 'Querying Windows Restart Manager…';
+
+  const a = api();
+  if (a && a.FindLockingProcesses) {
+    try {
+      lockResults = (await a.FindLockingProcesses(target)) || [];
+    } catch (e) {
+      lockResults = [];
+      toast('Lock scan error: ' + e);
+    }
+  } else {
+    lockResults = [];
+  }
+
+  if (typeof renderLockResults === 'function') renderLockResults(target);
+}
+
+async function unlockAction(pid, kind) {
+  const a = api();
+  if (!a) return;
+  try {
+    if (kind === 'close' && a.GracefulCloseProcess) {
+      await a.GracefulCloseProcess(pid);
+      toast(`Sent close signal to PID ${pid}`);
+    } else if (kind === 'kill' && a.KillProcess) {
+      await a.KillProcess(pid);
+      toast(`Terminated PID ${pid}`);
+    }
+    setTimeout(checkFileLocks, 500);
+  } catch (e) {
+    toast('Action failed: ' + e);
+  }
+}
+
 

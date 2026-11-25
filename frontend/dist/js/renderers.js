@@ -117,6 +117,21 @@ function renderDetailNetwork(a) {
   return `<div class="detail-section"><div class="detail-section-title">Live network &amp; telemetry (${conns.length})</div>${rows}${extra}</div>`;
 }
 
+function renderDetailNetwork(a) {
+  const conns = a && a.connections ? a.connections : [];
+  if (!conns.length) return '';
+  const rows = conns.slice(0, 15).map(cn => {
+    const dest = cn.remoteHost ? `${esc(cn.remoteHost)} (${esc(cn.remoteAddr)})` : (cn.remotePort ? `${esc(cn.remoteAddr)}:${cn.remotePort}` : esc(cn.remoteAddr));
+    const telTag = cn.isTelemetry ? `<span class="badge amber" style="font-size:9px;padding:1px 5px;margin-left:5px">Telemetry</span>` : '';
+    return `<div class="detail-kv" style="align-items:center">
+      <span><span class="badge" style="font-size:9px;padding:1px 5px;margin-right:4px">${esc(cn.protocol)}</span>${esc(cn.state)}</span>
+      <span style="word-break:break-all;text-align:right">${dest}${cn.remotePort && cn.remoteHost ? ':' + cn.remotePort : ''}${telTag}</span>
+    </div>`;
+  }).join('');
+  const extra = conns.length > 15 ? `<div style="font-size:10.5px;color:var(--muted);margin-top:4px">+ ${conns.length - 15} more socket(s)</div>` : '';
+  return `<div class="detail-section"><div class="detail-section-title">Live network &amp; telemetry (${conns.length})</div>${rows}${extra}</div>`;
+}
+
 function renderDetail(a) {
   const h = $('detail-content');
   if (!a) {
@@ -151,6 +166,7 @@ function renderDetail(a) {
        <div class="howto">How to change: ${esc(HOWTO[c.kind] || HOWTO.process)}</div></details></div>`;
    }).join('')}
   </div>
+  <div id="detail-network-host">${renderDetailNetwork(a)}</div>
   <div id="detail-network-host">${renderDetailNetwork(a)}</div>
   <div class="detail-section"><div class="detail-section-title">About this application</div><div class="detail-explain">${esc(explain(a))}</div></div>
   <div class="detail-section"><div class="detail-section-title">Application details</div>
@@ -481,6 +497,7 @@ function renderOverview() {
   $('overview-content').innerHTML = `
   <div class="page-header"><div><h1>Overview</h1><p class="page-subtitle">A quick view of background activity and system impact on this PC.</p></div>
    <div class="header-actions">
+     <button class="win-btn" onclick="doCreateRestorePoint()" title="Create a Windows System Restore Point"><i data-lucide="shield-plus" style="width:13px;height:13px;margin-right:6px"></i>Restore Point</button>
      <button class="win-btn" onclick="requestFocusMode()"><i data-lucide="zap" style="width:13px;height:13px;margin-right:6px"></i>Focus Mode</button>
      <button class="win-btn primary btn-scan" onclick="doScan()"><i data-lucide="refresh-cw" style="width:13px;height:13px;margin-right:6px"></i>Scan now</button>
    </div>
@@ -490,6 +507,23 @@ function renderOverview() {
    <div class="overview-stat"><div class="overview-stat-label">Background RAM</div><div class="overview-stat-value" id="stat-ram">${inv.totalRAMFormatted || '0 KB'}</div><div class="overview-stat-foot">In-memory working set</div></div>
    <div class="overview-stat"><div class="overview-stat-label">Services</div><div class="overview-stat-value" id="stat-svc">${svc.length}</div><div class="overview-stat-foot">${svc.filter(c => c.autoStart).length} automatic or delayed</div></div>
    <div class="overview-stat"><div class="overview-stat-label">Needs attention</div><div class="overview-stat-value" id="stat-rev">${rev.length}</div><div class="overview-stat-foot ${rev.length ? 'attention' : ''}">${rev.length ? 'Location or signature needs review' : 'Nothing flagged'}</div></div></div>
+  <div class="telemetry-strip">
+    <div class="telemetry-card">
+      <div class="telemetry-head"><span>Live CPU Utilization</span><span id="live-cpu-procs" class="telemetry-sub">Sampling…</span></div>
+      <div class="telemetry-val-row"><span class="telemetry-val" id="live-cpu-val">—%</span><span class="telemetry-sub">All logical cores</span></div>
+      <svg class="sparkline-svg" id="spark-cpu" viewBox="0 0 200 36" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="telemetry-card">
+      <div class="telemetry-head"><span>Physical Memory Load</span><span id="live-ram-pct" class="telemetry-sub">—%</span></div>
+      <div class="telemetry-val-row"><span class="telemetry-val" id="live-ram-val">—</span><span class="telemetry-sub" id="live-ram-total">Total RAM</span></div>
+      <svg class="sparkline-svg" id="spark-ram" viewBox="0 0 200 36" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="telemetry-card">
+      <div class="telemetry-head"><span>Active Network Sockets</span><span id="live-tel-count" class="telemetry-sub">0 telemetry</span></div>
+      <div class="telemetry-val-row"><span class="telemetry-val" id="live-net-val">—</span><span class="telemetry-sub">TCP/UDP connections</span></div>
+      <svg class="sparkline-svg" id="spark-net" viewBox="0 0 200 36" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
   <p class="overview-intro">Background components can run without an app window. This inventory groups related entries so you can see what owns them and how they are launched. ${nonSys} application${nonSys === 1 ? '' : 's'} start automatically.</p>
   <div class="overview-grid">
    ${bootBlock}
@@ -894,6 +928,230 @@ function renderUninstaller() {
       ${expandedRow}
     `;
   }).join('');
+
+  refreshIcons();
+}
+
+// --- Live Overview SVG Sparkline Telemetry ---
+
+function buildSparklineSVG(values, maxCap, color) {
+  if (!values || values.length === 0) return '';
+  const w = 200, h = 36;
+  const pts = values.length === 1 ? [values[0], values[0]] : values;
+  const maxVal = maxCap > 0 ? maxCap : Math.max(10, ...pts);
+  const stepX = w / (pts.length - 1);
+
+  const coords = pts.map((v, i) => {
+    const x = (i * stepX).toFixed(1);
+    const ratio = Math.max(0, Math.min(1, v / maxVal));
+    const y = (h - 3 - ratio * (h - 6)).toFixed(1);
+    return `${x},${y}`;
+  });
+
+  const linePoints = coords.join(' ');
+  const areaPoints = `0,${h} ${linePoints} ${w},${h}`;
+
+  return `
+    <polygon points="${areaPoints}" fill="${color}" fill-opacity="0.16" />
+    <polyline points="${linePoints}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+  `;
+}
+
+function updateOverviewTelemetryUI() {
+  if (!liveTelemetry) return;
+  const cpuVal = $('live-cpu-val');
+  const cpuProcs = $('live-cpu-procs');
+  const ramVal = $('live-ram-val');
+  const ramPct = $('live-ram-pct');
+  const ramTotal = $('live-ram-total');
+  const netVal = $('live-net-val');
+  const telCount = $('live-tel-count');
+
+  if (cpuVal) cpuVal.textContent = Math.round(liveTelemetry.cpuPercent || 0) + '%';
+  if (cpuProcs) cpuProcs.textContent = (liveTelemetry.processCount || 0) + ' processes';
+  if (ramVal) ramVal.textContent = liveTelemetry.usedPhysFormatted || '—';
+  if (ramPct) ramPct.textContent = (liveTelemetry.memoryLoadPercent || 0) + '% used';
+  if (ramTotal) ramTotal.textContent = 'of ' + (liveTelemetry.totalPhysFormatted || '—');
+  if (netVal) netVal.textContent = liveTelemetry.totalSockets || 0;
+  if (telCount) {
+    const t = liveTelemetry.telemetrySockets || 0;
+    telCount.textContent = t + ' telemetry';
+    telCount.style.color = t > 0 ? 'var(--amber)' : '';
+  }
+
+  const sCpu = $('spark-cpu');
+  const sRam = $('spark-ram');
+  const sNet = $('spark-net');
+  if (sCpu) sCpu.innerHTML = buildSparklineSVG(telemetryHistory.cpu, 100, 'var(--accent)');
+  if (sRam) sRam.innerHTML = buildSparklineSVG(telemetryHistory.ram, 100, '#10b981');
+  if (sNet) sNet.innerHTML = buildSparklineSVG(telemetryHistory.net, 0, '#f59e0b');
+}
+
+// --- Live Processes & Efficiency Mode Renderer ---
+
+function renderLiveProcesses() {
+  const sumEl = $('processes-summary');
+  const countMeta = $('proc-count-meta');
+  const tbody = $('proc-body');
+  if (!tbody) return;
+
+  const totalGroups = liveProcessGroups.length;
+  const totalPIDs = liveProcessGroups.reduce((n, g) => n + g.processCount, 0);
+  const ecoCount = liveProcessGroups.filter(g => g.ecoMode).length;
+  const cpuStr = liveTelemetry ? Math.round(liveTelemetry.cpuPercent || 0) + '%' : '—';
+  const ramStr = liveTelemetry ? `${liveTelemetry.usedPhysFormatted || '—'} / ${liveTelemetry.totalPhysFormatted || '—'}` : '—';
+
+  if (sumEl) {
+    sumEl.innerHTML = `
+      <div class="summary-item"><strong>${totalGroups}</strong> process groups (${totalPIDs} PIDs)</div>
+      <span class="summary-separator"></span>
+      <div class="summary-item">System CPU: <strong>${esc(cpuStr)}</strong></div>
+      <span class="summary-separator"></span>
+      <div class="summary-item">Physical RAM: <strong>${esc(ramStr)}</strong></div>
+      <span class="summary-separator"></span>
+      <div class="summary-item"><span class="eco-pill">🍃 ${ecoCount} in Efficiency Mode</span></div>
+    `;
+  }
+
+  const q = (procSearch || '').toLowerCase();
+  let list = liveProcessGroups.filter(g => {
+    if (procFilter === 'windowed' && !g.hasWindow) return false;
+    if (procFilter === 'eco' && !g.ecoMode) return false;
+    if (procFilter === 'network' && g.connCount === 0) return false;
+    if (procFilter === 'frozen' && !g.suspended) return false;
+    if (q) {
+      const hay = (g.name + ' ' + g.exePath + ' ' + g.pids.join(' ')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (procSort === 'cpu') {
+    list.sort((a, b) => (b.cpuPercent || 0) - (a.cpuPercent || 0) || b.ramBytes - a.ramBytes);
+  } else if (procSort === 'io') {
+    list.sort((a, b) => (b.ioBytesPerSec || 0) - (a.ioBytesPerSec || 0) || b.ramBytes - a.ramBytes);
+  } else if (procSort === 'name') {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    list.sort((a, b) => (b.ramBytes || 0) - (a.ramBytes || 0));
+  }
+
+  if (countMeta) countMeta.textContent = `Showing ${list.length} of ${totalGroups} groups · Click a row to inspect PIDs`;
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No running processes match this filter.</div></td></tr>';
+    refreshIcons();
+    return;
+  }
+
+  tbody.innerHTML = list.map(g => {
+    const rowId = 'proc_' + g.id;
+    const isExp = expanded.has(rowId);
+    const letter = (g.name || 'P').slice(0, 2).toUpperCase();
+    const countTag = g.processCount > 1 ? `<span class="badge" style="font-size:10px;padding:1px 6px;margin-left:6px">${g.processCount}</span>` : '';
+    const ecoTag = g.ecoMode ? `<span class="eco-pill" style="margin-left:6px">🍃 Eco</span>` : '';
+    const frozenTag = g.suspended ? `<span class="badge blue" style="font-size:10px;padding:1px 6px;margin-left:6px">❄️ Frozen</span>` : '';
+    const netTag = g.connCount > 0 ? `<span class="badge ${g.telemetryCount > 0 ? 'amber' : 'green'}" style="font-size:10px;padding:1px 6px;margin-left:6px">🌐 ${g.connCount}</span>` : '';
+    const protTag = g.protected ? `<span class="badge gray" style="font-size:10px;padding:1px 6px;margin-left:6px">Protected</span>` : '';
+
+    const cpuDisp = (g.cpuPercent || 0).toFixed(1) + '%';
+    const cpuColor = g.cpuPercent > 25 ? 'var(--amber)' : 'var(--text)';
+
+    const controlsHtml = g.protected
+      ? `<span style="font-size:11px;color:var(--muted)">System protected</span>`
+      : `<div style="display:inline-flex;align-items:center;gap:5px" onclick="event.stopPropagation()">
+           <button class="win-btn" style="height:25px;padding:0 7px;font-size:10.5px" onclick="toggleGroupEcoMode('${esc(g.id).replace(/'/g, "\\'")}', ${!g.ecoMode})" title="Toggle Windows 11 Efficiency Mode (EcoQoS)">${g.ecoMode ? 'Normal' : '🍃 Eco'}</button>
+           <button class="win-btn" style="height:25px;padding:0 7px;font-size:10.5px" onclick="freezeProcessGroup('${esc(g.id).replace(/'/g, "\\'")}', ${!g.suspended})" title="${g.suspended ? 'Resume process threads' : 'Freeze process without killing'}">${g.suspended ? 'Resume' : 'Freeze'}</button>
+           ${g.exePath ? `<button class="win-btn subtle" style="height:25px;padding:0 6px" onclick="openProcVT('${esc(g.exePath).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" title="Check on VirusTotal"><i data-lucide="shield-check" style="width:13px;height:13px;color:var(--accent)"></i></button>` : ''}
+           ${g.exePath ? `<button class="win-btn subtle" style="height:25px;padding:0 6px" onclick="openProcLocation('${esc(g.exePath).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" title="Open file location"><i data-lucide="folder-open" style="width:13px;height:13px"></i></button>` : ''}
+           <button class="win-btn" style="height:25px;padding:0 7px;font-size:10.5px;color:#f87171" onclick="killProcessGroup('${esc(g.id).replace(/'/g, "\\'")}')" title="End all processes in this group">End</button>
+         </div>`;
+
+    let childRows = '';
+    if (isExp && g.children && g.children.length) {
+      childRows = `<tr class="detail-row"><td colspan="6" style="padding:10px 18px;background:var(--surface-hover)">
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">${g.exePath ? `<strong>Path:</strong> <code>${esc(g.exePath)}</code>` : 'System / protected binary'}</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${g.children.slice(0, 20).map(ch => `
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:5px;background:var(--surface-card);border:1px solid var(--border);font-size:11px">
+              <span style="min-width:70px;font-family:monospace">PID ${ch.pid}</span>
+              <span style="min-width:55px">${(ch.cpuPercent || 0).toFixed(1)}% CPU</span>
+              <span style="min-width:75px;font-weight:600">${esc(ch.ramFormatted)}</span>
+              <span style="min-width:70px;color:var(--text-dim)">${esc(ch.ioFormatted)}</span>
+              <span style="flex:1">${ch.ecoMode ? '<span class="eco-pill">🍃 Eco</span>' : ''}</span>
+              ${ch.protected ? '<span style="color:var(--muted)">Protected</span>' : `
+                <select class="select-control" style="height:24px;font-size:10.5px;padding:0 6px" onchange="changePidPriority(${ch.pid}, this.value)">
+                  ${['Idle', 'Below Normal', 'Normal', 'Above Normal', 'High'].map(p => `<option value="${p}" ${ch.priority === p ? 'selected' : ''}>${p}</option>`).join('')}
+                </select>
+                <button class="win-btn" style="height:24px;font-size:10px;padding:0 7px" onclick="togglePidEcoMode(${ch.pid}, ${!ch.ecoMode})">${ch.ecoMode ? 'Normal' : '🍃 Eco'}</button>
+              `}
+            </div>
+          `).join('')}
+        </div>
+      </td></tr>`;
+    }
+
+    return `
+      <tr class="clickable" data-id="${esc(rowId)}" onclick="rowToggle(event, renderLiveProcesses)">
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="product-icon" style="${iconStyle(g.name)};width:26px;height:26px;font-size:10px;flex:none">${esc(letter)}</div>
+            <div style="min-width:0">
+              <div style="font-weight:600;font-size:12px;color:var(--text);display:flex;align-items:center;flex-wrap:wrap">
+                ${esc(g.name)}${countTag}${ecoTag}${frozenTag}${netTag}${protTag}
+              </div>
+              <div style="font-size:10.5px;color:var(--text-dim)">${g.hasWindow ? 'Foreground App' : 'Background Process'}</div>
+            </div>
+          </div>
+        </td>
+        <td style="text-align:right;font-weight:600;color:${cpuColor}">${cpuDisp}</td>
+        <td style="text-align:right;font-weight:600;color:var(--accent)">${esc(g.ramFormatted)}</td>
+        <td style="text-align:right;font-size:11px;color:var(--text-2)">${esc(g.ioFormatted)}</td>
+        <td><span style="font-size:11px;color:var(--text-2)">${esc(g.priority)}</span></td>
+        <td style="text-align:right">${controlsHtml}</td>
+      </tr>
+      ${childRows}
+    `;
+  }).join('');
+
+  refreshIcons();
+}
+
+// --- File Lock Finder Renderer ---
+
+function renderLockResults(target) {
+  const meta = $('lock-count-meta');
+  const tbody = $('lock-body');
+  if (!tbody) return;
+
+  if (meta) {
+    meta.textContent = lockResults.length
+      ? `${lockResults.length} process(es) locking "${base(target)}"`
+      : `No open locks detected on "${base(target)}"`;
+  }
+
+  if (!lockResults.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No running applications are currently holding a Restart Manager lock on this path.</div></td></tr>`;
+    refreshIcons();
+    return;
+  }
+
+  tbody.innerHTML = lockResults.map(lp => `
+    <tr>
+      <td><strong>${esc(lp.appName || base(lp.exePath) || 'Unknown')}</strong> ${lp.protected ? '<span class="badge gray" style="font-size:10px;margin-left:6px">Protected</span>' : ''}</td>
+      <td><code>${lp.pid}</code></td>
+      <td>${esc(lp.serviceName || '—')}</td>
+      <td><code style="font-size:11px">${esc(lp.exePath || '—')}</code></td>
+      <td style="text-align:right">
+        ${lp.protected ? '<span style="font-size:11px;color:var(--muted)">System protected</span>' : `
+          <div style="display:inline-flex;gap:6px">
+            <button class="win-btn" style="height:26px;font-size:11px" onclick="unlockAction(${lp.pid}, 'close')">Close App</button>
+            <button class="win-btn" style="height:26px;font-size:11px;color:#f87171" onclick="unlockAction(${lp.pid}, 'kill')">End Task</button>
+          </div>
+        `}
+      </td>
+    </tr>
+  `).join('');
 
   refreshIcons();
 }

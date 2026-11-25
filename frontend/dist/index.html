@@ -51,6 +51,7 @@
       <div class="nav-group-label">Manage</div>
       <nav class="nav-list" aria-label="Main navigation">
         <button class="nav-item active" data-page="overview"><i data-lucide="layout-grid"></i><span>Overview</span></button>
+        <button class="nav-item" data-page="processes"><i data-lucide="cpu"></i><span>Live Processes</span><span class="nav-count" id="nav-processes"></span></button>
         <button class="nav-item" data-page="applications"><i data-lucide="layers"></i><span>Applications</span><span class="nav-count" id="nav-apps"></span></button>
         <button class="nav-item" data-page="uninstaller"><i data-lucide="trash-2"></i><span>Uninstaller</span><span class="nav-count" id="nav-uninstaller"></span></button>
         <button class="nav-item" data-page="services"><i data-lucide="cog"></i><span>Services</span><span class="nav-count" id="nav-services"></span></button>
@@ -58,9 +59,10 @@
         <button class="nav-item" data-page="sources"><i data-lucide="compass"></i><span>Startup locations</span></button>
       </nav>
       <div class="nav-divider"></div>
-      <div class="nav-group-label">Other</div>
+      <div class="nav-group-label">Tools &amp; Safety</div>
       <nav class="nav-list">
-        <button class="nav-item" data-page="snapshots"><i data-lucide="camera"></i><span>Snapshots & Diffs</span></button>
+        <button class="nav-item" data-page="locks"><i data-lucide="lock"></i><span>File Lock Finder</span></button>
+        <button class="nav-item" data-page="snapshots"><i data-lucide="camera"></i><span>Snapshots &amp; Diffs</span></button>
         <button class="nav-item" data-page="history"><i data-lucide="history"></i><span>Change history</span></button>
         <button class="nav-item" data-page="settings"><i data-lucide="sliders"></i><span>Settings</span></button>
       </nav>
@@ -182,6 +184,99 @@
         <!-- Overview Page -->
         <section class="page active" id="page-overview">
           <div id="overview-content"><div class="loading">Scanning this PC…</div></div>
+        </section>
+
+        <!-- Live Processes Page -->
+        <section class="page" id="page-processes">
+          <div class="page-header">
+            <div>
+              <h1>Live Processes &amp; Efficiency Mode</h1>
+              <p class="page-subtitle">Real-time view of every running process grouped by application—with live CPU%, RAM, Disk I/O, Windows 11 EcoQoS throttling, priority, and freeze controls.</p>
+            </div>
+            <div class="header-actions">
+              <button class="win-btn" onclick="loadLiveProcesses()"><i data-lucide="refresh-cw" style="width:13px;height:13px;margin-right:4px"></i>Refresh</button>
+            </div>
+          </div>
+          <div class="system-summary" id="processes-summary"></div>
+          <div class="content-toolbar">
+            <div class="segmented" id="proc-filters">
+              <button class="active" data-filter="all">All Processes</button>
+              <button data-filter="windowed">Windowed Apps</button>
+              <button data-filter="eco">🍃 Efficiency Mode</button>
+              <button data-filter="network">🌐 Network Active</button>
+              <button data-filter="frozen">❄️ Frozen</button>
+            </div>
+            <div class="toolbar-flex"></div>
+            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="proc-search" type="search" placeholder="Search process name or PID"></label>
+            <select class="select-control" id="proc-sort" aria-label="Sort processes">
+              <option value="ram">Memory (High to Low)</option>
+              <option value="cpu">CPU % (High to Low)</option>
+              <option value="io">Disk I/O (High to Low)</option>
+              <option value="name">Name A–Z</option>
+            </select>
+          </div>
+          <div class="page-section">
+            <div class="section-heading"><strong>Running process groups</strong><span id="proc-count-meta">Click a group to inspect child PIDs</span></div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="min-width:230px">Application / Process</th>
+                    <th style="text-align:right">CPU</th>
+                    <th style="text-align:right">Memory</th>
+                    <th style="text-align:right">Disk I/O</th>
+                    <th>Status &amp; Priority</th>
+                    <th style="text-align:right;min-width:210px">Controls</th>
+                  </tr>
+                </thead>
+                <tbody id="proc-body">
+                  <tr><td colspan="6"><div class="loading">Sampling live processes…</div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- File Lock Finder Page -->
+        <section class="page" id="page-locks">
+          <div class="page-header">
+            <div>
+              <h1>Who's Locking This File?</h1>
+              <p class="page-subtitle">Natively query Windows Restart Manager (rstrtmgr.dll) to pinpoint which process is holding an open lock on a file or folder.</p>
+            </div>
+          </div>
+          <div class="page-section" style="padding:18px">
+            <div id="lock-dropzone" style="border:1.5px dashed var(--border);border-radius:8px;padding:18px;background:var(--surface-card);display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <label class="filter-search" style="flex:1;min-width:260px;max-width:none;height:34px">
+                  <i data-lucide="file-search" style="width:14px;height:14px;flex:none"></i>
+                  <input id="lock-path-input" type="text" placeholder="Paste or drop a locked file or folder path (e.g. C:\Users\...\app.log)">
+                </label>
+                <button class="win-btn" onclick="browseLockedFile()"><i data-lucide="folder-open"></i>Browse File…</button>
+                <button class="win-btn primary" onclick="checkFileLocks()"><i data-lucide="search"></i>Find Locks</button>
+              </div>
+              <div style="font-size:11px;color:var(--text-dim)">Tip: You can check either a single file or an entire folder. Critical Windows processes are automatically protected.</div>
+            </div>
+          </div>
+          <div class="page-section" style="margin-top:14px">
+            <div class="section-heading"><strong>Locking processes</strong><span id="lock-count-meta">Enter a path above to inspect locks</span></div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Application / Process</th>
+                    <th>PID</th>
+                    <th>Service</th>
+                    <th>Executable Path</th>
+                    <th style="text-align:right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="lock-body">
+                  <tr><td colspan="5"><div class="empty-state">No file scanned yet. Pick or paste a path above to see what's locking it.</div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <!-- Services Page -->

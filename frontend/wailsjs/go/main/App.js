@@ -10,6 +10,10 @@ export function ApplyFocusMode() {
   return window['go']['main']['App']['ApplyFocusMode']();
 }
 
+export function BrowseForLockedFile() {
+  return window['go']['main']['App']['BrowseForLockedFile']();
+}
+
 export function CleanResidualItems(arg1) {
   return window['go']['main']['App']['CleanResidualItems'](arg1);
 }
@@ -50,6 +54,10 @@ export function ExportMarkdown() {
   return window['go']['main']['App']['ExportMarkdown']();
 }
 
+export function FindLockingProcesses(arg1) {
+  return window['go']['main']['App']['FindLockingProcesses'](arg1);
+}
+
 export function GetAlwaysAdmin() {
   return window['go']['main']['App']['GetAlwaysAdmin']();
 }
@@ -64,6 +72,10 @@ export function GetFileVirusTotalURL(arg1) {
 
 export function GetInstalledApps() {
   return window['go']['main']['App']['GetInstalledApps']();
+}
+
+export function GetLiveProcesses() {
+  return window['go']['main']['App']['GetLiveProcesses']();
 }
 
 export function GetMinimizeToTray() {
@@ -92,6 +104,10 @@ export function IsProcessSuspended(arg1) {
 
 export function KillProcess(arg1) {
   return window['go']['main']['App']['KillProcess'](arg1);
+}
+
+export function KillProcessTree(arg1) {
+  return window['go']['main']['App']['KillProcessTree'](arg1);
 }
 
 export function LaunchUninstaller(arg1, arg2) {
@@ -142,8 +158,20 @@ export function SetAlwaysAdmin(arg1) {
   return window['go']['main']['App']['SetAlwaysAdmin'](arg1);
 }
 
+export function SetGroupEcoMode(arg1, arg2) {
+  return window['go']['main']['App']['SetGroupEcoMode'](arg1, arg2);
+}
+
 export function SetMinimizeToTray(arg1) {
   return window['go']['main']['App']['SetMinimizeToTray'](arg1);
+}
+
+export function SetProcessEcoMode(arg1, arg2) {
+  return window['go']['main']['App']['SetProcessEcoMode'](arg1, arg2);
+}
+
+export function SetProcessPriority(arg1, arg2) {
+  return window['go']['main']['App']['SetProcessPriority'](arg1, arg2);
 }
 
 export function SuspendProcess(arg1) {
