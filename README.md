@@ -1,6 +1,6 @@
 <div align="center">
 
-# <img src="WinBGM.png" alt="WinBGM Logo" width="38" height="38" align="absmiddle" style="vertical-align: middle;" /> WinBGM
+# <img src="assets/WinBGM.png" alt="WinBGM Logo" width="38" height="38" align="absmiddle" style="vertical-align: middle;" /> WinBGM
 
 **Windows Background Manager**  
 *The safe, modern background application, process & persistence manager for Windows 10 and 11.*
