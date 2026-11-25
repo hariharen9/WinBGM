@@ -536,3 +536,24 @@ func (a *App) GetSystemAbout() backend.SystemAboutInfo {
 	return backend.GetSystemAbout()
 }
 
+// CreateCustomStartup creates a custom startup entry or delayed logon scheduled task.
+func (a *App) CreateCustomStartup(spec backend.CustomStartupSpec) error {
+	return backend.CreateCustomStartup(spec)
+}
+
+// BrowseStartupExecutable opens a file picker for custom startup executables or scripts.
+func (a *App) BrowseStartupExecutable() (string, error) {
+	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select program or script to run at startup",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Executables & Scripts (*.exe, *.bat, *.cmd, *.ps1)", Pattern: "*.exe;*.bat;*.cmd;*.ps1;*.vbs;*.lnk"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		},
+	})
+}
+
+// CheckForUpdates checks GitHub Releases for a newer version of WinBGM.
+func (a *App) CheckForUpdates() backend.UpdateCheckResult {
+	return backend.CheckForUpdates()
+}
+

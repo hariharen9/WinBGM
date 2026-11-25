@@ -405,6 +405,30 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class CustomStartupSpec {
+	    name: string;
+	    command: string;
+	    args: string;
+	    workingDir: string;
+	    delaySeconds: number;
+	    runHidden: boolean;
+	    elevated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new CustomStartupSpec(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.command = source["command"];
+	        this.args = source["args"];
+	        this.workingDir = source["workingDir"];
+	        this.delaySeconds = source["delaySeconds"];
+	        this.runHidden = source["runHidden"];
+	        this.elevated = source["elevated"];
+	    }
+	}
 	export class DriveUsage {
 	    letter: string;
 	    total: number;
@@ -1151,6 +1175,31 @@ export namespace backend {
 	}
 	
 	
+	
+	export class UpdateCheckResult {
+	    currentVersion: string;
+	    latestVersion: string;
+	    updateAvailable: boolean;
+	    releaseUrl: string;
+	    releaseNotes: string;
+	    publishedAt: string;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateCheckResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.currentVersion = source["currentVersion"];
+	        this.latestVersion = source["latestVersion"];
+	        this.updateAvailable = source["updateAvailable"];
+	        this.releaseUrl = source["releaseUrl"];
+	        this.releaseNotes = source["releaseNotes"];
+	        this.publishedAt = source["publishedAt"];
+	        this.error = source["error"];
+	    }
+	}
 
 }
 

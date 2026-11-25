@@ -810,6 +810,126 @@ async function scanAppResiduals(appId) {
   };
 }
 
+let selectedUninstallIds = new Set();
+
+function toggleUninstallSelect(appId, checked) {
+  if (checked) selectedUninstallIds.add(appId);
+  else selectedUninstallIds.delete(appId);
+  updateBatchUninstallBar();
+}
+
+function toggleSelectAllUninstall(checked) {
+  const checks = document.querySelectorAll('#uninstaller-body input.uninst-check');
+  const q = (uninstallerSearch || '').toLowerCase();
+  const visible = (installedApps || []).filter(a => {
+    if (uninstallerFilter === 'heavy' && !a.hasHeavyProfile) return false;
+    if (uninstallerFilter === 'large' && (a.sizeBytes || 0) < 1024 * 1024 * 1024) return false;
+    if (uninstallerFilter === 'store' && a.source !== 'StoreApp') return false;
+    if (uninstallerFilter === 'pkg' && !['Steam', 'Scoop', 'Chocolatey'].includes(a.source)) return false;
+    if (uninstallerFilter === 'orphan' && a.source !== 'Orphaned') return false;
+    if (uninstallerFilter === 'user' && !a.isUserInstall) return false;
+    if (q && !(a.name + ' ' + a.publisher + ' ' + (a.installLocation || '')).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  visible.forEach(a => checked ? selectedUninstallIds.add(a.id) : selectedUninstallIds.delete(a.id));
+  checks.forEach(c => { c.checked = checked; });
+  updateBatchUninstallBar();
+}
+
+function clearUninstallSelection() {
+  selectedUninstallIds.clear();
+  renderUninstaller();
+}
+
+function updateBatchUninstallBar() {
+  const bar = $('uninstaller-batch-bar');
+  if (!bar) return;
+  const count = selectedUninstallIds.size;
+  if (count === 0) {
+    bar.style.display = 'none';
+    return;
+  }
+  const selected = (installedApps || []).filter(a => selectedUninstallIds.has(a.id));
+  const totalBytes = selected.reduce((acc, a) => acc + (a.sizeBytes || 0), 0);
+  const gb = 1024 ** 3, mb = 1024 ** 2;
+  const sizeStr = totalBytes >= gb ? (totalBytes / gb).toFixed(2) + ' GB' : (totalBytes / mb).toFixed(1) + ' MB';
+  $('uninstaller-batch-info').innerHTML = `<strong>${count}</strong> program${count > 1 ? 's' : ''} queued · <span>${sizeStr} estimated footprint</span>`;
+  $('uninstaller-batch-count').textContent = count;
+  bar.style.display = 'flex';
+  refreshIcons();
+}
+
+function promptBatchUninstall() {
+  const appsToRemove = (installedApps || []).filter(a => selectedUninstallIds.has(a.id));
+  if (!appsToRemove.length) return;
+  const listPreview = appsToRemove.slice(0, 6).map(a => `<li><strong>${esc(a.name)}</strong> (${esc(a.displaySize)})</li>`).join('');
+  const extra = appsToRemove.length > 6 ? `<li>…and ${appsToRemove.length - 6} more</li>` : '';
+
+  $('modal-title').textContent = `Batch Uninstall (${appsToRemove.length} Programs)`;
+  $('modal-body').innerHTML = `
+    <p>WinBGM will sequentially uninstall the following programs and then audit all leftover files &amp; dependencies in one unified cleanup step:</p>
+    <ul style="margin: 8px 0 10px 18px; font-size: 11.5px; color: var(--text)">${listPreview}${extra}</ul>
+    <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px">
+      <input type="checkbox" id="batch-quiet-toggle" checked>
+      <label for="batch-quiet-toggle" style="font-size: 11.5px; cursor: pointer">Attempt silent/quiet uninstallation whenever supported</label>
+    </div>
+  `;
+  $('modal-confirm').textContent = `Uninstall ${appsToRemove.length} Programs`;
+  $('modal-confirm').style.display = 'inline-flex';
+  $('modal-confirm').onclick = async () => {
+    closeModal();
+    const quiet = $('batch-quiet-toggle') ? $('batch-quiet-toggle').checked : true;
+    await executeBatchUninstall(appsToRemove, quiet);
+  };
+  $('modal-cancel').textContent = 'Cancel';
+  openModal();
+  refreshIcons();
+}
+
+async function executeBatchUninstall(appsToRemove, quiet) {
+  const a = api();
+  const mergedItems = [];
+  let totalSize = 0;
+
+  for (let i = 0; i < appsToRemove.length; i++) {
+    const app = appsToRemove[i];
+    toast(`Uninstalling (${i + 1}/${appsToRemove.length}): ${app.name}…`);
+    if (a && a.LaunchUninstaller) {
+      try {
+        await a.LaunchUninstaller(app.id, quiet);
+      } catch (e) {
+        toast(`Note for ${app.name}: ${e}`);
+      }
+    }
+    const report = await scanAppResiduals(app.id);
+    if (report && report.items && report.items.length) {
+      for (const it of report.items) {
+        mergedItems.push(it);
+        totalSize += (it.sizeBytes || 0);
+      }
+    }
+  }
+
+  selectedUninstallIds.clear();
+  if (mergedItems.length > 0) {
+    const gb = 1024 ** 3, mb = 1024 ** 2, kb = 1024;
+    const fmt = totalSize >= gb ? (totalSize / gb).toFixed(2) + ' GB'
+      : totalSize >= mb ? (totalSize / mb).toFixed(1) + ' MB'
+      : (totalSize / kb).toFixed(1) + ' KB';
+    showResidualModal({
+      appId: 'batch',
+      appName: `${appsToRemove.length} Programs`,
+      items: mergedItems,
+      totalSize,
+      totalSizeFormatted: fmt,
+    });
+  } else {
+    toast(`Batch uninstall complete! No leftover data found.`);
+    celebrateSuccess();
+    await loadInstalledApps();
+  }
+}
+
 function promptUninstall(appId) {
   const app = installedApps.find(a => a.id === appId);
   if (!app) return;

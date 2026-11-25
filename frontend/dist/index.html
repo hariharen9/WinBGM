@@ -278,10 +278,28 @@
                   <strong>Installed software inventory</strong
                   ><span id="uninstaller-count-meta">Auditing…</span>
                 </div>
+                <div class="batch-uninstall-bar" id="uninstaller-batch-bar" style="display: none">
+                  <div class="batch-uninstall-info" id="uninstaller-batch-info">0 selected</div>
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <button class="win-btn" onclick="clearUninstallSelection()">Clear</button>
+                    <button class="win-btn primary" onclick="promptBatchUninstall()">
+                      <i data-lucide="trash-2" style="width: 13px; height: 13px; margin-right: 4px"></i>
+                      Uninstall Selected (<span id="uninstaller-batch-count">0</span>)
+                    </button>
+                  </div>
+                </div>
                 <div style="overflow-x: auto">
                   <table class="data-table">
                     <thead>
                       <tr>
+                        <th style="width: 34px; text-align: center">
+                          <input
+                            type="checkbox"
+                            id="uninstaller-select-all"
+                            onchange="toggleSelectAllUninstall(this.checked)"
+                            title="Select all visible programs"
+                          />
+                        </th>
                         <th style="min-width: 240px">Program</th>
                         <th>Publisher</th>
                         <th>Installed On</th>
@@ -293,7 +311,7 @@
                     </thead>
                     <tbody id="uninstaller-body">
                       <tr>
-                        <td colspan="5">
+                        <td colspan="6">
                           <div class="loading">
                             Auditing installed software…
                           </div>
@@ -1066,6 +1084,15 @@
                         background on Windows.
                       </div>
                       <div class="creator-links">
+                        <button
+                          class="win-btn creator-link-btn"
+                          id="check-updates-btn"
+                          onclick="checkForAppUpdates()"
+                          title="Check GitHub Releases for a newer version of WinBGM"
+                        >
+                          <i data-lucide="refresh-cw"></i>
+                          <span id="check-updates-label">Check for updates</span>
+                        </button>
                         <a
                           href="https://hariharen.space"
                           class="win-btn creator-link-btn"
@@ -1086,6 +1113,7 @@
                         </a>
                       </div>
                     </div>
+                    <div class="about-update-status" id="about-update-status" style="display: none"></div>
                   </div>
                 </div>
               </div>
@@ -1245,6 +1273,83 @@
               Done
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Startup & Delay Entry Modal -->
+    <div class="modal-backdrop" id="custom-startup-modal">
+      <div
+        class="modal custom-startup-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="custom-startup-title"
+      >
+        <button
+          class="modal-close-btn"
+          id="custom-startup-close-x"
+          onclick="closeCustomStartupModal()"
+          aria-label="Close custom startup dialog"
+          title="Close (Esc)"
+        >
+          <i data-lucide="x"></i>
+        </button>
+        <div class="residual-header" style="margin-bottom: 14px">
+          <div class="sysabout-icon-badge" style="background: rgba(16, 185, 129, 0.14); color: #10b981; border-color: rgba(16, 185, 129, 0.3)">
+            <i data-lucide="clock"></i>
+          </div>
+          <div>
+            <h2 class="modal-title" id="custom-startup-title" style="margin-bottom: 2px">
+              Add Custom / Delayed Startup Entry
+            </h2>
+            <div class="modal-subtitle" style="font-size: 12px; color: var(--text-2)">
+              Launch any app, script, or command at sign-in with an optional boot delay
+            </div>
+          </div>
+        </div>
+        <div class="custom-startup-form">
+          <label class="cs-field">
+            <span>Entry Name</span>
+            <input type="text" id="cs-name" class="cs-input" placeholder="e.g. Docker Desktop (Delayed)" />
+          </label>
+          <label class="cs-field">
+            <span>Program, Script, or Command</span>
+            <div style="display: flex; gap: 8px">
+              <input type="text" id="cs-command" class="cs-input" style="flex: 1" placeholder="C:\Path\To\App.exe or powershell.exe" />
+              <button type="button" class="win-btn" onclick="browseStartupCommand()">Browse…</button>
+            </div>
+          </label>
+          <label class="cs-field">
+            <span>Arguments <span style="color: var(--muted)">(optional)</span></span>
+            <input type="text" id="cs-args" class="cs-input" placeholder="e.g. --minimized or -File C:\scripts\start.ps1" />
+          </label>
+          <div class="cs-field">
+            <span>Startup Delay (seconds after sign-in)</span>
+            <div class="cs-delay-row">
+              <input type="number" id="cs-delay" class="cs-input" min="0" max="3600" value="30" style="width: 96px" />
+              <div class="cs-delay-pills">
+                <button type="button" class="win-btn subtle" onclick="setCustomStartupDelay(0)">0s Instant</button>
+                <button type="button" class="win-btn subtle" onclick="setCustomStartupDelay(15)">15s</button>
+                <button type="button" class="win-btn subtle" onclick="setCustomStartupDelay(30)">30s</button>
+                <button type="button" class="win-btn subtle" onclick="setCustomStartupDelay(60)">60s</button>
+                <button type="button" class="win-btn subtle" onclick="setCustomStartupDelay(120)">2m</button>
+              </div>
+            </div>
+          </div>
+          <div class="cs-checks">
+            <label class="cs-check-label">
+              <input type="checkbox" id="cs-hidden" />
+              <span>Run hidden (no console window flash)</span>
+            </label>
+            <label class="cs-check-label">
+              <input type="checkbox" id="cs-elevated" />
+              <span>Run with highest privileges (Administrator)</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="win-btn" onclick="closeCustomStartupModal()">Cancel</button>
+          <button class="win-btn primary" id="cs-submit-btn" onclick="submitCustomStartup()">Create Startup Entry</button>
         </div>
       </div>
     </div>

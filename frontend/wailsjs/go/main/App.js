@@ -14,12 +14,24 @@ export function BrowseForLockedFile() {
   return window['go']['main']['App']['BrowseForLockedFile']();
 }
 
+export function BrowseStartupExecutable() {
+  return window['go']['main']['App']['BrowseStartupExecutable']();
+}
+
+export function CheckForUpdates() {
+  return window['go']['main']['App']['CheckForUpdates']();
+}
+
 export function CleanResidualItems(arg1) {
   return window['go']['main']['App']['CleanResidualItems'](arg1);
 }
 
 export function ClearSentinelAlerts() {
   return window['go']['main']['App']['ClearSentinelAlerts']();
+}
+
+export function CreateCustomStartup(arg1) {
+  return window['go']['main']['App']['CreateCustomStartup'](arg1);
 }
 
 export function CreateSystemRestorePoint(arg1) {

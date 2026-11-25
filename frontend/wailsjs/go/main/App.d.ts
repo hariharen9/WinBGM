@@ -9,9 +9,15 @@ export function ApplyFocusMode():Promise<backend.BatchResult>;
 
 export function BrowseForLockedFile():Promise<string>;
 
+export function BrowseStartupExecutable():Promise<string>;
+
+export function CheckForUpdates():Promise<backend.UpdateCheckResult>;
+
 export function CleanResidualItems(arg1:Array<backend.ResidualItem>):Promise<backend.CleanResult>;
 
 export function ClearSentinelAlerts():Promise<void>;
+
+export function CreateCustomStartup(arg1:backend.CustomStartupSpec):Promise<void>;
 
 export function CreateSystemRestorePoint(arg1:string):Promise<backend.RestorePointResult>;
 

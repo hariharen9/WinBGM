@@ -23,6 +23,7 @@ function renderCommandBar(p) {
     ],
     applications: [
       { id: 'scan-btn', cls: 'btn-scan', icon: 'refresh-cw', label: 'Scan now', fn: 'doScan()' },
+      { icon: 'plus', label: 'New Startup Entry', fn: 'openCustomStartupModal()' },
       { icon: 'zap', label: 'Focus Mode', fn: 'requestFocusMode()' },
       { icon: 'folder-search', label: 'Open location', fn: 'doReveal()' },
       { icon: 'download', label: 'Export', fn: 'openExportModal()' },
@@ -37,10 +38,12 @@ function renderCommandBar(p) {
     ],
     tasks: [
       { id: 'scan-btn', cls: 'btn-scan', icon: 'refresh-cw', label: 'Scan now', fn: 'doScan()' },
+      { icon: 'clock', label: 'New Delayed Task', fn: 'openCustomStartupModal()' },
       { icon: 'download', label: 'Export', fn: 'openExportModal()' },
     ],
     sources: [
       { id: 'scan-btn', cls: 'btn-scan', icon: 'refresh-cw', label: 'Scan now', fn: 'doScan()' },
+      { icon: 'plus', label: 'New Startup Entry', fn: 'openCustomStartupModal()' },
       { icon: 'download', label: 'Export', fn: 'openExportModal()' },
     ],
     locks: [
@@ -250,8 +253,16 @@ if ($('residual-modal')) {
 if ($('sysabout-modal')) {
   $('sysabout-modal').addEventListener('click', e => { if (e.target === $('sysabout-modal')) closeSystemAboutModal(); });
 }
+if ($('custom-startup-modal')) {
+  $('custom-startup-modal').addEventListener('click', e => { if (e.target === $('custom-startup-modal')) closeCustomStartupModal(); });
+}
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  if ($('custom-startup-modal') && $('custom-startup-modal').classList.contains('show')) {
+    e.preventDefault();
+    closeCustomStartupModal();
+    return;
+  }
   if ($('sysabout-modal') && $('sysabout-modal').classList.contains('show')) {
     e.preventDefault();
     closeSystemAboutModal();
@@ -285,6 +296,10 @@ document.addEventListener('keydown', e => {
   if (expanded.size > 0) {
     expanded.clear();
     render();
+    return;
+  }
+  if (page === 'uninstaller' && typeof selectedUninstallIds !== 'undefined' && selectedUninstallIds.size > 0) {
+    clearUninstallSelection();
     return;
   }
   if (page !== 'overview') {
@@ -572,6 +587,113 @@ function copySystemAboutSection(section) {
   navigator.clipboard.writeText(lines.join('\n')).then(() => {
     toast(section === 'device' ? 'Device specifications copied' : 'Windows specifications copied');
   });
+}
+
+function openCustomStartupModal() {
+  const modal = $('custom-startup-modal');
+  if (!modal) return;
+  $('cs-name').value = '';
+  $('cs-command').value = '';
+  $('cs-args').value = '';
+  $('cs-delay').value = '30';
+  $('cs-hidden').checked = false;
+  $('cs-elevated').checked = false;
+  modal.classList.add('show');
+  refreshIcons();
+  setTimeout(() => $('cs-name').focus(), 40);
+}
+
+function closeCustomStartupModal() {
+  const modal = $('custom-startup-modal');
+  if (modal) modal.classList.remove('show');
+}
+
+function setCustomStartupDelay(sec) {
+  if ($('cs-delay')) $('cs-delay').value = String(sec);
+}
+
+async function browseStartupCommand() {
+  try {
+    const p = await window.go.main.App.BrowseStartupExecutable();
+    if (p) {
+      $('cs-command').value = p;
+      if (!$('cs-name').value.trim()) {
+        const baseName = p.split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+        $('cs-name').value = baseName;
+      }
+    }
+  } catch (err) {
+    toast('Failed to open file picker: ' + err);
+  }
+}
+
+async function submitCustomStartup() {
+  const name = ($('cs-name').value || '').trim();
+  const command = ($('cs-command').value || '').trim();
+  const args = ($('cs-args').value || '').trim();
+  const delaySeconds = Math.max(0, parseInt($('cs-delay').value || '0', 10) || 0);
+  const runHidden = $('cs-hidden').checked;
+  const elevated = $('cs-elevated').checked;
+
+  if (!name || !command) {
+    toast('Please enter both an Entry Name and a Program/Command.');
+    return;
+  }
+
+  const btn = $('cs-submit-btn');
+  if (btn) btn.disabled = true;
+  try {
+    await window.go.main.App.CreateCustomStartup({
+      name,
+      command,
+      args,
+      workingDir: '',
+      delaySeconds,
+      runHidden,
+      elevated,
+    });
+    closeCustomStartupModal();
+    toast(delaySeconds > 0
+      ? `Created delayed startup "${name}" (${delaySeconds}s after sign-in)`
+      : `Created startup entry "${name}"`);
+    await doScan();
+  } catch (err) {
+    toast('Failed to create startup entry: ' + err);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function checkForAppUpdates() {
+  const btn = $('check-updates-btn');
+  const label = $('check-updates-label');
+  const box = $('about-update-status');
+  if (!box) return;
+
+  if (btn) btn.disabled = true;
+  if (label) label.textContent = 'Checking…';
+  try {
+    const res = await window.go.main.App.CheckForUpdates();
+    box.style.display = 'flex';
+    box.classList.remove('has-update');
+    if (res.error) {
+      box.innerHTML = `<span>Update check failed: ${esc(res.error)}</span>`;
+    } else if (res.updateAvailable) {
+      box.classList.add('has-update');
+      box.innerHTML = `
+        <span><strong>Update available: v${esc(res.latestVersion)}</strong> (current: v${esc(res.currentVersion)})</span>
+        <a href="${esc(res.releaseUrl)}" class="win-btn primary" style="padding: 3px 9px; font-size: 11px; text-decoration: none" onclick="return openExternalUrl(event, this.href)">Download Release</a>
+      `;
+    } else {
+      box.innerHTML = `<span>You are on the latest version (<strong>v${esc(res.currentVersion)}</strong>).</span>`;
+    }
+  } catch (err) {
+    box.style.display = 'flex';
+    box.innerHTML = `<span>Update check error: ${esc(String(err))}</span>`;
+  } finally {
+    if (btn) btn.disabled = false;
+    if (label) label.textContent = 'Check for updates';
+  }
 }
 
 function openExternalUrl(e, url) {

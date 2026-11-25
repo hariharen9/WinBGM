@@ -826,7 +826,8 @@ function renderUninstaller() {
   const tbody = $('uninstaller-body');
 
   if (!installedApps || !installedApps.length) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No installed programs detected.</div></td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No installed programs detected.</div></td></tr>';
+    updateBatchUninstallBar();
     return;
   }
 
@@ -888,13 +889,15 @@ function renderUninstaller() {
   if (!tbody) return;
 
   if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No installed programs match this filter or search.</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No installed programs match this filter or search.</div></td></tr>';
+    updateBatchUninstallBar();
     refreshIcons();
     return;
   }
 
   tbody.innerHTML = list.map(a => {
     const isExpanded = expanded.has('uninst_' + a.id);
+    const isChecked = typeof selectedUninstallIds !== 'undefined' && selectedUninstallIds.has(a.id);
     const heavyLabel = (a.heavyDisplaySize && a.heavyDisplaySize !== '—') ? `${esc(a.heavyDisplaySize)} models/data` : 'External Data / Cache';
     const heavyBadge = a.hasHeavyProfile
       ? `<span class="uninstaller-badge heavy" title="External models / cache detected"><i data-lucide="flame" style="width:11px;height:11px"></i>${heavyLabel}</span>`
@@ -927,7 +930,7 @@ function renderUninstaller() {
 
       expandedRow = `
         <tr class="detail-row">
-          <td colspan="5" style="padding:12px 18px;background:var(--surface-hover)">
+          <td colspan="6" style="padding:12px 18px;background:var(--surface-hover)">
             <div style="display:flex;flex-direction:column;gap:6px;font-size:11.5px">
               <div><strong style="color:var(--text-dim)">Installation Directory:</strong> <code>${esc(a.installLocation || 'Not specified in registry')}</code></div>
               ${a.exePath ? `<div><strong style="color:var(--text-dim)">Main Executable:</strong> <code>${esc(a.exePath)}</code></div>` : ''}
@@ -948,6 +951,9 @@ function renderUninstaller() {
 
     return `
       <tr class="clickable" data-id="uninst_${esc(a.id)}" onclick="rowToggle(event, renderUninstaller)">
+        <td style="text-align:center" onclick="event.stopPropagation()">
+          <input type="checkbox" class="uninst-check" ${isChecked ? 'checked' : ''} onchange="toggleUninstallSelect('${esc(a.id)}', this.checked)" aria-label="Select ${esc(a.name)}" />
+        </td>
         <td>
           <div style="display:flex;align-items:center;gap:10px">
             ${renderAppIcon(a.name, letter, [a.displayIcon, a.exePath], '', 'width:26px;height:26px;font-size:10px;flex:none')}
@@ -981,6 +987,10 @@ function renderUninstaller() {
     `;
   }).join('');
 
+  if ($('uninstaller-select-all')) {
+    $('uninstaller-select-all').checked = list.length > 0 && list.every(a => selectedUninstallIds.has(a.id));
+  }
+  updateBatchUninstallBar();
   refreshIcons();
 }
 
