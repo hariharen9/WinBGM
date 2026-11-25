@@ -406,7 +406,7 @@
 /* About Section Card */
 .about-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   padding: 16px;
   background: var(--surface-card);
@@ -414,16 +414,24 @@
   border-radius: 8px;
 }
 .about-logo {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   flex: none;
+  margin-top: 2px;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
 }
 .about-details {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+}
+.about-top-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .about-name {
   font-size: 15px;
@@ -438,72 +446,56 @@
 .about-meta {
   font-size: 11px;
   color: var(--muted);
-  margin-top: 2px;
 }
-.creator-card {
-  margin-top: 10px;
-  align-items: flex-start;
-}
-.creator-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: rgba(59, 130, 246, 0.12);
-  color: var(--accent);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+.about-creator-row {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex: none;
-}
-.creator-avatar svg {
-  width: 20px;
-  height: 20px;
-}
-.creator-header-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   flex-wrap: wrap;
+  gap: 10px;
 }
-.creator-role-pill {
-  font-size: 10px;
+.about-creator-text {
+  font-size: 11.5px;
+  color: var(--text-2);
+  line-height: 1.45;
+  flex: 1 1 260px;
+}
+.about-creator-text strong {
+  color: var(--text);
   font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(59, 130, 246, 0.12);
-  color: var(--accent);
-  border: 1px solid rgba(59, 130, 246, 0.25);
 }
 .creator-links {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  flex: none;
 }
 .creator-link-btn,
 .creator-coffee-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-size: 11px;
-  padding: 5px 10px;
+  padding: 4px 9px;
   text-decoration: none;
 }
 .creator-link-btn svg,
 .creator-coffee-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 .creator-coffee-btn {
-  background: rgba(245, 158, 11, 0.14);
+  background: rgba(245, 158, 11, 0.12);
   color: #f59e0b;
-  border-color: rgba(245, 158, 11, 0.35);
+  border-color: rgba(245, 158, 11, 0.3);
 }
 .creator-coffee-btn:hover {
-  background: rgba(245, 158, 11, 0.24);
-  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.5);
   color: #fbbf24;
 }
 .machine-card {
