@@ -1267,12 +1267,14 @@ function fetchInventoryIcons() {
   if (!inv || !inv.apps) return;
   const paths = [];
   inv.apps.forEach(app => {
-    const p = (app.components || []).find(c => c.exePath)?.exePath;
-    if (p) paths.push(p);
+    if (app.path) paths.push(app.path);
+    (app.components || []).forEach(c => {
+      if (c.exePath) paths.push(c.exePath);
+    });
   });
   fetchMissingIcons(paths, () => {
-    if (page === 'applications') renderApps();
-    if (page === 'overview') renderOverview();
+    renderApps();
+    renderOverview();
   });
 }
 

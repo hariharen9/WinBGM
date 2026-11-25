@@ -27,6 +27,7 @@ function navigate(p) {
   };
   $('commandbar-label').textContent = labels[p] || 'WinBGM';
   $('content-host').scrollTop = 0;
+  if (p === 'applications') renderApps();
   if (p === 'processes') loadLiveProcesses();
   if (p === 'uninstaller') loadInstalledApps();
   if (p === 'history') loadHistory();
