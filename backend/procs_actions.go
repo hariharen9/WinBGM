@@ -3,6 +3,7 @@ package backend
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"sync"
 	"unsafe"
 
@@ -36,10 +37,24 @@ func IsProcessSuspended(pid uint32) bool {
 	return suspendedPIDs[pid]
 }
 
+// guardProtectedPID enforces Go-side protection so critical Windows, security, and self processes
+// can never be suspended, closed, or terminated regardless of what the UI sends.
+func guardProtectedPID(pid uint32) error {
+	if pid == 0 || pid == 4 {
+		return errors.New("refusing action on critical Windows kernel/idle process")
+	}
+	p := imagePath(pid)
+	name := filepath.Base(p)
+	if isProtectedProcess(name, pid) {
+		return fmt.Errorf("refusing action on protected system or security process (%s)", name)
+	}
+	return nil
+}
+
 // SuspendProcess freezes all threads in the process via NtSuspendProcess.
 func SuspendProcess(pid uint32) error {
-	if pid == 0 {
-		return errors.New("invalid PID")
+	if err := guardProtectedPID(pid); err != nil {
+		return err
 	}
 	h, err := windows.OpenProcess(windows.PROCESS_SUSPEND_RESUME, false, pid)
 	if err != nil {
@@ -60,8 +75,8 @@ func SuspendProcess(pid uint32) error {
 
 // ResumeProcess unfreezes a suspended process via NtResumeProcess.
 func ResumeProcess(pid uint32) error {
-	if pid == 0 {
-		return errors.New("invalid PID")
+	if err := guardProtectedPID(pid); err != nil {
+		return err
 	}
 	h, err := windows.OpenProcess(windows.PROCESS_SUSPEND_RESUME, false, pid)
 	if err != nil {
@@ -82,8 +97,8 @@ func ResumeProcess(pid uint32) error {
 
 // GracefulCloseProcess posts WM_CLOSE to all top-level windows of the process and waits up to 2 seconds.
 func GracefulCloseProcess(pid uint32) error {
-	if pid == 0 {
-		return errors.New("invalid PID")
+	if err := guardProtectedPID(pid); err != nil {
+		return err
 	}
 	h, err := windows.OpenProcess(windows.SYNCHRONIZE|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 	if err != nil {
@@ -120,8 +135,8 @@ func GracefulCloseProcess(pid uint32) error {
 
 // KillProcess forcefully terminates a process.
 func KillProcess(pid uint32) error {
-	if pid == 0 {
-		return errors.New("invalid PID")
+	if err := guardProtectedPID(pid); err != nil {
+		return err
 	}
 	h, err := windows.OpenProcess(windows.PROCESS_TERMINATE, false, pid)
 	if err != nil {

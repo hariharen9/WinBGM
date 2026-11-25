@@ -3,9 +3,11 @@ package backend
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -36,15 +38,87 @@ const (
 	fofNoErrorUI      = 0x0400 // Do not display a user interface if an error occurs
 )
 
-// SafeRecyclePath moves a file or directory to the Windows Recycle Bin so the action is 100% reversible.
-// Falls back to standard removal if the drive volume doesn't support the Recycle Bin (e.g. ramdisks).
-func SafeRecyclePath(targetPath string) error {
+var protectedFolderNames = map[string]bool{
+	"microsoft": true, "windows": true, "google": true, "adobe": true,
+	"intel": true, "amd": true, "nvidia": true, "apple": true,
+	"common files": true, "windowsapps": true, "system32": true,
+	"syswow64": true, "program files": true, "program files (x86)": true,
+	"users": true, "programdata": true, "appdata": true, "local": true,
+	"roaming": true, "temp": true, "desktop": true, "documents": true,
+	"downloads": true, "pictures": true, "videos": true, "music": true,
+}
+
+// ValidateCleanPath ensures a file or directory path is safe to move to the Recycle Bin.
+// Blocks drive roots, Windows OS directories, user profile roots, and shared vendor roots.
+func ValidateCleanPath(targetPath string) error {
+	if strings.TrimSpace(targetPath) == "" {
+		return fmt.Errorf("empty path")
+	}
 	abs, err := filepath.Abs(targetPath)
 	if err != nil {
-		abs = targetPath
+		return fmt.Errorf("invalid path %q: %w", targetPath, err)
+	}
+	clean := filepath.Clean(abs)
+	if len(clean) <= 3 {
+		return fmt.Errorf("refusing to clean drive root: %s", clean)
 	}
 
-	// Verify target exists
+	low := strings.ToLower(clean)
+
+	// Block Windows OS directory and everything inside it
+	sysRoot := strings.ToLower(filepath.Clean(os.Getenv("SystemRoot")))
+	if sysRoot != "" && (low == sysRoot || strings.HasPrefix(low, sysRoot+`\`)) {
+		return fmt.Errorf("refusing to clean Windows system path: %s", clean)
+	}
+
+	// Block exact special roots
+	envRoots := []string{
+		os.Getenv("USERPROFILE"),
+		os.Getenv("APPDATA"),
+		os.Getenv("LOCALAPPDATA"),
+		os.Getenv("ProgramData"),
+		os.Getenv("ProgramFiles"),
+		os.Getenv("ProgramFiles(x86)"),
+	}
+	for _, r := range envRoots {
+		if r == "" {
+			continue
+		}
+		cr := strings.ToLower(filepath.Clean(r))
+		if low == cr {
+			return fmt.Errorf("refusing to clean root folder: %s", clean)
+		}
+		// Never clean a path that is an ancestor of a special root
+		if strings.HasPrefix(cr, low+`\`) {
+			return fmt.Errorf("refusing to clean parent of system/user root: %s", clean)
+		}
+	}
+
+	// Block shared vendor/system folder names directly under AppData, ProgramData, or Program Files
+	baseName := strings.ToLower(filepath.Base(clean))
+	if protectedFolderNames[baseName] {
+		parent := strings.ToLower(filepath.Dir(clean))
+		for _, r := range envRoots {
+			if r != "" && parent == strings.ToLower(filepath.Clean(r)) {
+				return fmt.Errorf("refusing to clean shared vendor/system directory: %s", clean)
+			}
+		}
+	}
+
+	return nil
+}
+
+// SafeRecyclePath moves a file or directory to the Windows Recycle Bin.
+// It NEVER permanently deletes: if the Recycle Bin operation fails or is aborted, it returns an error.
+func SafeRecyclePath(targetPath string) error {
+	if err := ValidateCleanPath(targetPath); err != nil {
+		return err
+	}
+	abs, err := filepath.Abs(targetPath)
+	if err != nil {
+		return err
+	}
+
 	if _, err := os.Stat(abs); os.IsNotExist(err) {
 		return nil // already gone
 	}
@@ -52,9 +126,8 @@ func SafeRecyclePath(targetPath string) error {
 	// SHFileOperationW requires a double-null-terminated string
 	utf16Path, err := windows.UTF16FromString(abs)
 	if err != nil {
-		return os.RemoveAll(abs)
+		return err
 	}
-	// Append second null terminator
 	utf16Path = append(utf16Path, 0)
 
 	op := shFileOpStructW{
@@ -65,19 +138,17 @@ func SafeRecyclePath(targetPath string) error {
 
 	ret, _, _ := procSHFileOperationW.Call(uintptr(unsafe.Pointer(&op)))
 	if ret != 0 || op.fAnyOperationsAborted != 0 {
-		// Fallback to os.RemoveAll
-		return os.RemoveAll(abs)
+		return fmt.Errorf("Recycle Bin move failed for %q (code=%d, aborted=%d); permanent deletion refused", abs, ret, op.fAnyOperationsAborted)
 	}
 
 	return nil
 }
 
-// SafeDeleteRegistryKey safely removes an orphan registry key after backing up its values into a history record.
-func SafeDeleteRegistryKey(fullKeyPath string) error {
-	// fullKeyPath e.g. "HKCU\Software\Ollama" or "HKLM\Software\..."
+// ValidateCleanRegistryPath ensures a registry key path is specific and not a protected OS/vendor root.
+func ValidateCleanRegistryPath(fullKeyPath string) (registry.Key, string, error) {
 	parts := strings.SplitN(fullKeyPath, `\`, 2)
 	if len(parts) < 2 {
-		return fmt.Errorf("invalid registry key path: %s", fullKeyPath)
+		return 0, "", fmt.Errorf("invalid registry key path: %s", fullKeyPath)
 	}
 
 	var root registry.Key
@@ -87,20 +158,82 @@ func SafeDeleteRegistryKey(fullKeyPath string) error {
 	case "HKLM", "HKEY_LOCAL_MACHINE":
 		root = registry.LOCAL_MACHINE
 	default:
-		return fmt.Errorf("unsupported root key: %s", parts[0])
+		return 0, "", fmt.Errorf("unsupported root key: %s", parts[0])
 	}
 
-	subKeyPath := parts[1]
-
-	// Check protection: never delete root software keys or critical Windows keys
+	subKeyPath := strings.Trim(parts[1], `\`)
 	low := strings.ToLower(subKeyPath)
-	if low == "software" || low == "software\\microsoft" || low == "software\\microsoft\\windows" ||
-		low == "software\\microsoft\\windows\\currentversion" {
-		return fmt.Errorf("refusing to delete protected system key: %s", subKeyPath)
+	if !strings.HasPrefix(low, `software\`) {
+		return 0, "", fmt.Errorf("refusing to modify non-Software registry path: %s", fullKeyPath)
+	}
+	rest := strings.TrimPrefix(low, `software\`)
+	if rest == "" || protectedFolderNames[rest] || strings.HasPrefix(rest, `microsoft\`) || strings.HasPrefix(rest, `policies\`) {
+		return 0, "", fmt.Errorf("refusing to delete protected system or vendor registry key: %s", fullKeyPath)
 	}
 
-	// First delete subkeys recursively if any
-	return deleteKeyRecursively(root, subKeyPath)
+	return root, subKeyPath, nil
+}
+
+func exportRegistryBackup(fullKeyPath string) (string, error) {
+	backupDir := filepath.Join(os.Getenv("APPDATA"), "WinBGM", "backups")
+	if err := os.MkdirAll(backupDir, 0o755); err != nil {
+		return "", fmt.Errorf("failed to create registry backup directory: %w", err)
+	}
+
+	safeName := strings.NewReplacer(`\`, "_", `/`, "_", `:`, "_", ` `, "_").Replace(fullKeyPath)
+	if len(safeName) > 64 {
+		safeName = safeName[len(safeName)-64:]
+	}
+	backupFile := filepath.Join(backupDir, fmt.Sprintf("%s_%s.reg", time.Now().Format("20060102_150405"), safeName))
+
+	// Normalize root prefix for reg.exe
+	regPath := fullKeyPath
+	if strings.HasPrefix(strings.ToUpper(regPath), `HKCU\`) {
+		regPath = `HKEY_CURRENT_USER\` + regPath[5:]
+	} else if strings.HasPrefix(strings.ToUpper(regPath), `HKLM\`) {
+		regPath = `HKEY_LOCAL_MACHINE\` + regPath[5:]
+	}
+
+	cmd := exec.Command("reg.exe", "export", regPath, backupFile, "/y")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("reg export backup failed: %v (%s)", err, strings.TrimSpace(string(out)))
+	}
+	return backupFile, nil
+}
+
+// SafeDeleteRegistryKey exports a .reg backup first, logs to history, and only then removes the key.
+func SafeDeleteRegistryKey(fullKeyPath string) error {
+	root, subKeyPath, err := ValidateCleanRegistryPath(fullKeyPath)
+	if err != nil {
+		return err
+	}
+
+	// Verify key exists before backing up
+	k, err := registry.OpenKey(root, subKeyPath, registry.READ)
+	if err != nil {
+		return nil // already absent
+	}
+	k.Close()
+
+	backupFile, err := exportRegistryBackup(fullKeyPath)
+	if err != nil {
+		return fmt.Errorf("aborting registry deletion because backup failed: %w", err)
+	}
+
+	if err := deleteKeyRecursively(root, subKeyPath); err != nil {
+		return err
+	}
+
+	_ = appendHistory(HistoryEntry{
+		ID:        fmt.Sprintf("regclean-%d", time.Now().UnixNano()),
+		Time:      time.Now().Format(time.RFC3339),
+		Title:     "Cleaned registry key: " + filepath.Base(subKeyPath),
+		Summary:   fmt.Sprintf("Exported .reg backup to %s before removal", backupFile),
+		Status:    "applied",
+		Restorable: false,
+	})
+	return nil
 }
 
 func deleteKeyRecursively(root registry.Key, subPath string) error {
@@ -120,7 +253,6 @@ func deleteKeyRecursively(root registry.Key, subPath string) error {
 		}
 	}
 
-	// Delete the key itself
 	parentPath := filepath.Dir(subPath)
 	keyName := filepath.Base(subPath)
 

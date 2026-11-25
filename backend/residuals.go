@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
+	"time"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -49,32 +51,73 @@ type ResidualReport struct {
 
 // CleanResult reports the outcome of a cleanup operation.
 type CleanResult struct {
-	FreedBytes          uint64   `json:"freedBytes"`
-	FreedSizeFormatted  string   `json:"freedSizeFormatted"`
-	DeletedFilesCount   int      `json:"deletedFilesCount"`
-	DeletedKeysCount    int      `json:"deletedKeysCount"`
-	Errors              []string `json:"errors"`
+	FreedBytes         uint64   `json:"freedBytes"`
+	FreedSizeFormatted string   `json:"freedSizeFormatted"`
+	DeletedFilesCount  int      `json:"deletedFilesCount"`
+	DeletedKeysCount   int      `json:"deletedKeysCount"`
+	Errors             []string `json:"errors"`
 }
 
-var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9]+`)
+var (
+	residualCacheMu sync.Mutex
+	residualCache   = make(map[string]ResidualItem)
+)
 
-// sanitizeName extracts clean tokens for path discovery.
-func sanitizeName(name string) []string {
-	clean := strings.ToLower(name)
-	var tokens []string
-	tokens = append(tokens, clean)
+var versionSuffixRegex = regexp.MustCompile(`(?i)\s+(v?\d+(\.\d+)+|\(\s*x(64|86)\s*\)|\d+-bit).*$`)
 
-	// Strip version numbers e.g. "CapCut 9.6" -> "CapCut"
-	tokens = append(tokens, nonAlphanumericRegex.ReplaceAllString(clean, ""))
+var genericVendorTokens = map[string]bool{
+	"microsoft": true, "windows": true, "google": true, "adobe": true,
+	"intel": true, "nvidia": true, "amd": true, "apple": true,
+	"oracle": true, "python": true, "java": true, "asus": true,
+	"dell": true, "lenovo": true, "hp": true, "razer": true,
+	"logitech": true, "common": true, "system": true, "update": true,
+	"updater": true, "launcher": true, "desktop": true, "helper": true,
+	"service": true, "client": true, "runtime": true, "redistributable": true,
+	"program": true, "software": true, "app": true, "tools": true,
+}
 
-	parts := strings.Fields(clean)
-	if len(parts) > 1 {
-		tokens = append(tokens, parts[0])
+// candidateAppSubpaths builds strict, non-generic folder/registry subpaths for an app.
+// It never guesses using a bare first word or generic vendor name.
+func candidateAppSubpaths(app InstalledApp) []string {
+	var out []string
+	seen := make(map[string]bool)
+	add := func(s string) {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return
+		}
+		low := strings.ToLower(s)
+		if genericVendorTokens[low] || protectedFolderNames[low] {
+			return
+		}
+		if len(s) < 4 && !strings.EqualFold(s, strings.TrimSpace(app.Name)) {
+			return
+		}
+		if !seen[low] {
+			seen[low] = true
+			out = append(out, s)
+		}
 	}
-	return tokens
+
+	rawName := strings.TrimSpace(app.Name)
+	add(rawName)
+
+	stripped := strings.TrimSpace(versionSuffixRegex.ReplaceAllString(rawName, ""))
+	add(stripped)
+
+	pub := strings.TrimSpace(app.Publisher)
+	if pub != "" && rawName != "" && !strings.EqualFold(pub, rawName) {
+		add(filepath.Join(pub, rawName))
+		if stripped != "" && stripped != rawName {
+			add(filepath.Join(pub, stripped))
+		}
+	}
+
+	return out
 }
 
 // ScanResiduals performs an in-depth audit of leftover files, directories, models, and registry keys for an app.
+// All items default to IsSelected: false so the user must explicitly opt-in before any cleanup.
 func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 	report := ResidualReport{
 		AppID:   app.ID,
@@ -90,6 +133,9 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 		for _, ps := range prof.PathSpecs {
 			expanded := ExpandPath(ps)
 			if seenPaths[strings.ToLower(expanded)] {
+				continue
+			}
+			if err := ValidateCleanPath(expanded); err != nil {
 				continue
 			}
 
@@ -115,7 +161,7 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 						SizeFormatted: FormatBytes(bytes),
 						ItemCount:     count,
 						Description:   prof.Description,
-						IsSelected:    true,
+						IsSelected:    false,
 						IsRegistry:    false,
 					}
 					items = append(items, item)
@@ -125,7 +171,7 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 		}
 	}
 
-	// 2. Check AppData, LocalAppData, and ProgramData directories
+	// 2. Check AppData, LocalAppData, and ProgramData directories (strict subpaths only)
 	candidateBases := []struct {
 		base     string
 		catTitle string
@@ -135,22 +181,19 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 		{os.Getenv("ProgramData"), "System ProgramData Storage"},
 	}
 
-	nameTokens := sanitizeName(app.Name)
-	if app.Publisher != "" {
-		nameTokens = append(nameTokens, strings.ToLower(app.Publisher))
-	}
+	subpaths := candidateAppSubpaths(app)
 
 	for _, cb := range candidateBases {
 		if cb.base == "" {
 			continue
 		}
-		for _, tok := range nameTokens {
-			if len(tok) < 3 {
-				continue
-			}
-			targetDir := filepath.Join(cb.base, tok)
+		for _, sub := range subpaths {
+			targetDir := filepath.Join(cb.base, sub)
 			lowTarget := strings.ToLower(targetDir)
 			if seenPaths[lowTarget] {
+				continue
+			}
+			if err := ValidateCleanPath(targetDir); err != nil {
 				continue
 			}
 
@@ -168,7 +211,7 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 						SizeFormatted: FormatBytes(bytes),
 						ItemCount:     count,
 						Description:   "Application data, configuration files, local databases, and temporary caches.",
-						IsSelected:    true,
+						IsSelected:    false,
 						IsRegistry:    false,
 					})
 				}
@@ -176,11 +219,11 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 		}
 	}
 
-	// 3. Check InstallLocation remnants (if uninstaller didn't wipe directory completely)
+	// 3. Check InstallLocation remnants
 	if app.InstallLocation != "" {
 		loc := app.InstallLocation
 		lowLoc := strings.ToLower(loc)
-		if !seenPaths[lowLoc] {
+		if !seenPaths[lowLoc] && ValidateCleanPath(loc) == nil {
 			if fi, err := os.Stat(loc); err == nil && fi.IsDir() {
 				seenPaths[lowLoc] = true
 				bytes, count := ComputeFolderSize(loc, 5000)
@@ -195,7 +238,7 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 						SizeFormatted: FormatBytes(bytes),
 						ItemCount:     count,
 						Description:   "Main installation folder containing leftover binaries, libraries, or uninstaller logs.",
-						IsSelected:    true,
+						IsSelected:    false,
 						IsRegistry:    false,
 					})
 				}
@@ -203,7 +246,7 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 		}
 	}
 
-	// 4. Check Registry remnants
+	// 4. Check Registry remnants (strict subpaths only)
 	regRoots := []struct {
 		root     registry.Key
 		rootName string
@@ -213,14 +256,14 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 	}
 
 	for _, rr := range regRoots {
-		for _, tok := range nameTokens {
-			if len(tok) < 3 {
-				continue
-			}
-			subPath := `Software\` + tok
+		for _, sub := range subpaths {
+			subPath := `Software\` + sub
 			fullKey := rr.rootName + `\` + subPath
 			lowKey := strings.ToLower(fullKey)
 			if seenPaths[lowKey] {
+				continue
+			}
+			if _, _, err := ValidateCleanRegistryPath(fullKey); err != nil {
 				continue
 			}
 
@@ -241,14 +284,14 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 					SizeFormatted: fmt.Sprintf("%d values, %d subkeys", len(valNames), len(subKeys)),
 					ItemCount:     len(valNames) + len(subKeys),
 					Description:   "Application preferences, licensing tokens, file associations, and window positions.",
-					IsSelected:    true,
+					IsSelected:    false,
 					IsRegistry:    true,
 				})
 			}
 		}
 	}
 
-	// 5. Check dead Run / Autostart keys
+	// 5. Check dead Run / Autostart keys (strict path or exact app-name match only)
 	runRoots := []struct {
 		root     registry.Key
 		rootName string
@@ -257,6 +300,10 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 		{registry.CURRENT_USER, "HKCU", `Software\Microsoft\Windows\CurrentVersion\Run`},
 		{registry.LOCAL_MACHINE, "HKLM", `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`},
 	}
+	lowInstall := strings.ToLower(app.InstallLocation)
+	lowExe := strings.ToLower(app.ExePath)
+	exactName := strings.ToLower(strings.TrimSpace(app.Name))
+
 	for _, rr := range runRoots {
 		k, err := registry.OpenKey(rr.root, rr.path, registry.READ)
 		if err == nil {
@@ -267,11 +314,12 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 				lowCmd := strings.ToLower(cmd)
 
 				matched := false
-				for _, tok := range nameTokens {
-					if strings.Contains(lowN, tok) || strings.Contains(lowCmd, tok) {
-						matched = true
-						break
-					}
+				if lowExe != "" && strings.Contains(lowCmd, lowExe) {
+					matched = true
+				} else if lowInstall != "" && len(lowInstall) > 6 && strings.Contains(lowCmd, lowInstall) {
+					matched = true
+				} else if exactName != "" && !genericVendorTokens[exactName] && len(exactName) >= 4 && strings.EqualFold(lowN, exactName) {
+					matched = true
 				}
 
 				if matched {
@@ -286,7 +334,7 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 						SizeFormatted: "Autostart Entry",
 						ItemCount:     1,
 						Description:   fmt.Sprintf("Startup command launching: %s", cmd),
-						IsSelected:    true,
+						IsSelected:    false,
 						IsRegistry:    true,
 					})
 				}
@@ -302,23 +350,38 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 	report.HeavySizeFormatted = FormatBytes(report.HeavySizeBytes)
 	report.Items = items
 
+	// Cache authoritative items in Go so CleanResidualItems never trusts UI-supplied paths
+	residualCacheMu.Lock()
+	for _, it := range items {
+		residualCache[it.ID] = it
+	}
+	residualCacheMu.Unlock()
+
 	return report, nil
 }
 
 // CleanResidualItems safely deletes the selected residual files (to Recycle Bin) and registry keys.
+// It looks up every requested item by ID from the backend scan cache and validates its path before touching disk or registry.
 func CleanResidualItems(items []ResidualItem) (CleanResult, error) {
 	var result CleanResult
 
-	for _, item := range items {
-		if !item.IsSelected {
+	for _, reqItem := range items {
+		if !reqItem.IsSelected {
 			continue
 		}
 
-		if item.IsRegistry {
-			// Registry deletion
-			if item.Category == CategoryAutostart {
-				// Dead run key: parse parent and value name
-				parts := strings.Split(item.Path, `\`)
+		// Look up authoritative item from backend cache; never trust paths from the UI
+		residualCacheMu.Lock()
+		authItem, ok := residualCache[reqItem.ID]
+		residualCacheMu.Unlock()
+		if !ok {
+			result.Errors = append(result.Errors, fmt.Sprintf("Rejected unverified cleanup item %q: please rescan first", reqItem.ID))
+			continue
+		}
+
+		if authItem.IsRegistry {
+			if authItem.Category == CategoryAutostart {
+				parts := strings.Split(authItem.Path, `\`)
 				if len(parts) >= 3 {
 					valName := parts[len(parts)-1]
 					keyPath := strings.Join(parts[1:len(parts)-1], `\`)
@@ -328,30 +391,48 @@ func CleanResidualItems(items []ResidualItem) (CleanResult, error) {
 					} else {
 						root = registry.LOCAL_MACHINE
 					}
+
+					// Back up the Run key before removing the value
+					parentKeyPath := strings.Join(parts[:len(parts)-1], `\`)
+					backupFile, err := exportRegistryBackup(parentKeyPath)
+					if err != nil {
+						result.Errors = append(result.Errors, fmt.Sprintf("Aborted Run-key removal (%s): backup failed: %v", authItem.Path, err))
+						continue
+					}
+
 					k, err := registry.OpenKey(root, keyPath, registry.SET_VALUE)
 					if err == nil {
-						k.DeleteValue(valName)
+						if delErr := k.DeleteValue(valName); delErr != nil {
+							result.Errors = append(result.Errors, fmt.Sprintf("Registry value error on %s: %v", authItem.Path, delErr))
+						} else {
+							result.DeletedKeysCount++
+							_ = appendHistory(HistoryEntry{
+								ID:         fmt.Sprintf("runclean-%d", time.Now().UnixNano()),
+								Time:       time.Now().Format(time.RFC3339),
+								Title:      "Removed orphaned Run entry: " + valName,
+								Summary:    fmt.Sprintf("Backed up Run key to %s before removing %q", backupFile, valName),
+								Status:     "applied",
+								Restorable: false,
+							})
+						}
 						k.Close()
-						result.DeletedKeysCount++
 					}
 				}
 			} else {
-				// Whole registry key
-				err := SafeDeleteRegistryKey(item.Path)
+				err := SafeDeleteRegistryKey(authItem.Path)
 				if err != nil {
-					result.Errors = append(result.Errors, fmt.Sprintf("Registry error on %s: %v", item.Path, err))
+					result.Errors = append(result.Errors, fmt.Sprintf("Registry error on %s: %v", authItem.Path, err))
 				} else {
 					result.DeletedKeysCount++
 				}
 			}
 		} else {
-			// File or directory deletion: Send to Recycle Bin!
-			err := SafeRecyclePath(item.Path)
+			err := SafeRecyclePath(authItem.Path)
 			if err != nil {
-				result.Errors = append(result.Errors, fmt.Sprintf("File error on %s: %v", item.Path, err))
+				result.Errors = append(result.Errors, fmt.Sprintf("Recycle Bin error on %s: %v", authItem.Path, err))
 			} else {
-				result.FreedBytes += item.SizeBytes
-				result.DeletedFilesCount += item.ItemCount
+				result.FreedBytes += authItem.SizeBytes
+				result.DeletedFilesCount += authItem.ItemCount
 			}
 		}
 	}
