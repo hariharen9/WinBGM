@@ -2,6 +2,18 @@
 
 const CHANGEABLE = ['service', 'run', 'folder', 'task', 'shellex'];
 
+function renderAppIcon(name, letter, paths, extraClass = '', extraStyle = '') {
+  const list = Array.isArray(paths) ? paths : [paths];
+  for (const p of list) {
+    if (!p) continue;
+    const uri = appIconCache[p.toLowerCase()];
+    if (uri) {
+      return `<img class="product-icon-img ${extraClass}" src="${uri}" alt="" style="${extraStyle}">`;
+    }
+  }
+  return `<div class="product-icon ${extraClass}" style="${iconStyle(name)};${extraStyle}">${esc(letter || (name || 'A').slice(0, 1).toUpperCase())}</div>`;
+}
+
 function render() {
   if (!inv) return;
   $('machine-name').textContent = inv.machine || 'This PC';
@@ -78,8 +90,9 @@ function renderApps() {
     const connCount = (a.connections || []).length;
     const netBadge = connCount > 0 ? `<span class="badge ${a.telemetryCount > 0 ? 'amber' : 'green'}" style="font-size:10px;padding:1px 6px;margin-left:4px" title="${a.telemetryCount > 0 ? a.telemetryCount + ' telemetry endpoint(s) detected' : 'Active network sockets'}">🌐 ${connCount}</span>` : '';
     const reviewBadge = a.review ? `<span class="state-text review">Review</span>` : a.running ? `<span class="state-text">Running</span>` : `<span class="state-text stopped">Not running</span>`;
+    const exeP = (a.components || []).find(c => c.exePath)?.exePath;
     return `<button class="app-row ${a.id === sel ? 'selected' : ''}" data-id="${esc(a.id)}">
-      <div class="app-cell"><div class="app-name-wrap"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="app-name">${esc(a.name)}${ramBadge}${netBadge}</div><div class="app-publisher">${esc(a.publisher || 'Publisher unknown')}</div></div></div></div>
+      <div class="app-cell"><div class="app-name-wrap">${renderAppIcon(a.name, a.letter, exeP)}<div style="min-width:0"><div class="app-name">${esc(a.name)}${ramBadge}${netBadge}</div><div class="app-publisher">${esc(a.publisher || 'Publisher unknown')}</div></div></div></div>
       <div class="app-cell cell-secondary">${a.components.length}</div>
       <div class="app-cell">${reviewBadge}</div>
       <div class="app-cell behavior">${esc(a.behavior)}<small>${esc(a.behaviorNote)}</small></div></button>`;
@@ -140,8 +153,9 @@ function renderDetail(a) {
   }
   const ver = a.signature === 'verified';
   const ramTag = a.ramFormatted ? `<span class="small-tag good"><i data-lucide="cpu" style="width:11px;height:11px;margin-right:4px"></i>${esc(a.ramFormatted)} RAM</span>` : '';
+  const detailExe = (a.components || []).find(c => c.exePath)?.exePath;
   h.innerHTML = `
-  <div class="detail-head"><div class="product-icon detail-app-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div style="min-width:0"><div class="detail-app-name">${esc(a.name)}</div><div class="detail-publisher">${esc(a.publisher || 'Publisher unknown')}</div>
+  <div class="detail-head">${renderAppIcon(a.name, a.letter, detailExe, 'detail-app-icon')}<div style="min-width:0"><div class="detail-app-name">${esc(a.name)}</div><div class="detail-publisher">${esc(a.publisher || 'Publisher unknown')}</div>
    <div class="detail-tags"><span class="small-tag ${ver ? 'good' : ''}"><i data-lucide="${ver ? 'shield-check' : 'shield-alert'}" style="width:11px;height:11px;margin-right:4px"></i>${ver ? 'Verified publisher' : a.signature === 'unverified' ? 'Signature not verified' : 'Signature unknown'}</span>${ramTag}<span class="small-tag">${a.components.length} component${a.components.length === 1 ? '' : 's'}</span>${a.review ? '<span class="small-tag review">Review</span>' : ''}</div></div></div>
   <div class="detail-section"><div class="detail-section-title">Background components</div>
    ${a.components.map(c => {
@@ -392,7 +406,8 @@ function renderOverview() {
   const running = A.filter(a => a.running).sort((a, b) => b.components.length - a.components.length).slice(0, 4);
   const row = a => {
     const ramBadge = a.ramFormatted ? `<span class="badge blue" style="font-size:10px;padding:1px 5px;margin-left:6px">${esc(a.ramFormatted)}</span>` : '';
-    return `<div class="overview-row"><div class="product-icon" style="${iconStyle(a.name)}">${esc(a.letter)}</div><div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}${ramBadge}</div><div class="overview-row-sub">${esc(a.publisher || 'Publisher unknown')} · ${a.components.length} component${a.components.length === 1 ? '' : 's'}</div></div><div class="overview-row-end"><span class="state-text ${a.running ? '' : 'stopped'}">${a.running ? 'Running' : 'Not running'}</span></div></div>`;
+    const rowExe = (a.components || []).find(c => c.exePath)?.exePath;
+    return `<div class="overview-row">${renderAppIcon(a.name, a.letter, rowExe)}<div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}${ramBadge}</div><div class="overview-row-sub">${esc(a.publisher || 'Publisher unknown')} · ${a.components.length} component${a.components.length === 1 ? '' : 's'}</div></div><div class="overview-row-end"><span class="state-text ${a.running ? '' : 'stopped'}">${a.running ? 'Running' : 'Not running'}</span></div></div>`;
   };
   const revRow = a => {
     const vtComp = a.components.find(c => c.virusTotalURL);
@@ -899,7 +914,7 @@ function renderUninstaller() {
       <tr class="clickable" data-id="uninst_${esc(a.id)}" onclick="rowToggle(event, renderUninstaller)">
         <td>
           <div style="display:flex;align-items:center;gap:10px">
-            <div class="product-icon" style="${iconStyle(a.name)};width:26px;height:26px;font-size:10px;flex:none">${esc(letter)}</div>
+            ${renderAppIcon(a.name, letter, [a.displayIcon, a.exePath], '', 'width:26px;height:26px;font-size:10px;flex:none')}
             <div style="min-width:0">
               <div style="font-weight:600;font-size:12px;color:var(--text);display:flex;align-items:center;flex-wrap:wrap">
                 ${esc(a.name)}
@@ -1095,7 +1110,7 @@ function renderLiveProcesses() {
       <tr class="clickable" data-id="${esc(rowId)}" onclick="rowToggle(event, renderLiveProcesses)">
         <td>
           <div style="display:flex;align-items:center;gap:10px">
-            <div class="product-icon" style="${iconStyle(g.name)};width:26px;height:26px;font-size:10px;flex:none">${esc(letter)}</div>
+            ${renderAppIcon(g.name, letter, g.exePath, '', 'width:26px;height:26px;font-size:10px;flex:none')}
             <div style="min-width:0">
               <div style="font-weight:600;font-size:12px;color:var(--text);display:flex;align-items:center;flex-wrap:wrap">
                 ${esc(g.name)}${countTag}${ecoTag}${frozenTag}${netTag}${protTag}

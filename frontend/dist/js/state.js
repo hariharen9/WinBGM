@@ -204,6 +204,7 @@ const telemetryHistory = {
   net: []
 };
 let lockResults = [];
+const appIconCache = {}; // lowercase path/spec -> data:image/png;base64,... or ''
 
 
 function sigText(c) {

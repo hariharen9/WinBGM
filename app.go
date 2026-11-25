@@ -526,3 +526,8 @@ func (a *App) BrowseForLockedFile() (string, error) {
 	})
 }
 
+// GetAppIcons extracts 32x32 PNG icons for a batch of executable or icon paths.
+func (a *App) GetAppIcons(paths []string) map[string]string {
+	return backend.GetAppIcons(paths)
+}
+

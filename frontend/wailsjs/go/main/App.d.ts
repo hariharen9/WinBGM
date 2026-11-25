@@ -33,6 +33,8 @@ export function FindLockingProcesses(arg1:string):Promise<Array<backend.LockingP
 
 export function GetAlwaysAdmin():Promise<boolean>;
 
+export function GetAppIcons(arg1:Array<string>):Promise<Record<string, string>>;
+
 export function GetBootProfile():Promise<backend.BootProfile>;
 
 export function GetFileVirusTotalURL(arg1:string):Promise<string>;

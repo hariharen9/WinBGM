@@ -27,6 +27,7 @@ async function doScan() {
     });
     $('scan-status').textContent = 'Scanned ' + new Date(inv.scannedAt).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + (inv.durationMs ? ' · ' + (inv.durationMs / 1000).toFixed(1) + 's' : '');
     render();
+    fetchInventoryIcons();
   } catch (e) {
     $('scan-status').textContent = 'Scan failed';
     toast('Scan failed: ' + (e && e.message ? e.message : e));
@@ -744,6 +745,7 @@ async function loadInstalledApps() {
   if (badge) badge.textContent = installedApps.length || '';
 
   renderUninstaller();
+  fetchUninstallerIcons();
 }
 
 async function scanAppResiduals(appId) {
@@ -1077,6 +1079,7 @@ async function loadLiveProcesses() {
   const nav = $('nav-processes');
   if (nav) nav.textContent = liveProcessGroups.length || '';
   if (typeof renderLiveProcesses === 'function') renderLiveProcesses();
+  fetchProcessIcons();
 }
 
 async function toggleGroupEcoMode(groupId, enable) {
@@ -1222,6 +1225,75 @@ async function unlockAction(pid, kind) {
   } catch (e) {
     toast('Action failed: ' + e);
   }
+}
+
+// --- Native Windows App Icon Extraction ---
+
+async function fetchMissingIcons(paths, onDone) {
+  const a = api();
+  if (!a || !a.GetAppIcons) return;
+  const missing = [];
+  const seen = new Set();
+  for (const p of paths) {
+    if (!p) continue;
+    const low = p.toLowerCase();
+    if (seen.has(low) || Object.prototype.hasOwnProperty.call(appIconCache, low)) continue;
+    seen.add(low);
+    missing.push(p);
+  }
+  if (missing.length === 0) return;
+
+  // Mark as pending so concurrent calls don't duplicate work
+  missing.forEach(p => { appIconCache[p.toLowerCase()] = ''; });
+
+  try {
+    const res = await a.GetAppIcons(missing);
+    let updated = false;
+    if (res) {
+      for (const [k, uri] of Object.entries(res)) {
+        if (uri) {
+          appIconCache[k.toLowerCase()] = uri;
+          updated = true;
+        }
+      }
+    }
+    if (updated && onDone) onDone();
+  } catch (e) {
+    console.error('Icon extraction failed:', e);
+  }
+}
+
+function fetchInventoryIcons() {
+  if (!inv || !inv.apps) return;
+  const paths = [];
+  inv.apps.forEach(app => {
+    const p = (app.components || []).find(c => c.exePath)?.exePath;
+    if (p) paths.push(p);
+  });
+  fetchMissingIcons(paths, () => {
+    if (page === 'applications') renderApps();
+    if (page === 'overview') renderOverview();
+  });
+}
+
+function fetchUninstallerIcons() {
+  if (!installedApps || !installedApps.length) return;
+  const paths = [];
+  installedApps.forEach(app => {
+    if (app.displayIcon) paths.push(app.displayIcon);
+    if (app.exePath) paths.push(app.exePath);
+  });
+  fetchMissingIcons(paths, () => {
+    if (page === 'uninstaller') renderUninstaller();
+  });
+}
+
+function fetchProcessIcons() {
+  if (!liveProcessGroups || !liveProcessGroups.length) return;
+  const paths = liveProcessGroups.map(g => g.exePath).filter(Boolean);
+  fetchMissingIcons(paths, () => {
+    if (page === 'processes') renderLiveProcesses();
+  });
 }
 
 
