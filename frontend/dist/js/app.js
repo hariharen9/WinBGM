@@ -350,6 +350,16 @@ document.addEventListener('keydown', e => {
   }
 });
 
+function openExternalUrl(e, url) {
+  if (e) e.preventDefault();
+  if (window.runtime && window.runtime.BrowserOpenURL) {
+    window.runtime.BrowserOpenURL(url);
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+  return false;
+}
+
 // Bootstrap
 applyTheme(currentTheme);
 applyAccent(currentAccent);

@@ -440,6 +440,72 @@
   color: var(--muted);
   margin-top: 2px;
 }
+.creator-card {
+  margin-top: 10px;
+  align-items: flex-start;
+}
+.creator-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.creator-avatar svg {
+  width: 20px;
+  height: 20px;
+}
+.creator-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.creator-role-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.creator-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.creator-link-btn,
+.creator-coffee-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 5px 10px;
+  text-decoration: none;
+}
+.creator-link-btn svg,
+.creator-coffee-btn svg {
+  width: 13px;
+  height: 13px;
+}
+.creator-coffee-btn {
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+.creator-coffee-btn:hover {
+  background: rgba(245, 158, 11, 0.24);
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fbbf24;
+}
 
 /* Accent Swatches & Theme Selector Controls */
 .accent-picker {
