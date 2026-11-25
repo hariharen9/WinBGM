@@ -49,6 +49,8 @@ export function GetPowerReport():Promise<backend.PowerReport>;
 
 export function GetSentinelAlerts():Promise<Array<backend.SentinelAlert>>;
 
+export function GetSystemAbout():Promise<backend.SystemAboutInfo>;
+
 export function GracefulCloseProcess(arg1:number):Promise<void>;
 
 export function History():Promise<Array<backend.HistoryEntry>>;

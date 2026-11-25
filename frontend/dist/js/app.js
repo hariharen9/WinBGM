@@ -188,8 +188,16 @@ $('confirm-modal').addEventListener('click', e => { if (e.target === $('confirm-
 if ($('residual-modal')) {
   $('residual-modal').addEventListener('click', e => { if (e.target === $('residual-modal')) closeResidualModal(); });
 }
+if ($('sysabout-modal')) {
+  $('sysabout-modal').addEventListener('click', e => { if (e.target === $('sysabout-modal')) closeSystemAboutModal(); });
+}
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  if ($('sysabout-modal') && $('sysabout-modal').classList.contains('show')) {
+    e.preventDefault();
+    closeSystemAboutModal();
+    return;
+  }
   if ($('residual-modal') && $('residual-modal').classList.contains('show')) {
     e.preventDefault();
     closeResidualModal();
@@ -349,6 +357,163 @@ document.addEventListener('keydown', e => {
     }
   }
 });
+
+let lastSystemAbout = null;
+
+function formatDriveBytes(b) {
+  const tb = 1024 ** 4;
+  const gb = 1024 ** 3;
+  if (b >= tb) return (b / tb).toFixed(2) + ' TB';
+  return (b / gb).toFixed(1) + ' GB';
+}
+
+async function openSystemAboutModal() {
+  const modal = $('sysabout-modal');
+  const body = $('sysabout-body');
+  const sub = $('sysabout-subtitle');
+  if (!modal || !body) return;
+
+  modal.classList.add('show');
+  if (!lastSystemAbout) {
+    body.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-2); font-size: 12px;">Reading hardware &amp; Windows specifications…</div>';
+  }
+  try {
+    const info = await window.go.main.App.GetSystemAbout();
+    lastSystemAbout = info;
+    $('sysabout-title').textContent = info.deviceName || 'This PC';
+    const board = [info.manufacturer, info.motherboard].filter(Boolean).join(' · ');
+    sub.textContent = board ? `${board} · ${info.edition || 'Windows'}` : (info.edition || 'Windows');
+
+    const cpuSub = [info.processorSpeed, info.logicalCores ? `${info.logicalCores} logical processors` : ''].filter(Boolean).join(' · ');
+    const ramDisplay = info.ramSummary || 'Unknown';
+    const gpuVal = info.gpuVram || 'Integrated';
+    const gpuSub = info.gpuName || 'Display adapter';
+
+    const deviceRows = [
+      ['Device name', info.deviceName],
+      ['Motherboard', board],
+      ['Processor', info.processorName + (info.processorSpeed ? ` (${info.processorSpeed})` : '')],
+      ['Installed RAM', info.ramSummary + (info.ramSpeed ? ` (${info.ramSpeed.replace(/^Speed:\s*/i, '')})` : '')],
+      ['Graphics card', info.gpuName + (info.gpuVram ? ` (${info.gpuVram})` : '')],
+      ['Storage', info.storageUsed || info.storageTotal],
+      ['Device ID', info.deviceId],
+      ['Product ID', info.productId],
+      ['System type', info.systemType],
+    ].filter(([, v]) => v);
+
+    const winRows = [
+      ['Edition', info.edition],
+      ['Version', info.version],
+      ['Installed on', info.installedOn],
+      ['OS build', info.osBuild],
+      ['Experience', info.experience],
+    ].filter(([, v]) => v);
+
+    const drivesHtml = (info.drives || []).map(d => {
+      const pct = d.total > 0 ? Math.min(100, Math.round((d.used / d.total) * 100)) : 0;
+      return `
+        <div class="sysabout-drive-row">
+          <strong style="color: var(--text)">${esc(d.letter)}</strong>
+          <div class="sysabout-drive-bar"><div class="sysabout-drive-fill" style="width:${pct}%"></div></div>
+          <span style="text-align:right; color: var(--text-2)">${formatDriveBytes(d.used)} / ${formatDriveBytes(d.total)}</span>
+        </div>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div class="sysabout-cards">
+        <div class="sysabout-hw-card">
+          <div class="sysabout-hw-label"><i data-lucide="cpu"></i> Processor</div>
+          <div class="sysabout-hw-val">${esc(info.processorName || 'Unknown')}</div>
+          <div class="sysabout-hw-sub">${esc(cpuSub)}</div>
+        </div>
+        <div class="sysabout-hw-card">
+          <div class="sysabout-hw-label"><i data-lucide="memory-stick"></i> Installed RAM</div>
+          <div class="sysabout-hw-val">${esc(ramDisplay)}</div>
+          <div class="sysabout-hw-sub">${esc(info.ramSpeed || 'System memory')}</div>
+        </div>
+        <div class="sysabout-hw-card">
+          <div class="sysabout-hw-label"><i data-lucide="monitor"></i> Graphics card</div>
+          <div class="sysabout-hw-val">${esc(gpuVal)}</div>
+          <div class="sysabout-hw-sub">${esc(gpuSub)}</div>
+        </div>
+        <div class="sysabout-hw-card">
+          <div class="sysabout-hw-label"><i data-lucide="hard-drive"></i> Storage</div>
+          <div class="sysabout-hw-val">${esc(info.storageTotal || 'Unknown')}</div>
+          <div class="sysabout-hw-sub">${esc(info.storageUsed || '')}</div>
+        </div>
+      </div>
+
+      <div class="sysabout-section">
+        <div class="sysabout-section-head">
+          <div class="sysabout-section-title"><i data-lucide="info"></i> Device specifications</div>
+          <button class="win-btn" style="padding: 3px 10px; font-size: 11px" onclick="copySystemAboutSection('device')">Copy</button>
+        </div>
+        <div class="sysabout-grid">
+          ${deviceRows.map(([k, v]) => `<div class="sysabout-k">${esc(k)}</div><div class="sysabout-v">${esc(v)}</div>`).join('')}
+        </div>
+      </div>
+
+      <div class="sysabout-section">
+        <div class="sysabout-section-head">
+          <div class="sysabout-section-title"><i data-lucide="layout-grid"></i> Windows specifications</div>
+          <button class="win-btn" style="padding: 3px 10px; font-size: 11px" onclick="copySystemAboutSection('windows')">Copy</button>
+        </div>
+        <div class="sysabout-grid">
+          ${winRows.map(([k, v]) => `<div class="sysabout-k">${esc(k)}</div><div class="sysabout-v">${esc(v)}</div>`).join('')}
+        </div>
+      </div>
+
+      ${drivesHtml ? `
+      <div class="sysabout-section">
+        <div class="sysabout-section-head" style="margin-bottom: 8px">
+          <div class="sysabout-section-title"><i data-lucide="hard-drive"></i> Local drives</div>
+        </div>
+        <div class="sysabout-drives">${drivesHtml}</div>
+      </div>` : ''}
+    `;
+
+    if (window.lucide && window.lucide.createIcons) {
+      window.lucide.createIcons({ nodes: [body] });
+    }
+  } catch (err) {
+    body.innerHTML = `<div style="padding: 16px; color: #ef4444; font-size: 12px;">Failed to load system details: ${esc(String(err))}</div>`;
+  }
+}
+
+function closeSystemAboutModal() {
+  const modal = $('sysabout-modal');
+  if (modal) modal.classList.remove('show');
+}
+
+function copySystemAboutSection(section) {
+  if (!lastSystemAbout) return;
+  const info = lastSystemAbout;
+  let lines = [];
+  if (section === 'device') {
+    lines = [
+      `Device name\t${info.deviceName || ''}`,
+      `Motherboard\t${[info.manufacturer, info.motherboard].filter(Boolean).join(' ')}`,
+      `Processor\t${info.processorName || ''} ${info.processorSpeed ? '(' + info.processorSpeed + ')' : ''}`,
+      `Installed RAM\t${info.ramSummary || ''} ${info.ramSpeed ? '(' + info.ramSpeed + ')' : ''}`,
+      `Graphics card\t${info.gpuName || ''} ${info.gpuVram ? '(' + info.gpuVram + ')' : ''}`,
+      `Storage\t${info.storageUsed || info.storageTotal || ''}`,
+      `Device ID\t${info.deviceId || ''}`,
+      `Product ID\t${info.productId || ''}`,
+      `System type\t${info.systemType || ''}`,
+    ];
+  } else {
+    lines = [
+      `Edition\t${info.edition || ''}`,
+      `Version\t${info.version || ''}`,
+      `Installed on\t${info.installedOn || ''}`,
+      `OS build\t${info.osBuild || ''}`,
+      `Experience\t${info.experience || ''}`,
+    ];
+  }
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    toast(section === 'device' ? 'Device specifications copied' : 'Windows specifications copied');
+  });
+}
 
 function openExternalUrl(e, url) {
   if (e) e.preventDefault();

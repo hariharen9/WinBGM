@@ -531,3 +531,8 @@ func (a *App) GetAppIcons(paths []string) map[string]string {
 	return backend.GetAppIcons(paths)
 }
 
+// GetSystemAbout returns hardware, motherboard, storage, and Windows OS details.
+func (a *App) GetSystemAbout() backend.SystemAboutInfo {
+	return backend.GetSystemAbout()
+}
+

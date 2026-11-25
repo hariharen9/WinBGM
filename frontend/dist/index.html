@@ -105,7 +105,15 @@
             </button>
           </nav>
           <div class="sidebar-bottom">
-            <div class="machine-card">
+            <div
+              class="machine-card"
+              id="machine-card-btn"
+              onclick="openSystemAboutModal()"
+              onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openSystemAboutModal(); }"
+              role="button"
+              tabindex="0"
+              title="Click for full System &amp; Windows specifications"
+            >
               <div class="machine-icon"><i data-lucide="monitor"></i></div>
               <div class="machine-copy">
                 <div class="machine-name" id="machine-name">This PC</div>
@@ -1211,6 +1219,59 @@
               onclick="executeResidualClean()"
             >
               Clean Selected (<span id="residual-selected-size">0 B</span>)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System & Windows About Modal -->
+    <div class="modal-backdrop" id="sysabout-modal">
+      <div
+        class="modal sysabout-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sysabout-title"
+      >
+        <button
+          class="modal-close-btn"
+          id="sysabout-close-x"
+          onclick="closeSystemAboutModal()"
+          aria-label="Close system specifications"
+          title="Close (Esc)"
+        >
+          <i data-lucide="x"></i>
+        </button>
+        <div class="residual-header">
+          <div class="sysabout-icon-badge"><i data-lucide="monitor"></i></div>
+          <div>
+            <h2
+              class="modal-title"
+              id="sysabout-title"
+              style="margin-bottom: 2px"
+            >
+              System Specifications
+            </h2>
+            <div
+              class="modal-subtitle"
+              id="sysabout-subtitle"
+              style="font-size: 12px; color: var(--text-2)"
+            >
+              Loading device and Windows details…
+            </div>
+          </div>
+        </div>
+        <div class="residual-body sysabout-body" id="sysabout-body"></div>
+        <div class="residual-footer">
+          <div class="residual-safety-note">
+            <i data-lucide="cpu"></i> Read directly from Windows Registry &amp; Win32 firmware tables
+          </div>
+          <div class="residual-actions">
+            <button
+              class="win-btn primary"
+              onclick="closeSystemAboutModal()"
+            >
+              Done
             </button>
           </div>
         </div>

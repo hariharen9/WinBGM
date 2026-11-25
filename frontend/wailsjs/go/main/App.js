@@ -94,6 +94,10 @@ export function GetSentinelAlerts() {
   return window['go']['main']['App']['GetSentinelAlerts']();
 }
 
+export function GetSystemAbout() {
+  return window['go']['main']['App']['GetSystemAbout']();
+}
+
 export function GracefulCloseProcess(arg1) {
   return window['go']['main']['App']['GracefulCloseProcess'](arg1);
 }

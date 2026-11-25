@@ -405,6 +405,24 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class DriveUsage {
+	    letter: string;
+	    total: number;
+	    used: number;
+	    free: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DriveUsage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.letter = source["letter"];
+	        this.total = source["total"];
+	        this.used = source["used"];
+	        this.free = source["free"];
+	    }
+	}
 	
 	export class InstalledApp {
 	    id: string;
@@ -1061,6 +1079,76 @@ export namespace backend {
 	    }
 	}
 	
+	export class SystemAboutInfo {
+	    processorName: string;
+	    processorSpeed: string;
+	    logicalCores: number;
+	    ramSummary: string;
+	    ramSpeed: string;
+	    gpuName: string;
+	    gpuVram: string;
+	    storageTotal: string;
+	    storageUsed: string;
+	    deviceName: string;
+	    motherboard: string;
+	    manufacturer: string;
+	    deviceId: string;
+	    productId: string;
+	    systemType: string;
+	    drives: DriveUsage[];
+	    edition: string;
+	    version: string;
+	    installedOn: string;
+	    osBuild: string;
+	    experience: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SystemAboutInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.processorName = source["processorName"];
+	        this.processorSpeed = source["processorSpeed"];
+	        this.logicalCores = source["logicalCores"];
+	        this.ramSummary = source["ramSummary"];
+	        this.ramSpeed = source["ramSpeed"];
+	        this.gpuName = source["gpuName"];
+	        this.gpuVram = source["gpuVram"];
+	        this.storageTotal = source["storageTotal"];
+	        this.storageUsed = source["storageUsed"];
+	        this.deviceName = source["deviceName"];
+	        this.motherboard = source["motherboard"];
+	        this.manufacturer = source["manufacturer"];
+	        this.deviceId = source["deviceId"];
+	        this.productId = source["productId"];
+	        this.systemType = source["systemType"];
+	        this.drives = this.convertValues(source["drives"], DriveUsage);
+	        this.edition = source["edition"];
+	        this.version = source["version"];
+	        this.installedOn = source["installedOn"];
+	        this.osBuild = source["osBuild"];
+	        this.experience = source["experience"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	
 	
 
