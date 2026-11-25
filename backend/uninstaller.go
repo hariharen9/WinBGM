@@ -29,6 +29,8 @@ type InstalledApp struct {
 	Is64Bit             bool   `json:"is64Bit"`
 	IsSystemComponent   bool   `json:"isSystemComponent"`
 	ExePath             string `json:"exePath"`
+	Source              string `json:"source"`        // "Win32", "Scoop", "Steam"
+	InstallerType       string `json:"installerType"` // "MSI", "InnoSetup", "NSIS", "Squirrel", "InstallShield", "Winget", "Standard", "Scoop", "Steam"
 	HasHeavyProfile     bool   `json:"hasHeavyProfile"`
 	HeavyProfileKey     string `json:"heavyProfileKey"`
 	HeavyEstimatedBytes uint64 `json:"heavyEstimatedBytes"`
@@ -187,6 +189,8 @@ func ScanInstalledApps() ([]InstalledApp, UninstallerSummary, error) {
 				}
 			}
 
+			instKind, genQuiet := DetectInstallerType(strings.TrimSpace(uninstStr), strings.TrimSpace(quietUninst))
+
 			app := InstalledApp{
 				ID:                  r.rootName + "_" + subname,
 				Name:                displayName,
@@ -198,13 +202,15 @@ func ScanInstalledApps() ([]InstalledApp, UninstallerSummary, error) {
 				DisplaySize:         FormatBytes(sizeBytes),
 				InstallLocation:     cleanedLoc,
 				UninstallString:     strings.TrimSpace(uninstStr),
-				QuietUninstall:      strings.TrimSpace(quietUninst),
+				QuietUninstall:      genQuiet,
 				DisplayIcon:         displayIcon,
 				RegistryPath:        r.rootName + `\` + appKeyPath,
 				IsUserInstall:       r.isUser,
 				Is64Bit:             r.is64Bit,
 				IsSystemComponent:   isSys,
 				ExePath:             exe,
+				Source:              "Win32",
+				InstallerType:       instKind,
 				HasHeavyProfile:     hasHeavy,
 				HeavyProfileKey:     heavyKey,
 				HeavyEstimatedBytes: 0,
@@ -223,6 +229,24 @@ func ScanInstalledApps() ([]InstalledApp, UninstallerSummary, error) {
 			if isSys {
 				summary.SystemAppsCount++
 			}
+		}
+	}
+
+	// Merge Scoop and Steam packages (deduplicating against Win32 entries by name)
+	seenNames := make(map[string]bool, len(apps))
+	for _, a := range apps {
+		seenNames[strings.ToLower(a.Name)] = true
+	}
+	for _, extra := range append(scanScoopApps(), scanSteamApps()...) {
+		if seenNames[strings.ToLower(extra.Name)] {
+			continue
+		}
+		seenNames[strings.ToLower(extra.Name)] = true
+		apps = append(apps, extra)
+		summary.TotalApps++
+		summary.TotalSizeBytes += extra.SizeBytes
+		if extra.IsUserInstall {
+			summary.UserAppsCount++
 		}
 	}
 

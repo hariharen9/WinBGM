@@ -898,6 +898,9 @@ function renderUninstaller() {
       : '';
     const userBadge = a.isUserInstall ? `<span class="uninstaller-badge user">User</span>` : '';
     const sysBadge = a.isSystemComponent ? `<span class="uninstaller-badge sys">System</span>` : '';
+    const instBadge = (a.installerType && a.installerType !== 'Standard' && a.installerType !== 'Unknown')
+      ? `<span class="badge" style="font-size:9.5px;padding:1px 6px;margin-left:5px">${esc(a.installerType)}</span>`
+      : '';
     const letter = (a.name || 'A').slice(0, 2).toUpperCase();
 
     // VirusTotal button if executable exists
@@ -948,6 +951,7 @@ function renderUninstaller() {
             <div style="min-width:0">
               <div style="font-weight:600;font-size:12px;color:var(--text);display:flex;align-items:center;flex-wrap:wrap">
                 ${esc(a.name)}
+                ${instBadge}
                 ${heavyBadge}
                 ${userBadge}
                 ${sysBadge}

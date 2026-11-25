@@ -25,17 +25,20 @@ const (
 
 // ResidualItem represents a single file, folder, or registry key leftover from an application.
 type ResidualItem struct {
-	ID            string           `json:"id"`
-	Category      ResidualCategory `json:"category"`
-	CategoryTitle string           `json:"categoryTitle"`
-	Title         string           `json:"title"`
-	Path          string           `json:"path"`
-	SizeBytes     uint64           `json:"sizeBytes"`
-	SizeFormatted string           `json:"sizeFormatted"`
-	ItemCount     int              `json:"itemCount"`
-	Description   string           `json:"description"`
-	IsSelected    bool             `json:"isSelected"`
-	IsRegistry    bool             `json:"isRegistry"`
+	ID                string           `json:"id"`
+	Category          ResidualCategory `json:"category"`
+	CategoryTitle     string           `json:"categoryTitle"`
+	Title             string           `json:"title"`
+	Path              string           `json:"path"`
+	SizeBytes         uint64           `json:"sizeBytes"`
+	SizeFormatted     string           `json:"sizeFormatted"`
+	ItemCount         int              `json:"itemCount"`
+	Description       string           `json:"description"`
+	IsSelected        bool             `json:"isSelected"`
+	IsRegistry        bool             `json:"isRegistry"`
+	ConfidenceScore   int              `json:"confidenceScore"`
+	ConfidenceLevel   string           `json:"confidenceLevel"` // "Very High", "Good", "Questionable", "Low"
+	ConfidenceReasons []string         `json:"confidenceReasons"`
 }
 
 // ResidualReport contains the complete audit of leftover files, caches, and registry data for an app.
@@ -343,8 +346,9 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 		}
 	}
 
-	for _, it := range items {
-		report.TotalSizeBytes += it.SizeBytes
+	for i := range items {
+		scoreResidualConfidence(app, &items[i])
+		report.TotalSizeBytes += items[i].SizeBytes
 	}
 	report.TotalSizeFormatted = FormatBytes(report.TotalSizeBytes)
 	report.HeavySizeFormatted = FormatBytes(report.HeavySizeBytes)
@@ -358,6 +362,68 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 	residualCacheMu.Unlock()
 
 	return report, nil
+}
+
+// scoreResidualConfidence assigns a BCU-inspired ConfidenceScore and ConfidenceLevel to each leftover item.
+func scoreResidualConfidence(app InstalledApp, item *ResidualItem) {
+	score := 0
+	var reasons []string
+
+	pub := strings.TrimSpace(app.Publisher)
+	lowPath := strings.ToLower(item.Path)
+
+	switch item.Category {
+	case CategoryHeavy:
+		score += 8
+		reasons = append(reasons, "Matched curated application dependency profile (+8)")
+	case CategoryAutostart:
+		score += 7
+		reasons = append(reasons, "Explicitly referenced by app path or exact Run key (+7)")
+	case CategoryInstall:
+		score += 5
+		reasons = append(reasons, "Matches registry InstallLocation (+5)")
+		if item.ItemCount == 0 {
+			score += 4
+			reasons = append(reasons, "Folder is empty (+4)")
+		}
+	default:
+		// AppData or Registry
+		stripped := strings.TrimSpace(versionSuffixRegex.ReplaceAllString(app.Name, ""))
+		baseItem := filepath.Base(item.Path)
+		if strings.EqualFold(baseItem, strings.TrimSpace(app.Name)) || (stripped != "" && strings.EqualFold(baseItem, stripped)) {
+			score += 4
+			reasons = append(reasons, "Exact product name match (+4)")
+		} else {
+			score += 1
+			reasons = append(reasons, "Partial name match (+1)")
+		}
+
+		if pub != "" && len(pub) >= 3 && strings.Contains(lowPath, `\`+strings.ToLower(pub)+`\`) {
+			score += 4
+			reasons = append(reasons, "Nested under matching Publisher folder (+4)")
+		} else if pub != "" && !strings.EqualFold(pub, app.Name) {
+			score -= 1
+			reasons = append(reasons, "Directly under shared root without Publisher folder (-1)")
+		}
+
+		if item.ItemCount == 0 && !item.IsRegistry {
+			score += 3
+			reasons = append(reasons, "Directory is empty (+3)")
+		}
+	}
+
+	item.ConfidenceScore = score
+	item.ConfidenceReasons = reasons
+	switch {
+	case score >= 7:
+		item.ConfidenceLevel = "Very High"
+	case score >= 3:
+		item.ConfidenceLevel = "Good"
+	case score >= 0:
+		item.ConfidenceLevel = "Questionable"
+	default:
+		item.ConfidenceLevel = "Low"
+	}
 }
 
 // CleanResidualItems safely deletes the selected residual files (to Recycle Bin) and registry keys.

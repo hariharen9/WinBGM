@@ -424,6 +424,8 @@ export namespace backend {
 	    is64Bit: boolean;
 	    isSystemComponent: boolean;
 	    exePath: string;
+	    source: string;
+	    installerType: string;
 	    hasHeavyProfile: boolean;
 	    heavyProfileKey: string;
 	    heavyEstimatedBytes: number;
@@ -452,6 +454,8 @@ export namespace backend {
 	        this.is64Bit = source["is64Bit"];
 	        this.isSystemComponent = source["isSystemComponent"];
 	        this.exePath = source["exePath"];
+	        this.source = source["source"];
+	        this.installerType = source["installerType"];
 	        this.hasHeavyProfile = source["hasHeavyProfile"];
 	        this.heavyProfileKey = source["heavyProfileKey"];
 	        this.heavyEstimatedBytes = source["heavyEstimatedBytes"];
@@ -878,6 +882,9 @@ export namespace backend {
 	    description: string;
 	    isSelected: boolean;
 	    isRegistry: boolean;
+	    confidenceScore: number;
+	    confidenceLevel: string;
+	    confidenceReasons: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new ResidualItem(source);
@@ -896,6 +903,9 @@ export namespace backend {
 	        this.description = source["description"];
 	        this.isSelected = source["isSelected"];
 	        this.isRegistry = source["isRegistry"];
+	        this.confidenceScore = source["confidenceScore"];
+	        this.confidenceLevel = source["confidenceLevel"];
+	        this.confidenceReasons = source["confidenceReasons"];
 	    }
 	}
 	export class ResidualReport {

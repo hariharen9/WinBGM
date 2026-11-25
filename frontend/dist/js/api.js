@@ -899,6 +899,22 @@ function showResidualModal(report) {
   refreshIcons();
 }
 
+function selectGoodResiduals() {
+  if (!currentResidualReport) return;
+  selectedResidualIds.clear();
+  currentResidualReport.items.forEach(it => {
+    if (it.confidenceLevel === 'Very High' || it.confidenceLevel === 'Good') {
+      selectedResidualIds.add(it.id);
+    }
+  });
+  renderResidualBody();
+}
+
+function clearResidualSelection() {
+  selectedResidualIds.clear();
+  renderResidualBody();
+}
+
 function renderResidualBody() {
   if (!currentResidualReport) return;
   const items = currentResidualReport.items;
@@ -910,9 +926,16 @@ function renderResidualBody() {
     categories[it.categoryTitle].push(it);
   });
 
-  let html = '';
+  let html = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:6px;background:var(--surface-card);border:1px solid var(--border);margin-bottom:4px">
+      <span style="font-size:11px;color:var(--text-2)">Nothing is pre-selected for safety. Review confidence ratings or select safe items:</span>
+      <div style="display:flex;gap:6px;flex:none">
+        <button class="win-btn" style="height:24px;font-size:10.5px;padding:0 8px" onclick="selectGoodResiduals()">Select Good+</button>
+        <button class="win-btn subtle" style="height:24px;font-size:10.5px;padding:0 8px" onclick="clearResidualSelection()">Clear</button>
+      </div>
+    </div>
+  `;
   for (const [catTitle, catItems] of Object.entries(categories)) {
-    const isHeavyCat = catItems.some(it => it.category === 'heavy');
     html += `
       <div class="residual-category-title">
         <span>${esc(catTitle)}</span>
@@ -923,12 +946,16 @@ function renderResidualBody() {
     catItems.forEach(it => {
       const isChecked = selectedResidualIds.has(it.id);
       const isHeavy = it.category === 'heavy';
+      const conf = it.confidenceLevel || 'Good';
+      const confCls = (conf === 'Very High' || conf === 'Good') ? 'green' : conf === 'Questionable' ? 'amber' : 'red';
+      const confTip = (it.confidenceReasons || []).join(' • ');
+      const confBadge = `<span class="badge ${confCls}" style="font-size:9.5px;padding:1px 6px;margin-left:6px" title="${esc(confTip)}">${esc(conf)}</span>`;
       html += `
         <div class="residual-item-card ${isHeavy ? 'is-heavy' : ''}" onclick="toggleResidualItem('${esc(it.id)}')">
           <input type="checkbox" id="chk-${esc(it.id)}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation();toggleResidualItem('${esc(it.id)}')" style="margin-top:2px;cursor:pointer">
           <div class="residual-item-copy">
             <div class="residual-item-title-row">
-              <span class="residual-item-title">${esc(it.title)}</span>
+              <span class="residual-item-title">${esc(it.title)}${confBadge}</span>
               <span class="residual-item-size">${esc(it.sizeFormatted)}</span>
             </div>
             <div class="residual-item-path">${esc(it.path)}</div>

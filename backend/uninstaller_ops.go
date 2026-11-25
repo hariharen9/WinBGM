@@ -23,6 +23,30 @@ func LaunchUninstaller(app InstalledApp, quiet bool) (int, error) {
 		return -1, errors.New("no uninstall command string provided for this application")
 	}
 
+	// Handle Steam protocol URLs (steam://uninstall/<appid>)
+	if strings.HasPrefix(strings.ToLower(cmdStr), "steam://") {
+		c := exec.Command("cmd.exe", "/c", "start", "", cmdStr)
+		c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		if err := c.Run(); err != nil {
+			return -1, err
+		}
+		return 0, nil
+	}
+
+	// Handle Scoop / Winget CLI uninstalls via PowerShell/CMD
+	lowCmd := strings.ToLower(cmdStr)
+	if strings.HasPrefix(lowCmd, "scoop ") || strings.HasPrefix(lowCmd, "winget ") {
+		c := exec.Command("powershell.exe", "-NoProfile", "-Command", cmdStr)
+		c.SysProcAttr = &syscall.SysProcAttr{HideWindow: false}
+		if err := c.Run(); err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				return exitErr.ExitCode(), nil
+			}
+			return -1, err
+		}
+		return 0, nil
+	}
+
 	// Parse command string into executable and arguments
 	var exe string
 	var args []string

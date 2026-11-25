@@ -79,7 +79,33 @@ func TestScanResidualsOllama(t *testing.T) {
 		len(report.Items), report.TotalSizeFormatted, report.HeavySizeFormatted)
 
 	for _, it := range report.Items {
-		t.Logf("  -> [%s] %s (%s) at %s", it.Category, it.Title, it.SizeFormatted, it.Path)
+		t.Logf("  -> [%s] %s (%s) at %s [Confidence: %s (%d)]", it.Category, it.Title, it.SizeFormatted, it.Path, it.ConfidenceLevel, it.ConfidenceScore)
+	}
+}
+
+func TestDetectInstallerType(t *testing.T) {
+	k1, q1 := DetectInstallerType(`MsiExec.exe /I{12345678-1234-1234-1234-1234567890AB}`, "")
+	if k1 != "MSI" || q1 != "MsiExec.exe /X{12345678-1234-1234-1234-1234567890AB} /qn /norestart" {
+		t.Errorf("MSI detection got (%q, %q)", k1, q1)
+	}
+
+	k2, q2 := DetectInstallerType(`"C:\Users\Admin\AppData\Local\AnkerLauncher\Update.exe" --uninstall`, "")
+	if k2 != "Squirrel" || q2 == "" {
+		t.Errorf("Squirrel detection got (%q, %q)", k2, q2)
+	}
+
+	k3, q3 := DetectInstallerType(`winget uninstall --product-code Foo.Bar`, "")
+	if k3 != "Winget" || q3 != "winget uninstall --product-code Foo.Bar --silent" {
+		t.Errorf("Winget detection got (%q, %q)", k3, q3)
+	}
+}
+
+func TestConfidenceScoring(t *testing.T) {
+	app := InstalledApp{Name: "Ollama", Publisher: "Ollama Inc."}
+	item := ResidualItem{Category: CategoryHeavy, Path: `C:\Users\Admin\.ollama\models`}
+	scoreResidualConfidence(app, &item)
+	if item.ConfidenceLevel != "Very High" || item.ConfidenceScore < 7 {
+		t.Errorf("expected Very High confidence for Heavy item, got %s (%d)", item.ConfidenceLevel, item.ConfidenceScore)
 	}
 }
 
