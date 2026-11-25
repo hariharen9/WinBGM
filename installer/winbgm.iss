@@ -1,22 +1,20 @@
 ; WinBGM Inno Setup Script
-; Parameterized via /D switches from CI:
+; Parameterized via /D switches from CI (all paths must be ABSOLUTE):
 ;   /DAppVersion=1.1.0
 ;   /DArch=x64  (x64 | arm64 | x86)
-;   /DSourceExe=build\bin\WinBGM.exe
-;   /DOutputDir=.
+;   /DRepoRoot=D:\a\WinBGM\WinBGM
 ;   /DOutputFilename=WinBGM-Setup-v1.1.0-windows-x64
 
+; SourcePath = directory containing this .iss file (installer\)
+; RepoRoot defaults to one level up from the .iss file — works for local builds
+#ifndef RepoRoot
+  #define RepoRoot SourcePath + "\.."
+#endif
 #ifndef AppVersion
   #define AppVersion "1.1.0"
 #endif
 #ifndef Arch
   #define Arch "x64"
-#endif
-#ifndef SourceExe
-  #define SourceExe "build\bin\WinBGM.exe"
-#endif
-#ifndef OutputDir
-  #define OutputDir "."
 #endif
 #ifndef OutputFilename
   #define OutputFilename "WinBGM-Setup-v" + AppVersion + "-windows-" + Arch
@@ -40,14 +38,14 @@ InfoAfterFile=
 UninstallDisplayIcon={app}\WinBGM.exe
 UninstallDisplayName=WinBGM
 ; Output
-OutputDir={#OutputDir}
+OutputDir={#RepoRoot}
 OutputBaseFilename={#OutputFilename}
 ; Compression
 Compression=lzma2/max
 SolidCompression=yes
 ; Visuals
 WizardStyle=modern
-SetupIconFile=build\windows\icon.ico
+SetupIconFile={#RepoRoot}\build\windows\icon.ico
 ; Require admin for Program Files installation
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
@@ -69,7 +67,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#SourceExe}"; DestDir: "{app}"; DestName: "WinBGM.exe"; Flags: ignoreversion
+Source: "{#RepoRoot}\build\bin\WinBGM.exe"; DestDir: "{app}"; DestName: "WinBGM.exe"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\WinBGM";         Filename: "{app}\WinBGM.exe"

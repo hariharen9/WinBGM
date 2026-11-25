@@ -67,10 +67,11 @@ jobs:
         if: matrix.arch != '386'
         shell: pwsh
         run: |
-          $Tag     = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "dev" }
-          $Version = $Tag.TrimStart('v')
-          $OutFile = "WinBGM-Setup-$Tag-windows-${{ matrix.name }}"
-          $ISCC    = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          $Tag      = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "dev" }
+          $Version  = $Tag.TrimStart('v')
+          $RepoRoot = (Get-Location).Path
+          $OutFile  = "WinBGM-Setup-$Tag-windows-${{ matrix.name }}"
+          $ISCC     = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $ISCC)) {
             Write-Host "Inno Setup not found, installing via Chocolatey..."
             choco install innosetup -y --no-progress
@@ -78,13 +79,12 @@ jobs:
           & $ISCC `
             "/DAppVersion=$Version" `
             "/DArch=${{ matrix.name }}" `
-            "/DSourceExe=build\bin\WinBGM.exe" `
-            "/DOutputDir=." `
+            "/DRepoRoot=$RepoRoot" `
             "/DOutputFilename=$OutFile" `
             "installer\winbgm.iss"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "Installer built: $OutFile.exe"
-          Get-FileHash -Path "$OutFile.exe" -Algorithm SHA256 | Format-List
+          Get-FileHash -Path "$RepoRoot\$OutFile.exe" -Algorithm SHA256 | Format-List
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
