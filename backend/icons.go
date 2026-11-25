@@ -104,8 +104,10 @@ func extractHIcon(rawSpec string) uintptr {
 		return 0
 	}
 
-	// If explicit icon index or .ico/.dll/.exe, try ExtractIconExW first when idx != 0
-	if idx != 0 || strings.EqualFold(filepath.Ext(p), ".ico") {
+	ext := strings.ToLower(filepath.Ext(p))
+	// For binaries and icon files, use ExtractIconExW so binaries without an embedded icon
+	// return 0 instead of SHGetFileInfoW's generic Windows placeholder box icon.
+	if ext == ".exe" || ext == ".dll" || ext == ".ico" || ext == ".cpl" {
 		var hLarge uintptr
 		ret, _, _ := procExtractIconExW.Call(
 			uintptr(unsafe.Pointer(u16)),
@@ -117,6 +119,7 @@ func extractHIcon(rawSpec string) uintptr {
 		if ret > 0 && hLarge != 0 {
 			return hLarge
 		}
+		return 0
 	}
 
 	var shfi shFileInfoW

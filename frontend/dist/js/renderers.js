@@ -2,6 +2,36 @@
 
 const CHANGEABLE = ['service', 'run', 'folder', 'task', 'shellex'];
 
+const HELPER_EXE_RE = /(update|updater|setup|install|unins|svc|service|helper|crash|broker|daemon)/i;
+
+function getAppIconPaths(a) {
+  const paths = [];
+  const lowName = (a.name || '').toLowerCase();
+  // 1. Prefer matching installed app DisplayIcon / ExePath if available
+  if (installedApps && installedApps.length && lowName.length >= 3) {
+    const match = installedApps.find(ia => {
+      const n = (ia.name || '').toLowerCase();
+      return n === lowName || (n.includes(lowName) && lowName.length >= 4) || (lowName.includes(n) && n.length >= 4);
+    });
+    if (match) {
+      if (match.displayIcon) paths.push(match.displayIcon);
+      if (match.exePath) paths.push(match.exePath);
+    }
+  }
+  // 2. Sort component executables: main GUI binaries first, updaters/services/helpers last
+  const comps = (a.components || []).filter(c => c.exePath).slice().sort((x, y) => {
+    const xHelper = HELPER_EXE_RE.test(base(x.exePath)) ? 1 : 0;
+    const yHelper = HELPER_EXE_RE.test(base(y.exePath)) ? 1 : 0;
+    if (xHelper !== yHelper) return xHelper - yHelper;
+    const xSvc = x.kind === 'service' || x.kind === 'task' ? 1 : 0;
+    const ySvc = y.kind === 'service' || y.kind === 'task' ? 1 : 0;
+    return xSvc - ySvc;
+  });
+  comps.forEach(c => paths.push(c.exePath));
+  if (a.path) paths.push(a.path);
+  return paths;
+}
+
 function renderAppIcon(name, letter, paths, extraClass = '', extraStyle = '') {
   const list = Array.isArray(paths) ? paths : [paths];
   for (const p of list) {
@@ -90,8 +120,7 @@ function renderApps() {
     const connCount = (a.connections || []).length;
     const netBadge = connCount > 0 ? `<span class="badge ${a.telemetryCount > 0 ? 'amber' : 'green'}" style="font-size:10px;padding:1px 6px;margin-left:4px" title="${a.telemetryCount > 0 ? a.telemetryCount + ' telemetry endpoint(s) detected' : 'Active network sockets'}">🌐 ${connCount}</span>` : '';
     const reviewBadge = a.review ? `<span class="state-text review">Review</span>` : a.running ? `<span class="state-text">Running</span>` : `<span class="state-text stopped">Not running</span>`;
-    const exePaths = (a.components || []).map(c => c.exePath).filter(Boolean);
-    if (a.path) exePaths.push(a.path);
+    const exePaths = getAppIconPaths(a);
     return `<button class="app-row ${a.id === sel ? 'selected' : ''}" data-id="${esc(a.id)}">
       <div class="app-cell"><div class="app-name-wrap">${renderAppIcon(a.name, a.letter, exePaths)}<div style="min-width:0"><div class="app-name">${esc(a.name)}${ramBadge}${netBadge}</div><div class="app-publisher">${esc(a.publisher || 'Publisher unknown')}</div></div></div></div>
       <div class="app-cell cell-secondary">${a.components.length}</div>
@@ -154,8 +183,7 @@ function renderDetail(a) {
   }
   const ver = a.signature === 'verified';
   const ramTag = a.ramFormatted ? `<span class="small-tag good"><i data-lucide="cpu" style="width:11px;height:11px;margin-right:4px"></i>${esc(a.ramFormatted)} RAM</span>` : '';
-  const detailExes = (a.components || []).map(c => c.exePath).filter(Boolean);
-  if (a.path) detailExes.push(a.path);
+  const detailExes = getAppIconPaths(a);
   h.innerHTML = `
   <div class="detail-head">${renderAppIcon(a.name, a.letter, detailExes, 'detail-app-icon')}<div style="min-width:0"><div class="detail-app-name">${esc(a.name)}</div><div class="detail-publisher">${esc(a.publisher || 'Publisher unknown')}</div>
    <div class="detail-tags"><span class="small-tag ${ver ? 'good' : ''}"><i data-lucide="${ver ? 'shield-check' : 'shield-alert'}" style="width:11px;height:11px;margin-right:4px"></i>${ver ? 'Verified publisher' : a.signature === 'unverified' ? 'Signature not verified' : 'Signature unknown'}</span>${ramTag}<span class="small-tag">${a.components.length} component${a.components.length === 1 ? '' : 's'}</span>${a.review ? '<span class="small-tag review">Review</span>' : ''}</div></div></div>
@@ -408,8 +436,7 @@ function renderOverview() {
   const running = A.filter(a => a.running).sort((a, b) => b.components.length - a.components.length).slice(0, 4);
   const row = a => {
     const ramBadge = a.ramFormatted ? `<span class="badge blue" style="font-size:10px;padding:1px 5px;margin-left:6px">${esc(a.ramFormatted)}</span>` : '';
-    const rowExes = (a.components || []).map(c => c.exePath).filter(Boolean);
-    if (a.path) rowExes.push(a.path);
+    const rowExes = getAppIconPaths(a);
     return `<div class="overview-row">${renderAppIcon(a.name, a.letter, rowExes)}<div class="overview-row-copy"><div class="overview-row-title">${esc(a.name)}${ramBadge}</div><div class="overview-row-sub">${esc(a.publisher || 'Publisher unknown')} · ${a.components.length} component${a.components.length === 1 ? '' : 's'}</div></div><div class="overview-row-end"><span class="state-text ${a.running ? '' : 'stopped'}">${a.running ? 'Running' : 'Not running'}</span></div></div>`;
   };
   const revRow = a => {

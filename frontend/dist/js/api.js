@@ -1287,6 +1287,8 @@ function fetchUninstallerIcons() {
   });
   fetchMissingIcons(paths, () => {
     if (page === 'uninstaller') renderUninstaller();
+    renderApps();
+    renderOverview();
   });
 }
 
