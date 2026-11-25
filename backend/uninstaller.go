@@ -37,12 +37,18 @@ type InstalledApp struct {
 
 // UninstallerSummary provides aggregate statistics on installed software.
 type UninstallerSummary struct {
-	TotalApps           int    `json:"totalApps"`
-	TotalSizeBytes      uint64 `json:"totalSizeBytes"`
-	TotalSizeFormatted  string `json:"totalSizeFormatted"`
-	HeavyAppsCount      int    `json:"heavyAppsCount"`
-	UserAppsCount       int    `json:"userAppsCount"`
-	SystemAppsCount     int    `json:"systemAppsCount"`
+	TotalApps          int    `json:"totalApps"`
+	TotalSizeBytes     uint64 `json:"totalSizeBytes"`
+	TotalSizeFormatted string `json:"totalSizeFormatted"`
+	HeavyAppsCount     int    `json:"heavyAppsCount"`
+	UserAppsCount      int    `json:"userAppsCount"`
+	SystemAppsCount    int    `json:"systemAppsCount"`
+}
+
+// InstalledAppsResponse wraps the installed app list and summary for clean Wails IPC serialization.
+type InstalledAppsResponse struct {
+	Apps    []InstalledApp     `json:"apps"`
+	Summary UninstallerSummary `json:"summary"`
 }
 
 // FormatBytes formats a byte count into a clean human-readable string.
@@ -172,6 +178,14 @@ func ScanInstalledApps() ([]InstalledApp, UninstallerSummary, error) {
 			}
 
 			cleanedLoc := strings.Trim(installLoc, `" `)
+			if cleanedLoc == "" && exe != "" {
+				dir := filepath.Dir(exe)
+				baseDir := strings.ToLower(filepath.Base(dir))
+				if baseDir != "system32" && baseDir != "syswow64" && baseDir != "windows" &&
+					baseDir != "programs" && baseDir != "program files" && baseDir != "program files (x86)" {
+					cleanedLoc = dir
+				}
+			}
 
 			app := InstalledApp{
 				ID:                  r.rootName + "_" + subname,
@@ -271,5 +285,16 @@ func extractExePath(displayIcon, installLoc, uninstStr string) string {
 		}
 	}
 
+	return ""
+}
+
+// FileVirusTotalURL computes the SHA-256 hash of a binary and returns its VirusTotal GUI URL.
+func FileVirusTotalURL(path string) string {
+	if path == "" {
+		return ""
+	}
+	if h := calcSHA256(path); h != "" {
+		return "https://www.virustotal.com/gui/file/" + h
+	}
 	return ""
 }

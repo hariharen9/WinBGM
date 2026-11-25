@@ -24,7 +24,9 @@ export function GetAlwaysAdmin():Promise<boolean>;
 
 export function GetBootProfile():Promise<backend.BootProfile>;
 
-export function GetInstalledApps():Promise<Array<backend.InstalledApp>>;
+export function GetFileVirusTotalURL(arg1:string):Promise<string>;
+
+export function GetInstalledApps():Promise<backend.InstalledAppsResponse>;
 
 export function GetPowerReport():Promise<backend.PowerReport>;
 

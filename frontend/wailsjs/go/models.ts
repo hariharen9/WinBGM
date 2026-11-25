@@ -458,6 +458,60 @@ export namespace backend {
 	        this.heavyDisplaySize = source["heavyDisplaySize"];
 	    }
 	}
+	export class UninstallerSummary {
+	    totalApps: number;
+	    totalSizeBytes: number;
+	    totalSizeFormatted: string;
+	    heavyAppsCount: number;
+	    userAppsCount: number;
+	    systemAppsCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new UninstallerSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalApps = source["totalApps"];
+	        this.totalSizeBytes = source["totalSizeBytes"];
+	        this.totalSizeFormatted = source["totalSizeFormatted"];
+	        this.heavyAppsCount = source["heavyAppsCount"];
+	        this.userAppsCount = source["userAppsCount"];
+	        this.systemAppsCount = source["systemAppsCount"];
+	    }
+	}
+	export class InstalledAppsResponse {
+	    apps: InstalledApp[];
+	    summary: UninstallerSummary;
+	
+	    static createFrom(source: any = {}) {
+	        return new InstalledAppsResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.apps = this.convertValues(source["apps"], InstalledApp);
+	        this.summary = this.convertValues(source["summary"], UninstallerSummary);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class SourceInfo {
 	    id: string;
 	    title: string;
@@ -776,28 +830,6 @@ export namespace backend {
 	}
 	
 	
-	export class UninstallerSummary {
-	    totalApps: number;
-	    totalSizeBytes: number;
-	    totalSizeFormatted: string;
-	    heavyAppsCount: number;
-	    userAppsCount: number;
-	    systemAppsCount: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new UninstallerSummary(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.totalApps = source["totalApps"];
-	        this.totalSizeBytes = source["totalSizeBytes"];
-	        this.totalSizeFormatted = source["totalSizeFormatted"];
-	        this.heavyAppsCount = source["heavyAppsCount"];
-	        this.userAppsCount = source["userAppsCount"];
-	        this.systemAppsCount = source["systemAppsCount"];
-	    }
-	}
 
 }
 

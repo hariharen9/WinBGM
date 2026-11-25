@@ -640,12 +640,15 @@ async function loadInstalledApps() {
   if (a && a.GetInstalledApps) {
     try {
       const res = await a.GetInstalledApps();
-      if (Array.isArray(res)) {
-        installedApps = res[0] || [];
-        uninstallerSummary = res[1] || null;
-      } else if (res && res.apps) {
+      if (res && Array.isArray(res.apps)) {
         installedApps = res.apps;
-        uninstallerSummary = res.summary;
+        uninstallerSummary = res.summary || null;
+      } else if (Array.isArray(res)) {
+        installedApps = res;
+        uninstallerSummary = null;
+      } else {
+        installedApps = [];
+        uninstallerSummary = null;
       }
     } catch (e) {
       console.error('Failed to query installed apps:', e);
@@ -728,10 +731,11 @@ function promptUninstall(appId) {
   const app = installedApps.find(a => a.id === appId);
   if (!app) return;
 
-  const hasHeavy = app.hasHeavyProfile && app.heavyDisplaySize !== '—';
+  const hasHeavy = !!app.hasHeavyProfile;
+  const heavySizeLabel = (app.heavyDisplaySize && app.heavyDisplaySize !== '—') ? ` (${esc(app.heavyDisplaySize)})` : '';
   const heavyNote = hasHeavy
     ? `<div style="margin-top:12px;padding:10px 12px;border-radius:6px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;font-size:11.5px">
-        <strong>🔥 Heavy Dependencies Detected:</strong> This program has external data/models (${esc(app.heavyDisplaySize)}) that standard uninstallers leave behind. WinBGM will automatically audit and offer to clean them after the uninstaller runs.
+        <strong>🔥 Heavy Dependencies Detected:</strong> This program has external data/models${heavySizeLabel} that standard uninstallers leave behind. WinBGM will automatically audit and offer to clean them after the uninstaller runs.
        </div>`
     : '';
 
@@ -896,10 +900,48 @@ function closeResidualModal() {
   selectedResidualIds.clear();
 }
 
+async function openAppLocation(appId) {
+  const app = installedApps.find(a => a.id === appId);
+  if (!app) return;
+  const loc = app.installLocation || app.exePath;
+  if (!loc) {
+    toast('No installation path available for this program.');
+    return;
+  }
+  const a = api();
+  if (a && a.Reveal) {
+    try {
+      await a.Reveal(loc);
+    } catch (e) {
+      toast('Could not open location: ' + e);
+    }
+  }
+}
+
+async function openAppVirusTotal(appId) {
+  const app = installedApps.find(a => a.id === appId);
+  if (!app || !app.exePath) return;
+  const a = api();
+  if (a && a.GetFileVirusTotalURL) {
+    try {
+      const url = await a.GetFileVirusTotalURL(app.exePath);
+      if (url) {
+        window.open(url, '_blank');
+        return;
+      }
+    } catch (e) {
+      console.error('VT hash failed:', e);
+    }
+  }
+  window.open('https://www.virustotal.com/gui/search/' + encodeURIComponent(base(app.exePath)), '_blank');
+}
+
 async function executeResidualClean() {
   if (!currentResidualReport || selectedResidualIds.size === 0) return;
 
-  const itemsToClean = currentResidualReport.items.filter(it => selectedResidualIds.has(it.id));
+  const itemsToClean = currentResidualReport.items
+    .filter(it => selectedResidualIds.has(it.id))
+    .map(it => Object.assign({}, it, { isSelected: true }));
   const confirmBtn = $('residual-confirm');
   if (confirmBtn) {
     confirmBtn.disabled = true;

@@ -21,8 +21,9 @@ import (
 
 // App is bound to the frontend.
 type App struct {
-	ctx  context.Context
-	last *backend.Inventory
+	ctx            context.Context
+	last           *backend.Inventory
+	installedCache []backend.InstalledApp
 }
 
 func NewApp() *App { return &App{} }
@@ -337,40 +338,60 @@ func (a *App) ExportCSV() (string, error) {
 }
 
 // GetInstalledApps returns all installed programs on the machine along with aggregate size and counts.
-func (a *App) GetInstalledApps() ([]backend.InstalledApp, backend.UninstallerSummary, error) {
-	return backend.ScanInstalledApps()
+func (a *App) GetInstalledApps() (backend.InstalledAppsResponse, error) {
+	apps, summary, err := backend.ScanInstalledApps()
+	if err != nil {
+		return backend.InstalledAppsResponse{}, err
+	}
+	a.installedCache = apps
+	return backend.InstalledAppsResponse{
+		Apps:    apps,
+		Summary: summary,
+	}, nil
+}
+
+func (a *App) findInstalledApp(appID string) (backend.InstalledApp, bool) {
+	for _, app := range a.installedCache {
+		if app.ID == appID {
+			return app, true
+		}
+	}
+	apps, _, err := backend.ScanInstalledApps()
+	if err == nil {
+		a.installedCache = apps
+		for _, app := range apps {
+			if app.ID == appID {
+				return app, true
+			}
+		}
+	}
+	return backend.InstalledApp{}, false
 }
 
 // ScanAppResiduals audits leftover directories, heavy models, caches, and registry keys for an app.
 func (a *App) ScanAppResiduals(appID string) (backend.ResidualReport, error) {
-	apps, _, err := backend.ScanInstalledApps()
-	if err != nil {
-		return backend.ResidualReport{}, err
-	}
-	for _, app := range apps {
-		if app.ID == appID {
-			return backend.ScanResiduals(app)
-		}
+	if app, ok := a.findInstalledApp(appID); ok {
+		return backend.ScanResiduals(app)
 	}
 	return backend.ScanResiduals(backend.InstalledApp{ID: appID, Name: appID})
 }
 
 // LaunchUninstaller triggers the official uninstaller for an app and waits for completion.
 func (a *App) LaunchUninstaller(appID string, quiet bool) (int, error) {
-	apps, _, err := backend.ScanInstalledApps()
-	if err != nil {
-		return -1, err
+	app, ok := a.findInstalledApp(appID)
+	if !ok {
+		return -1, fmt.Errorf("application %s not found", appID)
 	}
-	for _, app := range apps {
-		if app.ID == appID {
-			return backend.LaunchUninstaller(app, quiet)
-		}
-	}
-	return -1, fmt.Errorf("application %s not found", appID)
+	return backend.LaunchUninstaller(app, quiet)
 }
 
 // CleanResidualItems safely cleans selected leftover files (to Recycle Bin) and registry keys.
 func (a *App) CleanResidualItems(items []backend.ResidualItem) (backend.CleanResult, error) {
 	return backend.CleanResidualItems(items)
+}
+
+// GetFileVirusTotalURL computes the SHA-256 hash of a file and returns its VirusTotal URL.
+func (a *App) GetFileVirusTotalURL(path string) string {
+	return backend.FileVirusTotalURL(path)
 }
 

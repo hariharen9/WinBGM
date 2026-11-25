@@ -46,6 +46,10 @@ export function GetBootProfile() {
   return window['go']['main']['App']['GetBootProfile']();
 }
 
+export function GetFileVirusTotalURL(arg1) {
+  return window['go']['main']['App']['GetFileVirusTotalURL'](arg1);
+}
+
 export function GetInstalledApps() {
   return window['go']['main']['App']['GetInstalledApps']();
 }
