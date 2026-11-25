@@ -3,12 +3,15 @@ package backend
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -260,6 +263,229 @@ func scanSteamApps() []InstalledApp {
 				Source:           "Steam",
 				InstallerType:    "Steam",
 				Is64Bit:          true,
+				ExePath:          exe,
+				HeavyDisplaySize: "—",
+			})
+		}
+	}
+	return out
+}
+
+// scanChocolateyApps discovers packages installed via Chocolatey by reading %ChocolateyInstall%\lib\*\*.nuspec.
+func scanChocolateyApps() []InstalledApp {
+	chocoRoot := os.Getenv("ChocolateyInstall")
+	if chocoRoot == "" {
+		chocoRoot = filepath.Join(os.Getenv("ProgramData"), "chocolatey")
+	}
+	libDir := filepath.Join(chocoRoot, "lib")
+	entries, err := os.ReadDir(libDir)
+	if err != nil {
+		return nil
+	}
+
+	type nuspecMeta struct {
+		ID      string `xml:"metadata>id"`
+		Version string `xml:"metadata>version"`
+		Title   string `xml:"metadata>title"`
+		Authors string `xml:"metadata>authors"`
+	}
+
+	var out []InstalledApp
+	for _, e := range entries {
+		if !e.IsDir() || strings.EqualFold(e.Name(), "chocolatey") {
+			continue
+		}
+		pkgDir := filepath.Join(libDir, e.Name())
+		nuspecs, _ := filepath.Glob(filepath.Join(pkgDir, "*.nuspec"))
+		if len(nuspecs) == 0 {
+			continue
+		}
+		raw, err := os.ReadFile(nuspecs[0])
+		if err != nil {
+			continue
+		}
+		var meta nuspecMeta
+		if err := xml.Unmarshal(raw, &meta); err != nil {
+			continue
+		}
+		pkgID := strings.TrimSpace(meta.ID)
+		if pkgID == "" {
+			pkgID = e.Name()
+		}
+		title := strings.TrimSpace(meta.Title)
+		if title == "" {
+			title = pkgID
+		}
+		cmd := fmt.Sprintf("choco uninstall %s -y", pkgID)
+		exe := extractExePath("", pkgDir, "")
+		out = append(out, InstalledApp{
+			ID:               "Choco_" + pkgID,
+			Name:             title,
+			Version:          strings.TrimSpace(meta.Version),
+			Publisher:        strings.TrimSpace(meta.Authors),
+			InstallLocation:  pkgDir,
+			UninstallString:  cmd,
+			QuietUninstall:   cmd,
+			Source:           "Chocolatey",
+			InstallerType:    "Chocolatey",
+			Is64Bit:          true,
+			ExePath:          exe,
+			DisplaySize:      "—",
+			HeavyDisplaySize: "—",
+		})
+	}
+	return out
+}
+
+// scanStoreUninstallApps discovers non-system Microsoft Store / MSIX apps (inspired by BCU's StoreAppFactory).
+func scanStoreUninstallApps() []InstalledApp {
+	ps := `$pkgs = Get-AppxPackage | Where-Object { -not $_.IsFramework -and -not $_.IsResourcePackage -and -not $_.NonRemovable -and $_.SignatureKind -eq 'Store' }; ` +
+		`$pkgs | ForEach-Object { ` +
+		`$m = $null; try { $m = Get-AppxPackageManifest $_.PackageFullName } catch {}; ` +
+		`$disp = if ($m -and $m.Package.Properties.DisplayName -and $m.Package.Properties.DisplayName -notmatch '^ms-resource:') { $m.Package.Properties.DisplayName } else { $_.Name }; ` +
+		`$pub = if ($m -and $m.Package.Properties.PublisherDisplayName -and $m.Package.Properties.PublisherDisplayName -notmatch '^ms-resource:') { $m.Package.Properties.PublisherDisplayName } else { $_.Publisher }; ` +
+		`[PSCustomObject]@{ Name=$disp; RawName=$_.Name; FullName=$_.PackageFullName; Publisher=$pub; Version=$_.Version.ToString(); Loc=$_.InstallLocation } ` +
+		`} | ConvertTo-Json -Compress`
+
+	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", ps)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	raw, err := cmd.Output()
+	if err != nil || len(bytes.TrimSpace(raw)) == 0 {
+		return nil
+	}
+
+	type storePkg struct {
+		Name      string `json:"Name"`
+		RawName   string `json:"RawName"`
+		FullName  string `json:"FullName"`
+		Publisher string `json:"Publisher"`
+		Version   string `json:"Version"`
+		Loc       string `json:"Loc"`
+	}
+
+	var pkgs []storePkg
+	trimmed := bytes.TrimSpace(raw)
+	if bytes.HasPrefix(trimmed, []byte("{")) {
+		var single storePkg
+		if err := json.Unmarshal(trimmed, &single); err == nil {
+			pkgs = append(pkgs, single)
+		}
+	} else {
+		_ = json.Unmarshal(trimmed, &pkgs)
+	}
+
+	var out []InstalledApp
+	for _, p := range pkgs {
+		if p.Name == "" || p.FullName == "" {
+			continue
+		}
+		if strings.HasPrefix(p.RawName, "Microsoft.NET") || strings.HasPrefix(p.RawName, "Microsoft.VCLibs") ||
+			strings.HasPrefix(p.RawName, "Microsoft.UI.Xaml") || strings.HasPrefix(p.RawName, "Microsoft.WindowsAppRuntime") {
+			continue
+		}
+		uninstCmd := fmt.Sprintf(`powershell.exe -NoProfile -Command "Remove-AppxPackage -Package '%s'"`, strings.ReplaceAll(p.FullName, "'", "''"))
+		exe := extractExePath("", p.Loc, "")
+		out = append(out, InstalledApp{
+			ID:               "Store_" + p.FullName,
+			Name:             p.Name,
+			Version:          p.Version,
+			Publisher:        p.Publisher,
+			InstallLocation:  p.Loc,
+			UninstallString:  uninstCmd,
+			QuietUninstall:   uninstCmd,
+			Source:           "StoreApp",
+			InstallerType:    "StoreApp",
+			IsUserInstall:    true,
+			Is64Bit:          true,
+			ExePath:          exe,
+			DisplaySize:      "—",
+			HeavyDisplaySize: "—",
+		})
+	}
+	return out
+}
+
+var orphanSkipDirs = map[string]bool{
+	"common files": true, "windowsapps": true, "windows defender": true,
+	"windows mail": true, "windows media player": true, "windows nt": true,
+	"windows photo viewer": true, "windows security": true, "windowspowershell": true,
+	"internet explorer": true, "modifiablewindowsapps": true, "uninstall information": true,
+	"reference assemblies": true, "msbuild": true, "microsoft": true, "microsoft.net": true,
+	"dotnet": true, "packages": true, "common": true,
+}
+
+// scanOrphanedProgramDirs discovers portable apps or leftover program directories that have no Uninstall entry
+// (inspired by BCU's DirectoryFactory).
+func scanOrphanedProgramDirs(existing []InstalledApp) []InstalledApp {
+	knownRoots := make([]string, 0, len(existing)*2)
+	for _, a := range existing {
+		if a.InstallLocation != "" {
+			knownRoots = append(knownRoots, strings.ToLower(filepath.Clean(a.InstallLocation)))
+		}
+		if a.ExePath != "" {
+			knownRoots = append(knownRoots, strings.ToLower(filepath.Dir(a.ExePath)))
+		}
+	}
+
+	isKnown := func(dir string) bool {
+		low := strings.ToLower(filepath.Clean(dir))
+		for _, k := range knownRoots {
+			if k == low || strings.HasPrefix(k, low+`\`) || strings.HasPrefix(low, k+`\`) {
+				return true
+			}
+		}
+		return false
+	}
+
+	scanParents := []struct {
+		dir    string
+		isUser bool
+	}{
+		{os.Getenv("ProgramFiles"), false},
+		{os.Getenv("ProgramFiles(x86)"), false},
+		{filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs"), true},
+	}
+
+	var out []InstalledApp
+	for _, sp := range scanParents {
+		if sp.dir == "" {
+			continue
+		}
+		entries, err := os.ReadDir(sp.dir)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			lowName := strings.ToLower(e.Name())
+			if orphanSkipDirs[lowName] || strings.HasPrefix(lowName, ".") {
+				continue
+			}
+			fullDir := filepath.Join(sp.dir, e.Name())
+			if isKnown(fullDir) {
+				continue
+			}
+			// Only report directories that actually contain an executable
+			exe := extractExePath("", fullDir, "")
+			if exe == "" {
+				continue
+			}
+			sizeBytes, _ := ComputeFolderSize(fullDir, 1000)
+			out = append(out, InstalledApp{
+				ID:               "Orphan_" + e.Name(),
+				Name:             e.Name(),
+				Publisher:        "Portable / No Uninstaller",
+				EstimatedSizeKB:  sizeBytes / 1024,
+				SizeBytes:        sizeBytes,
+				DisplaySize:      FormatBytes(sizeBytes),
+				InstallLocation:  fullDir,
+				UninstallString:  "",
+				Source:           "Orphaned",
+				InstallerType:    "Portable / Orphan",
+				IsUserInstall:    sp.isUser,
+				Is64Bit:          !strings.Contains(strings.ToLower(sp.dir), "(x86)"),
 				ExePath:          exe,
 				HeavyDisplaySize: "—",
 			})

@@ -20,6 +20,10 @@ func LaunchUninstaller(app InstalledApp, quiet bool) (int, error) {
 
 	cmdStr = strings.TrimSpace(cmdStr)
 	if cmdStr == "" {
+		// Portable / Orphaned apps have no vendor uninstaller; return 0 so caller proceeds to residual Recycle Bin cleanup
+		if strings.EqualFold(app.Source, "Orphaned") {
+			return 0, nil
+		}
 		return -1, errors.New("no uninstall command string provided for this application")
 	}
 
@@ -33,11 +37,18 @@ func LaunchUninstaller(app InstalledApp, quiet bool) (int, error) {
 		return 0, nil
 	}
 
-	// Handle Scoop / Winget CLI uninstalls via PowerShell/CMD
+	// Handle Scoop / Chocolatey / Winget / StoreApp PowerShell uninstalls
 	lowCmd := strings.ToLower(cmdStr)
-	if strings.HasPrefix(lowCmd, "scoop ") || strings.HasPrefix(lowCmd, "winget ") {
-		c := exec.Command("powershell.exe", "-NoProfile", "-Command", cmdStr)
-		c.SysProcAttr = &syscall.SysProcAttr{HideWindow: false}
+	if strings.HasPrefix(lowCmd, "scoop ") || strings.HasPrefix(lowCmd, "choco ") ||
+		strings.HasPrefix(lowCmd, "winget ") || strings.Contains(lowCmd, "remove-appxpackage") {
+		psCmd := cmdStr
+		if strings.Contains(lowCmd, "remove-appxpackage") && strings.Contains(lowCmd, "-command ") {
+			// Already wrapped in powershell.exe -NoProfile -Command "..."
+			idx := strings.Index(lowCmd, "-command ")
+			psCmd = strings.Trim(strings.TrimSpace(cmdStr[idx+len("-command "):]), `"`)
+		}
+		c := exec.Command("powershell.exe", "-NoProfile", "-Command", psCmd)
+		c.SysProcAttr = &syscall.SysProcAttr{HideWindow: strings.Contains(lowCmd, "remove-appxpackage")}
 		if err := c.Run(); err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				return exitErr.ExitCode(), nil

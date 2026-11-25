@@ -107,5 +107,11 @@ func TestConfidenceScoring(t *testing.T) {
 	if item.ConfidenceLevel != "Very High" || item.ConfidenceScore < 7 {
 		t.Errorf("expected Very High confidence for Heavy item, got %s (%d)", item.ConfidenceLevel, item.ConfidenceScore)
 	}
+
+	sc := ResidualItem{Category: CategoryShortcut, Path: `C:\Users\Admin\Desktop\App.lnk`}
+	scoreResidualConfidence(app, &sc)
+	if sc.ConfidenceLevel != "Very High" || sc.ConfidenceScore < 7 {
+		t.Errorf("expected Very High confidence for Shortcut item, got %s (%d)", sc.ConfidenceLevel, sc.ConfidenceScore)
+	}
 }
 

@@ -232,12 +232,18 @@ func ScanInstalledApps() ([]InstalledApp, UninstallerSummary, error) {
 		}
 	}
 
-	// Merge Scoop and Steam packages (deduplicating against Win32 entries by name)
+	// Merge Scoop, Steam, Chocolatey, and Store Apps (deduplicating against Win32 entries by name)
 	seenNames := make(map[string]bool, len(apps))
 	for _, a := range apps {
 		seenNames[strings.ToLower(a.Name)] = true
 	}
-	for _, extra := range append(scanScoopApps(), scanSteamApps()...) {
+	var extraApps []InstalledApp
+	extraApps = append(extraApps, scanScoopApps()...)
+	extraApps = append(extraApps, scanSteamApps()...)
+	extraApps = append(extraApps, scanChocolateyApps()...)
+	extraApps = append(extraApps, scanStoreUninstallApps()...)
+
+	for _, extra := range extraApps {
 		if seenNames[strings.ToLower(extra.Name)] {
 			continue
 		}
@@ -246,6 +252,20 @@ func ScanInstalledApps() ([]InstalledApp, UninstallerSummary, error) {
 		summary.TotalApps++
 		summary.TotalSizeBytes += extra.SizeBytes
 		if extra.IsUserInstall {
+			summary.UserAppsCount++
+		}
+	}
+
+	// Scan for orphaned / portable app directories with no Uninstall entry
+	for _, orph := range scanOrphanedProgramDirs(apps) {
+		if seenNames[strings.ToLower(orph.Name)] {
+			continue
+		}
+		seenNames[strings.ToLower(orph.Name)] = true
+		apps = append(apps, orph)
+		summary.TotalApps++
+		summary.TotalSizeBytes += orph.SizeBytes
+		if orph.IsUserInstall {
 			summary.UserAppsCount++
 		}
 	}

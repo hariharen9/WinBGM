@@ -861,6 +861,9 @@ function renderUninstaller() {
   let list = installedApps.filter(a => {
     if (uninstallerFilter === 'heavy' && !a.hasHeavyProfile) return false;
     if (uninstallerFilter === 'large' && (a.sizeBytes || 0) < 1024 * 1024 * 1024) return false;
+    if (uninstallerFilter === 'store' && a.source !== 'StoreApp') return false;
+    if (uninstallerFilter === 'pkg' && !['Steam', 'Scoop', 'Chocolatey'].includes(a.source)) return false;
+    if (uninstallerFilter === 'orphan' && a.source !== 'Orphaned') return false;
     if (uninstallerFilter === 'user' && !a.isUserInstall) return false;
     if (q) {
       const hay = (a.name + ' ' + a.publisher + ' ' + (a.installLocation || '')).toLowerCase();
