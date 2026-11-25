@@ -1,609 +1,1171 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>WinBGM</title>
-  <link rel="icon" type="image/png" href="icon.png">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>WinBGM</title>
+    <link rel="icon" type="image/png" href="icon.png" />
 
-  <!-- Theme Pre-Initialization (avoids theme flash) -->
-  <script>
-    try {
-      var t = localStorage.getItem('bgm.theme') || 'dark';
-      document.documentElement.dataset.theme = t;
-      var a = localStorage.getItem('bgm.accent') || 'blue';
-      document.documentElement.dataset.accent = a;
-    } catch(e) {}
-  </script>
+    <!-- Theme Pre-Initialization (avoids theme flash) -->
+    <script>
+      try {
+        var t = localStorage.getItem("bgm.theme") || "dark";
+        document.documentElement.dataset.theme = t;
+        var a = localStorage.getItem("bgm.accent") || "blue";
+        document.documentElement.dataset.accent = a;
+      } catch (e) {}
+    </script>
 
-  <!-- Libraries -->
-  <script src="lucide.min.js"></script>
-  <script src="anime.min.js"></script>
-  <script src="confetti.min.js"></script>
+    <!-- Libraries -->
+    <script src="lucide.min.js"></script>
+    <script src="anime.min.js"></script>
+    <script src="confetti.min.js"></script>
 
-  <!-- Modular Styles -->
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/layout.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/animations.css">
-</head>
-<body>
-<div class="app-window">
-  <header class="titlebar">
-    <div class="app-identity">
-      <img class="app-logo" src="icon.png" alt="WinBGM">
-      <div class="titlebar-name">WinBGM</div>
+    <!-- Modular Styles -->
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/animations.css" />
+  </head>
+  <body>
+    <div class="app-window">
+      <header class="titlebar">
+        <div class="app-identity">
+          <img class="app-logo" src="icon.png" alt="WinBGM" />
+          <div class="titlebar-name">WinBGM</div>
+        </div>
+        <div class="titlebar-center">
+          <label class="quick-search">
+            <i data-lucide="search" style="width: 14px; height: 14px"></i>
+            <input
+              id="global-search"
+              type="search"
+              placeholder="Search apps, services and tasks"
+              aria-label="Search"
+            />
+            <span class="search-shortcut">Ctrl+K</span>
+          </label>
+        </div>
+        <div class="titlebar-right">
+          <span class="readonly-pill"
+            ><i
+              data-lucide="shield"
+              style="width: 11px; height: 11px; margin-right: 4px"
+            ></i
+            >Safe mode</span
+          >
+        </div>
+      </header>
+
+      <div class="app-body">
+        <aside class="sidebar">
+          <div class="nav-group-label">Manage</div>
+          <nav class="nav-list" aria-label="Main navigation">
+            <button class="nav-item active" data-page="overview">
+              <i data-lucide="layout-grid"></i><span>Overview</span>
+            </button>
+            <button class="nav-item" data-page="processes">
+              <i data-lucide="cpu"></i><span>Live Processes</span
+              ><span class="nav-count" id="nav-processes"></span>
+            </button>
+            <button class="nav-item" data-page="applications">
+              <i data-lucide="layers"></i><span>Applications</span
+              ><span class="nav-count" id="nav-apps"></span>
+            </button>
+            <button class="nav-item" data-page="uninstaller">
+              <i data-lucide="trash-2"></i><span>Uninstaller</span
+              ><span class="nav-count" id="nav-uninstaller"></span>
+            </button>
+            <button class="nav-item" data-page="services">
+              <i data-lucide="cog"></i><span>Services</span
+              ><span class="nav-count" id="nav-services"></span>
+            </button>
+            <button class="nav-item" data-page="tasks">
+              <i data-lucide="calendar-clock"></i><span>Scheduled tasks</span
+              ><span class="nav-count" id="nav-tasks"></span>
+            </button>
+            <button class="nav-item" data-page="sources">
+              <i data-lucide="compass"></i><span>Startup locations</span>
+            </button>
+          </nav>
+          <div class="nav-divider"></div>
+          <div class="nav-group-label">Tools &amp; Safety</div>
+          <nav class="nav-list">
+            <button class="nav-item" data-page="locks">
+              <i data-lucide="lock"></i><span>File Lock Finder</span>
+            </button>
+            <button class="nav-item" data-page="snapshots">
+              <i data-lucide="camera"></i><span>Snapshots &amp; Diffs</span>
+            </button>
+            <button class="nav-item" data-page="history">
+              <i data-lucide="history"></i><span>Change history</span>
+            </button>
+            <button class="nav-item" data-page="settings">
+              <i data-lucide="sliders"></i><span>Settings</span>
+            </button>
+          </nav>
+          <div class="sidebar-bottom">
+            <div class="machine-card">
+              <div class="machine-icon"><i data-lucide="monitor"></i></div>
+              <div class="machine-copy">
+                <div class="machine-name" id="machine-name">This PC</div>
+                <div class="machine-meta" id="machine-meta">Scanning…</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <main class="main-shell">
+          <div class="commandbar">
+            <span class="commandbar-label" id="commandbar-label">Overview</span>
+            <span class="commandbar-sep"></span>
+            <button
+              class="command-btn btn-scan"
+              id="scan-btn"
+              onclick="doScan()"
+            >
+              <i data-lucide="refresh-cw"></i>Scan now
+            </button>
+            <button class="command-btn" onclick="requestFocusMode()">
+              <i data-lucide="zap"></i>Focus Mode
+            </button>
+            <button class="command-btn" onclick="doReveal()">
+              <i data-lucide="folder-search"></i>Open location
+            </button>
+            <button class="command-btn" onclick="openExportModal()">
+              <i data-lucide="download"></i>Export
+            </button>
+            <div class="command-spacer"></div>
+            <div class="command-state">
+              <span class="state-led"></span
+              ><span id="scan-status">Scanning…</span>
+            </div>
+          </div>
+
+          <div class="content-host" id="content-host">
+            <div
+              id="sentinel-banner-host"
+              style="padding: 10px 24px 0 24px"
+            ></div>
+            <!-- Applications Page -->
+            <section class="page" id="page-applications">
+              <div class="page-header">
+                <div>
+                  <h1>Applications</h1>
+                  <p class="page-subtitle">
+                    Background components found on this PC, grouped by the
+                    application that owns them. Every change is backed up first
+                    and can be undone.
+                  </p>
+                </div>
+                <div class="header-actions">
+                  <button class="win-btn" onclick="requestFocusMode()">
+                    <i
+                      data-lucide="zap"
+                      style="width: 13px; height: 13px; margin-right: 4px"
+                    ></i
+                    >Focus Mode
+                  </button>
+                  <button class="win-btn" onclick="openExportModal()">
+                    <i
+                      data-lucide="download"
+                      style="width: 13px; height: 13px; margin-right: 4px"
+                    ></i
+                    >Export Report
+                  </button>
+                </div>
+              </div>
+              <div id="app-banners"></div>
+              <div class="system-summary" id="app-summary"></div>
+              <div class="content-toolbar">
+                <div class="segmented" id="app-filters"></div>
+                <div class="toolbar-flex"></div>
+                <label class="filter-search"
+                  ><i
+                    data-lucide="search"
+                    style="width: 13px; height: 13px; flex: none"
+                  ></i
+                  ><input
+                    id="app-search"
+                    type="search"
+                    placeholder="Find an application"
+                /></label>
+                <select
+                  class="select-control"
+                  id="app-sort"
+                  aria-label="Sort applications"
+                >
+                  <option value="name">Name A–Z</option>
+                  <option value="running">Running first</option>
+                  <option value="ram">RAM usage (High to Low)</option>
+                  <option value="review">Needs review first</option>
+                </select>
+              </div>
+              <div class="split-view">
+                <div class="list-pane">
+                  <div class="list-topline">
+                    <strong>Detected applications</strong
+                    ><span style="margin-left: auto" id="visible-count"></span>
+                  </div>
+                  <div class="list-head">
+                    <div>Name</div>
+                    <div>Components</div>
+                    <div>Activity</div>
+                    <div>Launch behavior</div>
+                  </div>
+                  <div id="app-list">
+                    <div class="loading">Scanning this PC…</div>
+                  </div>
+                  <div class="pane-footer">
+                    <span id="list-foot"></span
+                    ><span>Changes are backed up</span>
+                  </div>
+                </div>
+                <aside class="detail-pane">
+                  <div class="detail-inner" id="detail-content"></div>
+                </aside>
+              </div>
+            </section>
+
+            <!-- Uninstaller Page -->
+            <section class="page" id="page-uninstaller">
+              <div class="page-header">
+                <div>
+                  <h1>Installed Programs & Deep Uninstaller</h1>
+                  <p class="page-subtitle">
+                    Audit installed Win32 & user software, track true disk
+                    footprints, and completely clean leftover caches and heavy
+                    dependencies (like Ollama models and SDKs).
+                  </p>
+                </div>
+                <div class="header-actions">
+                  <button class="win-btn" onclick="loadInstalledApps()">
+                    <i
+                      data-lucide="refresh-cw"
+                      style="width: 13px; height: 13px; margin-right: 4px"
+                    ></i
+                    >Refresh
+                  </button>
+                </div>
+              </div>
+              <div class="system-summary" id="uninstaller-summary"></div>
+              <div class="content-toolbar">
+                <div class="segmented" id="uninstaller-filters">
+                  <button class="segmented-btn active" data-filter="all">All</button>
+                  <button class="segmented-btn" data-filter="heavy">🔥 Heavy</button>
+                  <button class="segmented-btn" data-filter="large">&gt; 1 GB</button>
+                  <button class="segmented-btn" data-filter="store">Store</button>
+                  <button class="segmented-btn" data-filter="pkg">Steam / Pkg</button>
+                  <button class="segmented-btn" data-filter="orphan">Orphan</button>
+                  <button class="segmented-btn" data-filter="user">User</button>
+                </div>
+                <div class="toolbar-flex"></div>
+                <label class="filter-search"
+                  ><i
+                    data-lucide="search"
+                    style="width: 13px; height: 13px; flex: none"
+                  ></i
+                  ><input
+                    id="uninstaller-search"
+                    type="search"
+                    placeholder="Search installed apps or publishers"
+                /></label>
+                <select
+                  class="select-control"
+                  id="uninstaller-sort"
+                  aria-label="Sort installed apps"
+                >
+                  <option value="size">Size (Largest first)</option>
+                  <option value="name">Name A–Z</option>
+                  <option value="date">Install Date (Newest first)</option>
+                </select>
+              </div>
+              <div class="page-section">
+                <div class="section-heading">
+                  <strong>Installed software inventory</strong
+                  ><span id="uninstaller-count-meta">Auditing…</span>
+                </div>
+                <div style="overflow-x: auto">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th style="min-width: 240px">Program</th>
+                        <th>Publisher</th>
+                        <th>Installed On</th>
+                        <th style="text-align: right">Size</th>
+                        <th style="text-align: right; min-width: 180px">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody id="uninstaller-body">
+                      <tr>
+                        <td colspan="5">
+                          <div class="loading">
+                            Auditing installed software…
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="notice-line" style="margin-top: 14px">
+                <i
+                  data-lucide="shield-check"
+                  style="
+                    width: 14px;
+                    height: 14px;
+                    flex: none;
+                    color: #10b981;
+                    margin-top: 1px;
+                  "
+                ></i>
+                <span
+                  ><strong>WinBGM Safety Guarantee</strong>: Leftover cleanup
+                  safely moves files to the Windows Recycle Bin (restorable
+                  anytime). Registry keys are backed up to history before
+                  removal.</span
+                >
+              </div>
+            </section>
+
+            <!-- Overview Page -->
+            <section class="page active" id="page-overview">
+              <div id="overview-content">
+                <div class="loading">Scanning this PC…</div>
+              </div>
+            </section>
+
+            <!-- Live Processes Page -->
+            <section class="page" id="page-processes">
+              <div class="page-header">
+                <div>
+                  <h1>Live Processes &amp; Efficiency Mode</h1>
+                  <p class="page-subtitle">
+                    Real-time view of every running process grouped by
+                    application—with live CPU%, RAM, Disk I/O, Windows 11 EcoQoS
+                    throttling, priority, and freeze controls.
+                  </p>
+                </div>
+                <div class="header-actions">
+                  <button class="win-btn" onclick="loadLiveProcesses()">
+                    <i
+                      data-lucide="refresh-cw"
+                      style="width: 13px; height: 13px; margin-right: 4px"
+                    ></i
+                    >Refresh
+                  </button>
+                </div>
+              </div>
+              <div class="system-summary" id="processes-summary"></div>
+              <div class="content-toolbar">
+                <div class="segmented" id="proc-filters">
+                  <button class="active" data-filter="all">
+                    All Processes
+                  </button>
+                  <button data-filter="windowed">Windowed Apps</button>
+                  <button data-filter="eco">🍃 Efficiency Mode</button>
+                  <button data-filter="network">🌐 Network Active</button>
+                  <button data-filter="frozen">❄️ Frozen</button>
+                </div>
+                <div class="toolbar-flex"></div>
+                <label class="filter-search"
+                  ><i
+                    data-lucide="search"
+                    style="width: 13px; height: 13px; flex: none"
+                  ></i
+                  ><input
+                    id="proc-search"
+                    type="search"
+                    placeholder="Search process name or PID"
+                /></label>
+                <select
+                  class="select-control"
+                  id="proc-sort"
+                  aria-label="Sort processes"
+                >
+                  <option value="ram">Memory (High to Low)</option>
+                  <option value="cpu">CPU % (High to Low)</option>
+                  <option value="io">Disk I/O (High to Low)</option>
+                  <option value="name">Name A–Z</option>
+                </select>
+              </div>
+              <div class="page-section">
+                <div class="section-heading">
+                  <strong>Running process groups</strong
+                  ><span id="proc-count-meta"
+                    >Click a group to inspect child PIDs</span
+                  >
+                </div>
+                <div style="overflow-x: auto">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th style="min-width: 230px">Application / Process</th>
+                        <th style="text-align: right">CPU</th>
+                        <th style="text-align: right">Memory</th>
+                        <th style="text-align: right">Disk I/O</th>
+                        <th>Status &amp; Priority</th>
+                        <th style="text-align: right; min-width: 210px">
+                          Controls
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody id="proc-body">
+                      <tr>
+                        <td colspan="6">
+                          <div class="loading">Sampling live processes…</div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <!-- File Lock Finder Page -->
+            <section class="page" id="page-locks">
+              <div class="page-header">
+                <div>
+                  <h1>Who's Locking This File?</h1>
+                  <p class="page-subtitle">
+                    Natively query Windows Restart Manager (rstrtmgr.dll) to
+                    pinpoint which process is holding an open lock on a file or
+                    folder.
+                  </p>
+                </div>
+              </div>
+              <div class="page-section" style="padding: 18px">
+                <div
+                  id="lock-dropzone"
+                  style="
+                    border: 1.5px dashed var(--border);
+                    border-radius: 8px;
+                    padding: 18px;
+                    background: var(--surface-card);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                  "
+                >
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 10px;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <label
+                      class="filter-search"
+                      style="
+                        flex: 1;
+                        min-width: 260px;
+                        max-width: none;
+                        height: 34px;
+                      "
+                    >
+                      <i
+                        data-lucide="file-search"
+                        style="width: 14px; height: 14px; flex: none"
+                      ></i>
+                      <input
+                        id="lock-path-input"
+                        type="text"
+                        placeholder="Paste or drop a locked file or folder path (e.g. C:\Users\...\app.log)"
+                      />
+                    </label>
+                    <button class="win-btn" onclick="browseLockedFile()">
+                      <i data-lucide="folder-open"></i>Browse File…
+                    </button>
+                    <button class="win-btn primary" onclick="checkFileLocks()">
+                      <i data-lucide="search"></i>Find Locks
+                    </button>
+                  </div>
+                  <div style="font-size: 11px; color: var(--text-dim)">
+                    Tip: You can check either a single file or an entire folder.
+                    Critical Windows processes are automatically protected.
+                  </div>
+                </div>
+              </div>
+              <div class="page-section" style="margin-top: 14px">
+                <div class="section-heading">
+                  <strong>Locking processes</strong
+                  ><span id="lock-count-meta"
+                    >Enter a path above to inspect locks</span
+                  >
+                </div>
+                <div style="overflow-x: auto">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Application / Process</th>
+                        <th>PID</th>
+                        <th>Service</th>
+                        <th>Executable Path</th>
+                        <th style="text-align: right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="lock-body">
+                      <tr>
+                        <td colspan="5">
+                          <div class="empty-state">
+                            No file scanned yet. Pick or paste a path above to
+                            see what's locking it.
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <!-- Services Page -->
+            <section class="page" id="page-services">
+              <div class="page-header">
+                <div>
+                  <h1>Services</h1>
+                  <p class="page-subtitle">
+                    Background services, how they start, and whether Windows is
+                    running them now.
+                  </p>
+                </div>
+              </div>
+              <div class="system-summary" id="svc-summary"></div>
+              <div class="content-toolbar">
+                <label class="filter-search"
+                  ><i
+                    data-lucide="search"
+                    style="width: 13px; height: 13px; flex: none"
+                  ></i
+                  ><input
+                    id="svc-search"
+                    type="search"
+                    placeholder="Search services"
+                /></label>
+                <select class="select-control" id="svc-type">
+                  <option value="">All startup types</option>
+                  <option>Automatic</option>
+                  <option>Automatic (Delayed)</option>
+                  <option>Manual</option>
+                  <option>Disabled</option>
+                </select>
+                <div class="toolbar-flex"></div>
+                <span class="subtle-label" id="svc-count"></span>
+              </div>
+              <div class="page-section">
+                <div class="section-heading">
+                  <strong>Service inventory</strong
+                  ><span>Click a row for details</span>
+                </div>
+                <div style="overflow-x: auto">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Service</th>
+                        <th>Publisher</th>
+                        <th>Startup type</th>
+                        <th>State</th>
+                        <th>Protection</th>
+                      </tr>
+                    </thead>
+                    <tbody id="svc-body"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="notice-line" style="margin-top: 12px">
+                <i
+                  data-lucide="info"
+                  style="width: 13px; height: 13px; flex: none; margin-top: 1px"
+                ></i>
+                <span
+                  >"Locked" means Windows would not let this account change the
+                  service's settings (checked only when running as
+                  administrator). Stopping a locked service is often still
+                  allowed.</span
+                >
+              </div>
+            </section>
+
+            <!-- Tasks Page -->
+            <section class="page" id="page-tasks">
+              <div class="page-header">
+                <div>
+                  <h1>Scheduled tasks</h1>
+                  <p class="page-subtitle">
+                    Tasks can start programs at logon, at boot, on a timer or
+                    when something happens. Microsoft's own task library is not
+                    listed.
+                  </p>
+                </div>
+              </div>
+              <div class="system-summary" id="task-summary"></div>
+              <div class="content-toolbar">
+                <label class="filter-search"
+                  ><i
+                    data-lucide="search"
+                    style="width: 13px; height: 13px; flex: none"
+                  ></i
+                  ><input
+                    id="task-search"
+                    type="search"
+                    placeholder="Search tasks"
+                /></label>
+                <div class="toolbar-flex"></div>
+                <span class="subtle-label" id="task-count"></span>
+              </div>
+              <div class="page-section">
+                <div class="section-heading">
+                  <strong>Task inventory</strong
+                  ><span>Click a row for details</span>
+                </div>
+                <div style="overflow-x: auto">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Task</th>
+                        <th>Trigger</th>
+                        <th>Publisher</th>
+                        <th>Action</th>
+                        <th>Last run</th>
+                        <th>State</th>
+                      </tr>
+                    </thead>
+                    <tbody id="task-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <!-- Sources Page -->
+            <section class="page" id="page-sources">
+              <div class="page-header">
+                <div>
+                  <h1 id="source-page-title">Startup locations</h1>
+                  <p class="page-subtitle" id="source-page-subtitle">
+                    The Windows mechanisms scanned to discover automatic and
+                    event-triggered launches.
+                  </p>
+                </div>
+                <div
+                  class="header-actions"
+                  id="source-header-actions"
+                  style="display: none"
+                >
+                  <button class="win-btn" onclick="closeSourceInspector()">
+                    <i
+                      data-lucide="arrow-left"
+                      style="width: 13px; height: 13px; margin-right: 4px"
+                    ></i
+                    >Back to all locations
+                  </button>
+                </div>
+              </div>
+
+              <div id="source-grid-container">
+                <div class="source-grid" id="source-grid"></div>
+                <div class="notice-line" style="margin-top: 13px">
+                  <i
+                    data-lucide="info"
+                    style="
+                      width: 13px;
+                      height: 13px;
+                      flex: none;
+                      margin-top: 1px;
+                    "
+                  ></i>
+                  <span
+                    >Click any startup location card to inspect, filter, and
+                    manage all background entries discovered in that
+                    mechanism.</span
+                  >
+                </div>
+              </div>
+
+              <!-- Interactive Location Inspector -->
+              <div id="source-inspector" style="display: none">
+                <div class="system-summary" id="inspector-summary"></div>
+                <div class="content-toolbar">
+                  <label class="filter-search"
+                    ><i
+                      data-lucide="search"
+                      style="width: 13px; height: 13px; flex: none"
+                    ></i
+                    ><input
+                      id="inspector-search"
+                      type="search"
+                      placeholder="Search items in this location..."
+                  /></label>
+                  <div class="toolbar-flex"></div>
+                  <span class="subtle-label" id="inspector-count"></span>
+                </div>
+                <div class="page-section">
+                  <div class="section-heading">
+                    <strong id="inspector-heading">Location Items</strong
+                    ><span id="inspector-hint"
+                      >Click row for details & security</span
+                    >
+                  </div>
+                  <div style="overflow-x: auto">
+                    <table class="data-table">
+                      <thead>
+                        <tr id="inspector-table-head">
+                          <th>Item Name</th>
+                          <th>Application</th>
+                          <th>Command / Target</th>
+                          <th>Status</th>
+                          <th>Control</th>
+                        </tr>
+                      </thead>
+                      <tbody id="inspector-table-body"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- History Page -->
+            <section class="page" id="page-history">
+              <div class="page-header">
+                <div>
+                  <h1>Change history</h1>
+                  <p class="page-subtitle">
+                    Every change is saved here before it is made, with the
+                    original value, so it can be restored.
+                  </p>
+                </div>
+              </div>
+              <div class="system-summary" id="history-summary"></div>
+              <div class="page-section">
+                <div class="section-heading">
+                  <strong>Recent activity</strong><span>Newest first</span>
+                </div>
+                <div class="history-list" id="history-list"></div>
+              </div>
+              <div class="notice-line" style="margin-top: 12px">
+                <i
+                  data-lucide="info"
+                  style="width: 13px; height: 13px; flex: none; margin-top: 1px"
+                ></i>
+                <span
+                  >Restore only runs if the item is still exactly as WinBGM left
+                  it, so it never overwrites a newer change you made
+                  elsewhere.</span
+                >
+              </div>
+            </section>
+
+            <!-- Snapshots & Diff Page -->
+            <section class="page" id="page-snapshots">
+              <div class="page-header">
+                <div>
+                  <h1>Snapshots & Diff Comparison</h1>
+                  <p class="page-subtitle">
+                    Save baseline snapshots to audit what changes when new
+                    software, updates, or games are installed.
+                  </p>
+                </div>
+                <div class="header-actions">
+                  <button
+                    class="win-btn primary"
+                    onclick="promptCreateSnapshot()"
+                  >
+                    <i
+                      data-lucide="camera"
+                      style="width: 13px; height: 13px; margin-right: 6px"
+                    ></i
+                    >Create Baseline
+                  </button>
+                </div>
+              </div>
+              <div class="system-summary" id="snapshot-summary"></div>
+              <div class="page-section">
+                <div class="section-heading">
+                  <strong>Saved Baselines</strong
+                  ><span>Compare with current PC state</span>
+                </div>
+                <div class="snapshot-list" id="snapshot-list"></div>
+              </div>
+              <div
+                id="diff-container"
+                style="display: none; margin-top: 20px"
+                class="page-section"
+              >
+                <div class="section-heading">
+                  <strong id="diff-heading">Comparison Results</strong
+                  ><button
+                    class="win-btn"
+                    style="height: 24px; font-size: 11px"
+                    onclick="$('diff-container').style.display = 'none'"
+                  >
+                    Close Diff
+                  </button>
+                </div>
+                <div id="diff-content" style="padding: 16px 20px"></div>
+              </div>
+            </section>
+
+            <!-- Settings Page -->
+            <section class="page" id="page-settings">
+              <div class="page-header">
+                <div>
+                  <h1>Settings</h1>
+                  <p class="page-subtitle">
+                    Appearance, display preferences, text readability, and
+                    administrator privileges.
+                  </p>
+                </div>
+              </div>
+
+              <div class="page-section">
+                <div class="section-heading">
+                  <strong>Appearance & Personalization</strong
+                  ><span>Theme & colors</span>
+                </div>
+                <div class="overview-row">
+                  <div class="overview-row-copy">
+                    <div class="overview-row-title">App theme</div>
+                    <div class="overview-row-sub">
+                      Choose between Dark, Light, AMOLED pitch black, or sync
+                      automatically with your Windows system preference.
+                    </div>
+                  </div>
+                  <select
+                    class="select-control"
+                    id="set-theme"
+                    aria-label="App theme"
+                  >
+                    <option value="system">Windows default</option>
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="amoled">AMOLED (Pitch Black)</option>
+                  </select>
+                </div>
+                <div class="overview-row">
+                  <div class="overview-row-copy">
+                    <div class="overview-row-title">Accent color</div>
+                    <div class="overview-row-sub">
+                      Customize the highlight color used across buttons,
+                      indicators, active tabs, and navigation items.
+                    </div>
+                  </div>
+                  <div
+                    class="accent-picker"
+                    id="accent-picker"
+                    role="radiogroup"
+                    aria-label="Accent color"
+                  >
+                    <button
+                      type="button"
+                      class="accent-swatch active"
+                      data-color="blue"
+                      title="Blue"
+                      aria-label="Blue"
+                    ></button>
+                    <button
+                      type="button"
+                      class="accent-swatch"
+                      data-color="purple"
+                      title="Purple"
+                      aria-label="Purple"
+                    ></button>
+                    <button
+                      type="button"
+                      class="accent-swatch"
+                      data-color="emerald"
+                      title="Emerald"
+                      aria-label="Emerald"
+                    ></button>
+                    <button
+                      type="button"
+                      class="accent-swatch"
+                      data-color="amber"
+                      title="Amber"
+                      aria-label="Amber"
+                    ></button>
+                    <button
+                      type="button"
+                      class="accent-swatch"
+                      data-color="rose"
+                      title="Rose"
+                      aria-label="Rose"
+                    ></button>
+                    <button
+                      type="button"
+                      class="accent-swatch"
+                      data-color="cyan"
+                      title="Cyan"
+                      aria-label="Cyan"
+                    ></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="page-section" style="margin-top: 13px">
+                <div class="section-heading">
+                  <strong>Display & Readability</strong><span></span>
+                </div>
+                <div class="overview-row">
+                  <div class="overview-row-copy">
+                    <div class="overview-row-title">Text size & UI scale</div>
+                    <div class="overview-row-sub">
+                      Scale up the text and interface elements for easier
+                      reading. You can also press Ctrl + and Ctrl - anytime to
+                      zoom.
+                    </div>
+                  </div>
+                  <select
+                    class="select-control"
+                    id="set-ui-scale"
+                    aria-label="Text size & UI scale"
+                  >
+                    <option value="100%">Default (100%)</option>
+                    <option value="110%">Medium (110%)</option>
+                    <option value="120%">Large (120%)</option>
+                    <option value="130%">Extra Large (130%)</option>
+                    <option value="140%">Huge (140%)</option>
+                  </select>
+                </div>
+                <div class="overview-row">
+                  <div class="overview-row-copy">
+                    <div class="overview-row-title">
+                      Show Windows and Microsoft system components
+                    </div>
+                    <div class="overview-row-sub">
+                      Includes Windows' own services and system packages. Hidden
+                      by default to keep the list focused on your apps.
+                    </div>
+                  </div>
+                  <input
+                    class="toggle"
+                    id="set-system"
+                    type="checkbox"
+                    aria-label="Show system components"
+                  />
+                </div>
+              </div>
+
+              <div class="page-section" style="margin-top: 13px">
+                <div class="section-heading">
+                  <strong>Privileges & Startup</strong><span></span>
+                </div>
+                <div class="overview-row">
+                  <div class="overview-row-copy">
+                    <div class="overview-row-title">
+                      Always start as administrator
+                    </div>
+                    <div class="overview-row-sub">
+                      Windows will prompt for administrator rights automatically
+                      whenever WinBGM is launched, giving you full process
+                      inspection and access to reconfigure services and tasks.
+                    </div>
+                  </div>
+                  <input
+                    class="toggle"
+                    id="set-always-admin"
+                    type="checkbox"
+                    aria-label="Always start as administrator"
+                  />
+                </div>
+                <div class="overview-row">
+                  <div class="overview-row-copy">
+                    <div class="overview-row-title">
+                      Minimize to System Tray on close (Watchdog Daemon)
+                    </div>
+                    <div class="overview-row-sub">
+                      Keep WinBGM running quietly in the Windows notification
+                      tray so the Persistence Watchdog can alert you via Windows
+                      Toast notifications if an installer adds a startup entry.
+                    </div>
+                  </div>
+                  <input
+                    class="toggle"
+                    id="set-minimize-tray"
+                    type="checkbox"
+                    aria-label="Minimize to system tray"
+                  />
+                </div>
+              </div>
+
+              <div class="page-section" style="margin-top: 13px">
+                <div class="section-heading">
+                  <strong>Safety & Guardrails</strong><span>Always active</span>
+                </div>
+                <div class="overview-row">
+                  <div class="overview-row-copy">
+                    <div class="overview-row-title">
+                      Windows System Restore Point
+                    </div>
+                    <div class="overview-row-sub">
+                      Create a native Windows System Restore checkpoint before
+                      making major service, task, or uninstall changes for
+                      maximum peace of mind.
+                    </div>
+                  </div>
+                  <button
+                    class="win-btn"
+                    id="btn-create-restore-point"
+                    onclick="doCreateRestorePoint()"
+                  >
+                    <i data-lucide="shield-plus"></i>Create Restore Point
+                  </button>
+                </div>
+                <div class="overview-row">
+                  <div class="overview-row-copy">
+                    <div class="overview-row-title">
+                      Backup before every change
+                    </div>
+                    <div class="overview-row-sub">
+                      The original setting is saved to Change history first. If
+                      the backup can't be saved, nothing is changed.
+                    </div>
+                  </div>
+                  <input
+                    class="toggle"
+                    type="checkbox"
+                    checked
+                    disabled
+                    aria-label="Backup before every change"
+                  />
+                </div>
+                <div class="overview-row">
+                  <div class="overview-row-copy">
+                    <div class="overview-row-title">
+                      Protect Windows and security software
+                    </div>
+                    <div class="overview-row-sub">
+                      Windows' own components, critical services and antivirus
+                      can't be changed from here.
+                    </div>
+                  </div>
+                  <input
+                    class="toggle"
+                    type="checkbox"
+                    checked
+                    disabled
+                    aria-label="Protect system components"
+                  />
+                </div>
+              </div>
+
+              <div class="page-section" style="margin-top: 13px">
+                <div class="section-heading">
+                  <strong>About</strong><span>WinBGM for Windows</span>
+                </div>
+                <div class="about-card">
+                  <img src="icon.png" alt="WinBGM Logo" class="about-logo" />
+                  <div class="about-details">
+                    <div class="about-name">WinBGM</div>
+                    <div class="about-desc">
+                      Windows Background Manager · Monitor, understand, and
+                      safely manage background startup programs, services, and
+                      tasks.
+                    </div>
+                    <div class="about-meta">
+                      Version 1.0.0 · All system components protected
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <footer class="statusbar">
+            <div class="status-left">
+              <span
+                ><i class="status-dot"></i
+                ><span id="status-text">Ready</span></span
+              >
+              <span id="status-admin"></span>
+            </div>
+            <div class="status-right">
+              <span
+                >Every change is backed up · System components protected</span
+              >
+            </div>
+          </footer>
+        </main>
+      </div>
     </div>
-    <div class="titlebar-center">
-      <label class="quick-search">
-        <i data-lucide="search" style="width:14px;height:14px"></i>
-        <input id="global-search" type="search" placeholder="Search apps, services and tasks" aria-label="Search">
-        <span class="search-shortcut">Ctrl+K</span>
-      </label>
-    </div>
-    <div class="titlebar-right">
-      <span class="readonly-pill"><i data-lucide="shield" style="width:11px;height:11px;margin-right:4px"></i>Safe mode</span>
-    </div>
-  </header>
 
-  <div class="app-body">
-    <aside class="sidebar">
-      <div class="nav-group-label">Manage</div>
-      <nav class="nav-list" aria-label="Main navigation">
-        <button class="nav-item active" data-page="overview"><i data-lucide="layout-grid"></i><span>Overview</span></button>
-        <button class="nav-item" data-page="processes"><i data-lucide="cpu"></i><span>Live Processes</span><span class="nav-count" id="nav-processes"></span></button>
-        <button class="nav-item" data-page="applications"><i data-lucide="layers"></i><span>Applications</span><span class="nav-count" id="nav-apps"></span></button>
-        <button class="nav-item" data-page="uninstaller"><i data-lucide="trash-2"></i><span>Uninstaller</span><span class="nav-count" id="nav-uninstaller"></span></button>
-        <button class="nav-item" data-page="services"><i data-lucide="cog"></i><span>Services</span><span class="nav-count" id="nav-services"></span></button>
-        <button class="nav-item" data-page="tasks"><i data-lucide="calendar-clock"></i><span>Scheduled tasks</span><span class="nav-count" id="nav-tasks"></span></button>
-        <button class="nav-item" data-page="sources"><i data-lucide="compass"></i><span>Startup locations</span></button>
-      </nav>
-      <div class="nav-divider"></div>
-      <div class="nav-group-label">Tools &amp; Safety</div>
-      <nav class="nav-list">
-        <button class="nav-item" data-page="locks"><i data-lucide="lock"></i><span>File Lock Finder</span></button>
-        <button class="nav-item" data-page="snapshots"><i data-lucide="camera"></i><span>Snapshots &amp; Diffs</span></button>
-        <button class="nav-item" data-page="history"><i data-lucide="history"></i><span>Change history</span></button>
-        <button class="nav-item" data-page="settings"><i data-lucide="sliders"></i><span>Settings</span></button>
-      </nav>
-      <div class="sidebar-bottom">
-        <div class="machine-card">
-          <div class="machine-icon"><i data-lucide="monitor"></i></div>
-          <div class="machine-copy">
-            <div class="machine-name" id="machine-name">This PC</div>
-            <div class="machine-meta" id="machine-meta">Scanning…</div>
+    <!-- Modal Dialog -->
+    <div class="modal-backdrop" id="confirm-modal">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <h2 class="modal-title" id="modal-title"></h2>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-actions">
+          <button class="win-btn" id="modal-cancel">Cancel</button>
+          <button class="win-btn primary" id="modal-confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Residual & Dependency Cleanup Modal -->
+    <div class="modal-backdrop" id="residual-modal">
+      <div
+        class="modal residual-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="residual-title"
+      >
+        <div class="residual-header">
+          <div class="residual-icon-badge"><i data-lucide="sparkles"></i></div>
+          <div>
+            <h2
+              class="modal-title"
+              id="residual-title"
+              style="margin-bottom: 2px"
+            >
+              Deep Clean Leftovers & Dependencies
+            </h2>
+            <div
+              class="modal-subtitle"
+              id="residual-subtitle"
+              style="font-size: 12px; color: var(--text-2)"
+            ></div>
+          </div>
+        </div>
+        <div class="residual-body" id="residual-body"></div>
+        <div class="residual-footer">
+          <div class="residual-safety-note">
+            <i data-lucide="shield-check"></i> Files are moved safely to the
+            Windows Recycle Bin
+          </div>
+          <div class="residual-actions">
+            <button
+              class="win-btn"
+              id="residual-cancel"
+              onclick="closeResidualModal()"
+            >
+              Keep Leftovers
+            </button>
+            <button
+              class="win-btn primary"
+              id="residual-confirm"
+              onclick="executeResidualClean()"
+            >
+              Clean Selected (<span id="residual-selected-size">0 B</span>)
+            </button>
           </div>
         </div>
       </div>
-    </aside>
-
-    <main class="main-shell">
-      <div class="commandbar">
-        <span class="commandbar-label" id="commandbar-label">Overview</span>
-        <span class="commandbar-sep"></span>
-        <button class="command-btn btn-scan" id="scan-btn" onclick="doScan()"><i data-lucide="refresh-cw"></i>Scan now</button>
-        <button class="command-btn" onclick="requestFocusMode()"><i data-lucide="zap"></i>Focus Mode</button>
-        <button class="command-btn" onclick="doReveal()"><i data-lucide="folder-search"></i>Open location</button>
-        <button class="command-btn" onclick="openExportModal()"><i data-lucide="download"></i>Export</button>
-        <div class="command-spacer"></div>
-        <div class="command-state"><span class="state-led"></span><span id="scan-status">Scanning…</span></div>
-      </div>
-
-      <div class="content-host" id="content-host">
-        <div id="sentinel-banner-host" style="padding:10px 24px 0 24px"></div>
-        <!-- Applications Page -->
-        <section class="page" id="page-applications">
-          <div class="page-header">
-            <div>
-              <h1>Applications</h1>
-              <p class="page-subtitle">Background components found on this PC, grouped by the application that owns them. Every change is backed up first and can be undone.</p>
-            </div>
-            <div class="header-actions">
-              <button class="win-btn" onclick="requestFocusMode()"><i data-lucide="zap" style="width:13px;height:13px;margin-right:4px"></i>Focus Mode</button>
-              <button class="win-btn" onclick="openExportModal()"><i data-lucide="download" style="width:13px;height:13px;margin-right:4px"></i>Export Report</button>
-            </div>
-          </div>
-          <div id="app-banners"></div>
-          <div class="system-summary" id="app-summary"></div>
-          <div class="content-toolbar">
-            <div class="segmented" id="app-filters"></div>
-            <div class="toolbar-flex"></div>
-            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="app-search" type="search" placeholder="Find an application"></label>
-            <select class="select-control" id="app-sort" aria-label="Sort applications">
-              <option value="name">Name A–Z</option>
-              <option value="running">Running first</option>
-              <option value="ram">RAM usage (High to Low)</option>
-              <option value="review">Needs review first</option>
-            </select>
-          </div>
-          <div class="split-view">
-            <div class="list-pane">
-              <div class="list-topline"><strong>Detected applications</strong><span style="margin-left:auto" id="visible-count"></span></div>
-              <div class="list-head"><div>Name</div><div>Components</div><div>Activity</div><div>Launch behavior</div></div>
-              <div id="app-list"><div class="loading">Scanning this PC…</div></div>
-              <div class="pane-footer"><span id="list-foot"></span><span>Changes are backed up</span></div>
-            </div>
-            <aside class="detail-pane">
-              <div class="detail-inner" id="detail-content"></div>
-            </aside>
-          </div>
-        </section>
-
-        <!-- Uninstaller Page -->
-        <section class="page" id="page-uninstaller">
-          <div class="page-header">
-            <div>
-              <h1>Installed Programs & Deep Uninstaller</h1>
-              <p class="page-subtitle">Audit installed Win32 & user software, track true disk footprints, and completely clean leftover caches and heavy dependencies (like Ollama models and SDKs).</p>
-            </div>
-            <div class="header-actions">
-              <button class="win-btn" onclick="loadInstalledApps()"><i data-lucide="refresh-cw" style="width:13px;height:13px;margin-right:4px"></i>Refresh</button>
-            </div>
-          </div>
-          <div class="system-summary" id="uninstaller-summary"></div>
-          <div class="content-toolbar">
-            <div class="segmented" id="uninstaller-filters">
-              <button class="segmented-btn active" data-filter="all">All Programs</button>
-              <button class="segmented-btn" data-filter="heavy">🔥 Heavy Dependencies</button>
-              <button class="segmented-btn" data-filter="large">Gigabyte Apps (&gt;1 GB)</button>
-              <button class="segmented-btn" data-filter="store">Store Apps</button>
-              <button class="segmented-btn" data-filter="pkg">Steam / Scoop / Choco</button>
-              <button class="segmented-btn" data-filter="orphan">Portable / Orphan</button>
-              <button class="segmented-btn" data-filter="user">User Space</button>
-            </div>
-            <div class="toolbar-flex"></div>
-            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="uninstaller-search" type="search" placeholder="Search installed apps or publishers"></label>
-            <select class="select-control" id="uninstaller-sort" aria-label="Sort installed apps">
-              <option value="size">Size (Largest first)</option>
-              <option value="name">Name A–Z</option>
-              <option value="date">Install Date (Newest first)</option>
-            </select>
-          </div>
-          <div class="page-section">
-            <div class="section-heading"><strong>Installed software inventory</strong><span id="uninstaller-count-meta">Auditing…</span></div>
-            <div style="overflow-x:auto">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th style="min-width:240px">Program</th>
-                    <th>Publisher</th>
-                    <th>Installed On</th>
-                    <th style="text-align:right">Size</th>
-                    <th style="text-align:right;min-width:180px">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="uninstaller-body">
-                  <tr><td colspan="5"><div class="loading">Auditing installed software…</div></td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div class="notice-line" style="margin-top:14px">
-            <i data-lucide="shield-check" style="width:14px;height:14px;flex:none;color:#10b981;margin-top:1px"></i>
-            <span><strong>WinBGM Safety Guarantee</strong>: Leftover cleanup safely moves files to the Windows Recycle Bin (restorable anytime). Registry keys are backed up to history before removal.</span>
-          </div>
-        </section>
-
-        <!-- Overview Page -->
-        <section class="page active" id="page-overview">
-          <div id="overview-content"><div class="loading">Scanning this PC…</div></div>
-        </section>
-
-        <!-- Live Processes Page -->
-        <section class="page" id="page-processes">
-          <div class="page-header">
-            <div>
-              <h1>Live Processes &amp; Efficiency Mode</h1>
-              <p class="page-subtitle">Real-time view of every running process grouped by application—with live CPU%, RAM, Disk I/O, Windows 11 EcoQoS throttling, priority, and freeze controls.</p>
-            </div>
-            <div class="header-actions">
-              <button class="win-btn" onclick="loadLiveProcesses()"><i data-lucide="refresh-cw" style="width:13px;height:13px;margin-right:4px"></i>Refresh</button>
-            </div>
-          </div>
-          <div class="system-summary" id="processes-summary"></div>
-          <div class="content-toolbar">
-            <div class="segmented" id="proc-filters">
-              <button class="active" data-filter="all">All Processes</button>
-              <button data-filter="windowed">Windowed Apps</button>
-              <button data-filter="eco">🍃 Efficiency Mode</button>
-              <button data-filter="network">🌐 Network Active</button>
-              <button data-filter="frozen">❄️ Frozen</button>
-            </div>
-            <div class="toolbar-flex"></div>
-            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="proc-search" type="search" placeholder="Search process name or PID"></label>
-            <select class="select-control" id="proc-sort" aria-label="Sort processes">
-              <option value="ram">Memory (High to Low)</option>
-              <option value="cpu">CPU % (High to Low)</option>
-              <option value="io">Disk I/O (High to Low)</option>
-              <option value="name">Name A–Z</option>
-            </select>
-          </div>
-          <div class="page-section">
-            <div class="section-heading"><strong>Running process groups</strong><span id="proc-count-meta">Click a group to inspect child PIDs</span></div>
-            <div style="overflow-x:auto">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th style="min-width:230px">Application / Process</th>
-                    <th style="text-align:right">CPU</th>
-                    <th style="text-align:right">Memory</th>
-                    <th style="text-align:right">Disk I/O</th>
-                    <th>Status &amp; Priority</th>
-                    <th style="text-align:right;min-width:210px">Controls</th>
-                  </tr>
-                </thead>
-                <tbody id="proc-body">
-                  <tr><td colspan="6"><div class="loading">Sampling live processes…</div></td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- File Lock Finder Page -->
-        <section class="page" id="page-locks">
-          <div class="page-header">
-            <div>
-              <h1>Who's Locking This File?</h1>
-              <p class="page-subtitle">Natively query Windows Restart Manager (rstrtmgr.dll) to pinpoint which process is holding an open lock on a file or folder.</p>
-            </div>
-          </div>
-          <div class="page-section" style="padding:18px">
-            <div id="lock-dropzone" style="border:1.5px dashed var(--border);border-radius:8px;padding:18px;background:var(--surface-card);display:flex;flex-direction:column;gap:12px">
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                <label class="filter-search" style="flex:1;min-width:260px;max-width:none;height:34px">
-                  <i data-lucide="file-search" style="width:14px;height:14px;flex:none"></i>
-                  <input id="lock-path-input" type="text" placeholder="Paste or drop a locked file or folder path (e.g. C:\Users\...\app.log)">
-                </label>
-                <button class="win-btn" onclick="browseLockedFile()"><i data-lucide="folder-open"></i>Browse File…</button>
-                <button class="win-btn primary" onclick="checkFileLocks()"><i data-lucide="search"></i>Find Locks</button>
-              </div>
-              <div style="font-size:11px;color:var(--text-dim)">Tip: You can check either a single file or an entire folder. Critical Windows processes are automatically protected.</div>
-            </div>
-          </div>
-          <div class="page-section" style="margin-top:14px">
-            <div class="section-heading"><strong>Locking processes</strong><span id="lock-count-meta">Enter a path above to inspect locks</span></div>
-            <div style="overflow-x:auto">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Application / Process</th>
-                    <th>PID</th>
-                    <th>Service</th>
-                    <th>Executable Path</th>
-                    <th style="text-align:right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="lock-body">
-                  <tr><td colspan="5"><div class="empty-state">No file scanned yet. Pick or paste a path above to see what's locking it.</div></td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- Services Page -->
-        <section class="page" id="page-services">
-          <div class="page-header">
-            <div>
-              <h1>Services</h1>
-              <p class="page-subtitle">Background services, how they start, and whether Windows is running them now.</p>
-            </div>
-          </div>
-          <div class="system-summary" id="svc-summary"></div>
-          <div class="content-toolbar">
-            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="svc-search" type="search" placeholder="Search services"></label>
-            <select class="select-control" id="svc-type">
-              <option value="">All startup types</option>
-              <option>Automatic</option>
-              <option>Automatic (Delayed)</option>
-              <option>Manual</option>
-              <option>Disabled</option>
-            </select>
-            <div class="toolbar-flex"></div>
-            <span class="subtle-label" id="svc-count"></span>
-          </div>
-          <div class="page-section">
-            <div class="section-heading"><strong>Service inventory</strong><span>Click a row for details</span></div>
-            <div style="overflow-x:auto">
-              <table class="data-table">
-                <thead>
-                  <tr><th>Service</th><th>Publisher</th><th>Startup type</th><th>State</th><th>Protection</th></tr>
-                </thead>
-                <tbody id="svc-body"></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="notice-line" style="margin-top:12px">
-            <i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i>
-            <span>"Locked" means Windows would not let this account change the service's settings (checked only when running as administrator). Stopping a locked service is often still allowed.</span>
-          </div>
-        </section>
-
-        <!-- Tasks Page -->
-        <section class="page" id="page-tasks">
-          <div class="page-header">
-            <div>
-              <h1>Scheduled tasks</h1>
-              <p class="page-subtitle">Tasks can start programs at logon, at boot, on a timer or when something happens. Microsoft's own task library is not listed.</p>
-            </div>
-          </div>
-          <div class="system-summary" id="task-summary"></div>
-          <div class="content-toolbar">
-            <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="task-search" type="search" placeholder="Search tasks"></label>
-            <div class="toolbar-flex"></div>
-            <span class="subtle-label" id="task-count"></span>
-          </div>
-          <div class="page-section">
-            <div class="section-heading"><strong>Task inventory</strong><span>Click a row for details</span></div>
-            <div style="overflow-x:auto">
-              <table class="data-table">
-                <thead>
-                  <tr><th>Task</th><th>Trigger</th><th>Publisher</th><th>Action</th><th>Last run</th><th>State</th></tr>
-                </thead>
-                <tbody id="task-body"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- Sources Page -->
-        <section class="page" id="page-sources">
-          <div class="page-header">
-            <div>
-              <h1 id="source-page-title">Startup locations</h1>
-              <p class="page-subtitle" id="source-page-subtitle">The Windows mechanisms scanned to discover automatic and event-triggered launches.</p>
-            </div>
-            <div class="header-actions" id="source-header-actions" style="display:none">
-              <button class="win-btn" onclick="closeSourceInspector()"><i data-lucide="arrow-left" style="width:13px;height:13px;margin-right:4px"></i>Back to all locations</button>
-            </div>
-          </div>
-
-          <div id="source-grid-container">
-            <div class="source-grid" id="source-grid"></div>
-            <div class="notice-line" style="margin-top:13px">
-              <i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i>
-              <span>Click any startup location card to inspect, filter, and manage all background entries discovered in that mechanism.</span>
-            </div>
-          </div>
-
-          <!-- Interactive Location Inspector -->
-          <div id="source-inspector" style="display:none">
-            <div class="system-summary" id="inspector-summary"></div>
-            <div class="content-toolbar">
-              <label class="filter-search"><i data-lucide="search" style="width:13px;height:13px;flex:none"></i><input id="inspector-search" type="search" placeholder="Search items in this location..."></label>
-              <div class="toolbar-flex"></div>
-              <span class="subtle-label" id="inspector-count"></span>
-            </div>
-            <div class="page-section">
-              <div class="section-heading"><strong id="inspector-heading">Location Items</strong><span id="inspector-hint">Click row for details & security</span></div>
-              <div style="overflow-x:auto">
-                <table class="data-table">
-                  <thead>
-                    <tr id="inspector-table-head"><th>Item Name</th><th>Application</th><th>Command / Target</th><th>Status</th><th>Control</th></tr>
-                  </thead>
-                  <tbody id="inspector-table-body"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- History Page -->
-        <section class="page" id="page-history">
-          <div class="page-header">
-            <div>
-              <h1>Change history</h1>
-              <p class="page-subtitle">Every change is saved here before it is made, with the original value, so it can be restored.</p>
-            </div>
-          </div>
-          <div class="system-summary" id="history-summary"></div>
-          <div class="page-section">
-            <div class="section-heading"><strong>Recent activity</strong><span>Newest first</span></div>
-            <div class="history-list" id="history-list"></div>
-          </div>
-          <div class="notice-line" style="margin-top:12px">
-            <i data-lucide="info" style="width:13px;height:13px;flex:none;margin-top:1px"></i>
-            <span>Restore only runs if the item is still exactly as WinBGM left it, so it never overwrites a newer change you made elsewhere.</span>
-          </div>
-        </section>
-
-        <!-- Snapshots & Diff Page -->
-        <section class="page" id="page-snapshots">
-          <div class="page-header">
-            <div>
-              <h1>Snapshots & Diff Comparison</h1>
-              <p class="page-subtitle">Save baseline snapshots to audit what changes when new software, updates, or games are installed.</p>
-            </div>
-            <div class="header-actions">
-              <button class="win-btn primary" onclick="promptCreateSnapshot()"><i data-lucide="camera" style="width:13px;height:13px;margin-right:6px"></i>Create Baseline</button>
-            </div>
-          </div>
-          <div class="system-summary" id="snapshot-summary"></div>
-          <div class="page-section">
-            <div class="section-heading"><strong>Saved Baselines</strong><span>Compare with current PC state</span></div>
-            <div class="snapshot-list" id="snapshot-list"></div>
-          </div>
-          <div id="diff-container" style="display:none;margin-top:20px" class="page-section">
-            <div class="section-heading"><strong id="diff-heading">Comparison Results</strong><button class="win-btn" style="height:24px;font-size:11px" onclick="$('diff-container').style.display='none'">Close Diff</button></div>
-            <div id="diff-content" style="padding:16px 20px"></div>
-          </div>
-        </section>
-
-        <!-- Settings Page -->
-        <section class="page" id="page-settings">
-          <div class="page-header">
-            <div>
-              <h1>Settings</h1>
-              <p class="page-subtitle">Appearance, display preferences, text readability, and administrator privileges.</p>
-            </div>
-          </div>
-
-          <div class="page-section">
-            <div class="section-heading"><strong>Appearance & Personalization</strong><span>Theme & colors</span></div>
-            <div class="overview-row">
-              <div class="overview-row-copy">
-                <div class="overview-row-title">App theme</div>
-                <div class="overview-row-sub">Choose between Dark, Light, AMOLED pitch black, or sync automatically with your Windows system preference.</div>
-              </div>
-              <select class="select-control" id="set-theme" aria-label="App theme">
-                <option value="system">Windows default</option>
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
-                <option value="amoled">AMOLED (Pitch Black)</option>
-              </select>
-            </div>
-            <div class="overview-row">
-              <div class="overview-row-copy">
-                <div class="overview-row-title">Accent color</div>
-                <div class="overview-row-sub">Customize the highlight color used across buttons, indicators, active tabs, and navigation items.</div>
-              </div>
-              <div class="accent-picker" id="accent-picker" role="radiogroup" aria-label="Accent color">
-                <button type="button" class="accent-swatch active" data-color="blue" title="Blue" aria-label="Blue"></button>
-                <button type="button" class="accent-swatch" data-color="purple" title="Purple" aria-label="Purple"></button>
-                <button type="button" class="accent-swatch" data-color="emerald" title="Emerald" aria-label="Emerald"></button>
-                <button type="button" class="accent-swatch" data-color="amber" title="Amber" aria-label="Amber"></button>
-                <button type="button" class="accent-swatch" data-color="rose" title="Rose" aria-label="Rose"></button>
-                <button type="button" class="accent-swatch" data-color="cyan" title="Cyan" aria-label="Cyan"></button>
-              </div>
-            </div>
-          </div>
-
-          <div class="page-section" style="margin-top:13px">
-            <div class="section-heading"><strong>Display & Readability</strong><span></span></div>
-            <div class="overview-row">
-              <div class="overview-row-copy">
-                <div class="overview-row-title">Text size & UI scale</div>
-                <div class="overview-row-sub">Scale up the text and interface elements for easier reading. You can also press Ctrl + and Ctrl - anytime to zoom.</div>
-              </div>
-              <select class="select-control" id="set-ui-scale" aria-label="Text size & UI scale">
-                <option value="100%">Default (100%)</option>
-                <option value="110%">Medium (110%)</option>
-                <option value="120%">Large (120%)</option>
-                <option value="130%">Extra Large (130%)</option>
-                <option value="140%">Huge (140%)</option>
-              </select>
-            </div>
-            <div class="overview-row">
-              <div class="overview-row-copy">
-                <div class="overview-row-title">Show Windows and Microsoft system components</div>
-                <div class="overview-row-sub">Includes Windows' own services and system packages. Hidden by default to keep the list focused on your apps.</div>
-              </div>
-              <input class="toggle" id="set-system" type="checkbox" aria-label="Show system components">
-            </div>
-          </div>
-
-          <div class="page-section" style="margin-top:13px">
-            <div class="section-heading"><strong>Privileges & Startup</strong><span></span></div>
-            <div class="overview-row">
-              <div class="overview-row-copy">
-                <div class="overview-row-title">Always start as administrator</div>
-                <div class="overview-row-sub">Windows will prompt for administrator rights automatically whenever WinBGM is launched, giving you full process inspection and access to reconfigure services and tasks.</div>
-              </div>
-              <input class="toggle" id="set-always-admin" type="checkbox" aria-label="Always start as administrator">
-            </div>
-            <div class="overview-row">
-              <div class="overview-row-copy">
-                <div class="overview-row-title">Minimize to System Tray on close (Watchdog Daemon)</div>
-                <div class="overview-row-sub">Keep WinBGM running quietly in the Windows notification tray so the Persistence Watchdog can alert you via Windows Toast notifications if an installer adds a startup entry.</div>
-              </div>
-              <input class="toggle" id="set-minimize-tray" type="checkbox" aria-label="Minimize to system tray">
-            </div>
-          </div>
-
-          <div class="page-section" style="margin-top:13px">
-            <div class="section-heading"><strong>Safety & Guardrails</strong><span>Always active</span></div>
-            <div class="overview-row">
-              <div class="overview-row-copy">
-                <div class="overview-row-title">Windows System Restore Point</div>
-                <div class="overview-row-sub">Create a native Windows System Restore checkpoint before making major service, task, or uninstall changes for maximum peace of mind.</div>
-              </div>
-              <button class="win-btn" id="btn-create-restore-point" onclick="doCreateRestorePoint()"><i data-lucide="shield-plus"></i>Create Restore Point</button>
-            </div>
-            <div class="overview-row">
-              <div class="overview-row-copy">
-                <div class="overview-row-title">Backup before every change</div>
-                <div class="overview-row-sub">The original setting is saved to Change history first. If the backup can't be saved, nothing is changed.</div>
-              </div>
-              <input class="toggle" type="checkbox" checked disabled aria-label="Backup before every change">
-            </div>
-            <div class="overview-row">
-              <div class="overview-row-copy">
-                <div class="overview-row-title">Protect Windows and security software</div>
-                <div class="overview-row-sub">Windows' own components, critical services and antivirus can't be changed from here.</div>
-              </div>
-              <input class="toggle" type="checkbox" checked disabled aria-label="Protect system components">
-            </div>
-          </div>
-
-          <div class="page-section" style="margin-top:13px">
-            <div class="section-heading"><strong>About</strong><span>WinBGM for Windows</span></div>
-            <div class="about-card">
-              <img src="icon.png" alt="WinBGM Logo" class="about-logo">
-              <div class="about-details">
-                <div class="about-name">WinBGM</div>
-                <div class="about-desc">Windows Background Manager · Monitor, understand, and safely manage background startup programs, services, and tasks.</div>
-                <div class="about-meta">Version 1.0.0 · All system components protected</div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <footer class="statusbar">
-        <div class="status-left">
-          <span><i class="status-dot"></i><span id="status-text">Ready</span></span>
-          <span id="status-admin"></span>
-        </div>
-        <div class="status-right">
-          <span>Every change is backed up · System components protected</span>
-        </div>
-      </footer>
-    </main>
-  </div>
-</div>
-
-<!-- Modal Dialog -->
-<div class="modal-backdrop" id="confirm-modal">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <h2 class="modal-title" id="modal-title"></h2>
-    <div class="modal-body" id="modal-body"></div>
-    <div class="modal-actions">
-      <button class="win-btn" id="modal-cancel">Cancel</button>
-      <button class="win-btn primary" id="modal-confirm">Confirm</button>
     </div>
-  </div>
-</div>
 
-<!-- Residual & Dependency Cleanup Modal -->
-<div class="modal-backdrop" id="residual-modal">
-  <div class="modal residual-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="residual-title">
-    <div class="residual-header">
-      <div class="residual-icon-badge"><i data-lucide="sparkles"></i></div>
-      <div>
-        <h2 class="modal-title" id="residual-title" style="margin-bottom:2px">Deep Clean Leftovers & Dependencies</h2>
-        <div class="modal-subtitle" id="residual-subtitle" style="font-size:12px;color:var(--text-2)"></div>
-      </div>
-    </div>
-    <div class="residual-body" id="residual-body"></div>
-    <div class="residual-footer">
-      <div class="residual-safety-note"><i data-lucide="shield-check"></i> Files are moved safely to the Windows Recycle Bin</div>
-      <div class="residual-actions">
-        <button class="win-btn" id="residual-cancel" onclick="closeResidualModal()">Keep Leftovers</button>
-        <button class="win-btn primary" id="residual-confirm" onclick="executeResidualClean()">Clean Selected (<span id="residual-selected-size">0 B</span>)</button>
-      </div>
-    </div>
-  </div>
-</div>
+    <!-- Toast Notifications -->
+    <div class="toast" id="toast"></div>
 
-<!-- Toast Notifications -->
-<div class="toast" id="toast"></div>
-
-<!-- Modular Scripts -->
-<script src="js/state.js"></script>
-<script src="js/animations.js"></script>
-<script src="js/api.js"></script>
-<script src="js/renderers.js"></script>
-<script src="js/app.js"></script>
-</body>
+    <!-- Modular Scripts -->
+    <script src="js/state.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/renderers.js"></script>
+    <script src="js/app.js"></script>
+  </body>
 </html>
