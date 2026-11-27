@@ -169,19 +169,19 @@ func scanScoopApps() []InstalledApp {
 			}
 
 			out = append(out, InstalledApp{
-				ID:              "Scoop_" + appName,
-				Name:            appName,
-				Version:         m.Version,
-				Publisher:       "Scoop Package",
-				InstallLocation: curDir,
-				UninstallString: cmd,
-				QuietUninstall:  cmd,
-				Source:          "Scoop",
-				InstallerType:   "Scoop",
-				IsUserInstall:   !isGlobal,
-				Is64Bit:         true,
-				ExePath:         exe,
-				DisplaySize:     "—",
+				ID:               "Scoop_" + appName,
+				Name:             appName,
+				Version:          m.Version,
+				Publisher:        "Scoop Package",
+				InstallLocation:  curDir,
+				UninstallString:  cmd,
+				QuietUninstall:   cmd,
+				Source:           "Scoop",
+				InstallerType:    "Scoop",
+				IsUserInstall:    !isGlobal,
+				Is64Bit:          true,
+				ExePath:          exe,
+				DisplaySize:      "—",
 				HeavyDisplaySize: "—",
 			})
 		}

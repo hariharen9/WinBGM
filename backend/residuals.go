@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sys/windows/registry"
@@ -66,6 +67,7 @@ type CleanResult struct {
 var (
 	residualCacheMu sync.Mutex
 	residualCache   = make(map[string]ResidualItem)
+	residualScanSeq uint64
 )
 
 var versionSuffixRegex = regexp.MustCompile(`(?i)\s+(v?\d+(\.\d+)+|\(\s*x(64|86)\s*\)|\d+-bit).*$`)
@@ -81,6 +83,62 @@ var genericVendorTokens = map[string]bool{
 	"program": true, "software": true, "app": true, "tools": true,
 }
 
+func sanitizeSubpathSegment(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.ReplaceAll(s, "..", "")
+	s = strings.ReplaceAll(s, `/`, " ")
+	s = strings.ReplaceAll(s, `\`, " ")
+	return strings.TrimSpace(s)
+}
+
+func isBroadRootDir(dir string) bool {
+	clean := strings.ToLower(filepath.Clean(strings.TrimSpace(dir)))
+	if clean == "" || len(clean) <= 3 {
+		return true
+	}
+	broad := []string{
+		os.Getenv("ProgramFiles"),
+		os.Getenv("ProgramFiles(x86)"),
+		os.Getenv("ProgramW6432"),
+		os.Getenv("SystemRoot"),
+		os.Getenv("LOCALAPPDATA"),
+		os.Getenv("APPDATA"),
+		os.Getenv("ProgramData"),
+		os.Getenv("USERPROFILE"),
+	}
+	for _, b := range broad {
+		if b != "" && strings.EqualFold(clean, filepath.Clean(b)) {
+			return true
+		}
+	}
+	return false
+}
+
+func pathUnderDir(target, dir string) bool {
+	if strings.TrimSpace(dir) == "" || isBroadRootDir(dir) {
+		return false
+	}
+	t := strings.ToLower(filepath.Clean(target))
+	d := strings.ToLower(filepath.Clean(dir))
+	return t == d || strings.HasPrefix(t, d+`\`)
+}
+
+func isAppStillInstalled(app InstalledApp) bool {
+	if app.ExePath != "" {
+		if _, err := os.Stat(app.ExePath); err == nil {
+			return true
+		}
+	}
+	if app.UninstallString != "" && !strings.EqualFold(app.Source, "Orphaned") {
+		if exe := exePath(app.UninstallString); exe != "" {
+			if _, err := os.Stat(exe); err == nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // candidateAppSubpaths builds strict, non-generic folder/registry subpaths for an app.
 // It never guesses using a bare first word or generic vendor name.
 func candidateAppSubpaths(app InstalledApp) []string {
@@ -88,14 +146,14 @@ func candidateAppSubpaths(app InstalledApp) []string {
 	seen := make(map[string]bool)
 	add := func(s string) {
 		s = strings.TrimSpace(s)
-		if s == "" {
+		if s == "" || strings.Contains(s, "..") {
 			return
 		}
 		low := strings.ToLower(s)
 		if genericVendorTokens[low] || protectedFolderNames[low] {
 			return
 		}
-		if len(s) < 4 && !strings.EqualFold(s, strings.TrimSpace(app.Name)) {
+		if len(s) < 4 && !strings.EqualFold(s, sanitizeSubpathSegment(app.Name)) {
 			return
 		}
 		if !seen[low] {
@@ -104,13 +162,13 @@ func candidateAppSubpaths(app InstalledApp) []string {
 		}
 	}
 
-	rawName := strings.TrimSpace(app.Name)
+	rawName := sanitizeSubpathSegment(app.Name)
 	add(rawName)
 
-	stripped := strings.TrimSpace(versionSuffixRegex.ReplaceAllString(rawName, ""))
+	stripped := sanitizeSubpathSegment(versionSuffixRegex.ReplaceAllString(rawName, ""))
 	add(stripped)
 
-	pub := strings.TrimSpace(app.Publisher)
+	pub := sanitizeSubpathSegment(app.Publisher)
 	if pub != "" && rawName != "" && !strings.EqualFold(pub, rawName) {
 		add(filepath.Join(pub, rawName))
 		if stripped != "" && stripped != rawName {
@@ -316,12 +374,12 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 			for _, n := range names {
 				lowN := strings.ToLower(n)
 				cmd, _, _ := k.GetStringValue(n)
-				lowCmd := strings.ToLower(cmd)
 
+				cmdExe := exePath(cmd)
 				matched := false
-				if lowExe != "" && strings.Contains(lowCmd, lowExe) {
+				if lowExe != "" && cmdExe != "" && pathUnderDir(cmdExe, app.ExePath) {
 					matched = true
-				} else if lowInstall != "" && len(lowInstall) > 6 && strings.Contains(lowCmd, lowInstall) {
+				} else if lowInstall != "" && cmdExe != "" && pathUnderDir(cmdExe, app.InstallLocation) {
 					matched = true
 				} else if exactName != "" && !genericVendorTokens[exactName] && len(exactName) >= 4 && strings.EqualFold(lowN, exactName) {
 					matched = true
@@ -371,7 +429,7 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 					return nil
 				}
 				lowT := strings.ToLower(target)
-				if (lowExe != "" && lowT == lowExe) || (lowInstall != "" && len(lowInstall) > 6 && strings.HasPrefix(lowT, lowInstall)) {
+				if (lowExe != "" && lowT == lowExe) || pathUnderDir(target, app.InstallLocation) {
 					seenPaths[strings.ToLower(p)] = true
 					items = append(items, ResidualItem{
 						ID:            fmt.Sprintf("lnk_%d", len(items)),
@@ -417,8 +475,11 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 		}
 	}
 
+	scanSeq := atomic.AddUint64(&residualScanSeq, 1)
+	stillInstalled := isAppStillInstalled(app)
 	for i := range items {
-		scoreResidualConfidence(app, &items[i])
+		items[i].ID = fmt.Sprintf("s%d_%s", scanSeq, items[i].ID)
+		scoreResidualConfidence(app, &items[i], stillInstalled)
 		report.TotalSizeBytes += items[i].SizeBytes
 	}
 	report.TotalSizeFormatted = FormatBytes(report.TotalSizeBytes)
@@ -436,7 +497,7 @@ func ScanResiduals(app InstalledApp) (ResidualReport, error) {
 }
 
 // scoreResidualConfidence assigns a BCU-inspired ConfidenceScore and ConfidenceLevel to each leftover item.
-func scoreResidualConfidence(app InstalledApp, item *ResidualItem) {
+func scoreResidualConfidence(app InstalledApp, item *ResidualItem, stillInstalled bool) {
 	score := 0
 	var reasons []string
 
@@ -489,6 +550,11 @@ func scoreResidualConfidence(app InstalledApp, item *ResidualItem) {
 		}
 	}
 
+	if stillInstalled && (item.Category == CategoryInstall || item.Category == CategoryAutostart || item.Category == CategoryShortcut) {
+		score -= 6
+		reasons = append(reasons, "Application still appears installed (-6)")
+	}
+
 	item.ConfidenceScore = score
 	item.ConfidenceReasons = reasons
 	switch {
@@ -517,7 +583,7 @@ func CleanResidualItems(items []ResidualItem) (CleanResult, error) {
 		residualCacheMu.Lock()
 		authItem, ok := residualCache[reqItem.ID]
 		residualCacheMu.Unlock()
-		if !ok {
+		if !ok || !strings.EqualFold(authItem.Path, reqItem.Path) {
 			result.Errors = append(result.Errors, fmt.Sprintf("Rejected unverified cleanup item %q: please rescan first", reqItem.ID))
 			continue
 		}

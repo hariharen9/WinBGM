@@ -47,8 +47,15 @@ jobs:
           go test -v ./backend
 
       - name: Build Wails Binary (${{ matrix.platform }})
+        shell: pwsh
         run: |
-          wails build -platform ${{ matrix.platform }} -clean -trimpath -o WinBGM.exe
+          $Tag = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "dev" }
+          $Version = $Tag.TrimStart('v')
+          $Commit = (git rev-parse --short HEAD).Trim()
+          $CommitMsg = (git log -1 --pretty=%s).Trim()
+          $CommitMsgB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($CommitMsg))
+          $LdFlags = "-X winbgm/backend.AppVersion=$Version -X winbgm/backend.AppCommit=$Commit -X winbgm/backend.AppCommitMsgB64=$CommitMsgB64"
+          wails build -platform ${{ matrix.platform }} -clean -trimpath -ldflags $LdFlags -o WinBGM.exe
 
       - name: Package Release Archive
         shell: pwsh

@@ -9,8 +9,8 @@ import (
 )
 
 type appxManifest struct {
-	XMLName    xml.Name `xml:"Package"`
-	Identity   struct {
+	XMLName  xml.Name `xml:"Package"`
+	Identity struct {
 		Name      string `xml:"Name,attr"`
 		Publisher string `xml:"Publisher,attr"`
 		Version   string `xml:"Version,attr"`

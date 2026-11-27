@@ -2,9 +2,11 @@ package backend
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 type HistoryEntry struct {
@@ -54,12 +56,16 @@ func loadHistory() []HistoryEntry {
 }
 
 func loadHistoryLocked() []HistoryEntry {
-	b, err := os.ReadFile(historyPath())
+	p := historyPath()
+	b, err := os.ReadFile(p)
 	if err != nil {
 		return nil
 	}
 	var h []HistoryEntry
-	if json.Unmarshal(b, &h) != nil {
+	if err := json.Unmarshal(b, &h); err != nil {
+		// Preserve corrupt history file instead of silently wiping backups on next save.
+		bak := fmt.Sprintf("%s.corrupt.%s.bak", p, time.Now().Format("20060102-150405"))
+		_ = os.Rename(p, bak)
 		return nil
 	}
 	return h

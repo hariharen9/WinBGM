@@ -1,8 +1,10 @@
 package backend
 
 import (
+	"context"
 	"encoding/json"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -14,7 +16,9 @@ import (
 const psPrelude = `$ProgressPreference='SilentlyContinue'; [Console]::OutputEncoding=[Text.Encoding]::UTF8; `
 
 func ps(script string) ([]byte, error) {
-	c := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", psPrelude+script)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	c := exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", psPrelude+script)
 	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return c.Output()
 }
@@ -74,6 +78,9 @@ func humanTriggers(raw string) (text string, atStart bool) {
 
 // scanTasksCOM queries Windows Task Scheduler 2.0 in-process via COM (<50ms).
 func scanTasksCOM(pt procTable) ([]Component, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
 		ole.CoInitialize(0)
 	}
@@ -138,7 +145,7 @@ func scanTasksCOM(pt procTable) ([]Component, error) {
 
 					stateVar, _ := oleutil.GetProperty(task, "State")
 					stateVal := int(stateVar.Val)
-					enabled := stateVal != 1 // 1 is TASK_STATE_DISABLED
+					enabled := stateVal != 1   // 1 is TASK_STATE_DISABLED
 					isRunning := stateVal == 4 // 4 is TASK_STATE_RUNNING
 
 					lastRunStr := ""

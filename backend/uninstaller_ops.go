@@ -6,6 +6,10 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
+	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 // LaunchUninstaller executes the vendor uninstaller command for an app.
@@ -58,65 +62,104 @@ func LaunchUninstaller(app InstalledApp, quiet bool) (int, error) {
 		return 0, nil
 	}
 
-	// Parse command string into executable and arguments
-	var exe string
-	var args []string
-
-	if strings.HasPrefix(cmdStr, `"`) {
-		endIdx := strings.Index(cmdStr[1:], `"`)
-		if endIdx > 0 {
-			exe = cmdStr[1 : endIdx+1]
-			remainder := strings.TrimSpace(cmdStr[endIdx+2:])
-			if remainder != "" {
-				args = strings.Fields(remainder)
-			}
-		} else {
-			exe = strings.Trim(cmdStr, `"`)
-		}
-	} else {
+	// Resolve executable path without corrupting quoted args or unquoted paths with spaces,
+	// and pass the raw command line via SysProcAttr.CmdLine.
+	exe := exePath(cmdStr)
+	if exe == "" {
 		parts := strings.Fields(cmdStr)
 		if len(parts) > 0 {
-			exe = parts[0]
-			args = parts[1:]
+			exe = strings.Trim(parts[0], `"`)
 		}
 	}
-
 	if exe == "" {
 		return -1, fmt.Errorf("failed to parse uninstaller executable from: %s", cmdStr)
 	}
 
-	// Special handling for MsiExec
+	finalCmdLine := cmdStr
 	if strings.EqualFold(filepathBase(exe), "msiexec.exe") || strings.EqualFold(filepathBase(exe), "msiexec") {
 		if quiet {
-			// Add quiet flag if not already present
-			hasQuiet := false
-			for _, a := range args {
-				if strings.EqualFold(a, "/qn") || strings.EqualFold(a, "/quiet") || strings.EqualFold(a, "/q") {
-					hasQuiet = true
-					break
-				}
-			}
-			if !hasQuiet {
-				args = append(args, "/qn")
+			low := strings.ToLower(finalCmdLine)
+			if !strings.Contains(low, " /qn") && !strings.Contains(low, " /quiet") && !strings.Contains(low, " /q") {
+				finalCmdLine += " /qn"
 			}
 		}
 	}
 
-	cmd := exec.Command(exe, args...)
-	// Allow child GUI uninstaller windows to open normally
+	cmd := exec.Command(exe)
+	// Allow child GUI uninstaller windows to open normally and preserve exact quoting/args
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		HideWindow: false,
+		CmdLine:    finalCmdLine,
 	}
 
-	err := cmd.Run()
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return exitErr.ExitCode(), nil
-		}
+	code, err := runAndWaitProcessTree(cmd)
+	// Allow brief OS filesystem/registry flush before residual scan runs
+	time.Sleep(600 * time.Millisecond)
+	return code, err
+}
+
+// runAndWaitProcessTree starts cmd inside a Windows Job Object and waits for both
+// the main process and any spawned child processes (e.g. Inno Setup / NSIS temp
+// uninstallers in %TEMP%) to exit before returning.
+func runAndWaitProcessTree(cmd *exec.Cmd) (int, error) {
+	job, jobErr := windows.CreateJobObject(nil, nil)
+	if jobErr == nil {
+		defer windows.CloseHandle(job)
+	}
+
+	if err := cmd.Start(); err != nil {
 		return -1, err
 	}
 
-	return 0, nil
+	assigned := false
+	if jobErr == nil && cmd.Process != nil {
+		if procH, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE|windows.SYNCHRONIZE, false, uint32(cmd.Process.Pid)); err == nil {
+			if err := windows.AssignProcessToJobObject(job, procH); err == nil {
+				assigned = true
+			}
+			windows.CloseHandle(procH)
+		}
+	}
+
+	exitCode := 0
+	if err := cmd.Wait(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else {
+			return -1, err
+		}
+	}
+
+	if assigned {
+		waitForJobTreeExit(job, 5*time.Minute)
+	}
+
+	return exitCode, nil
+}
+
+func waitForJobTreeExit(job windows.Handle, maxWait time.Duration) {
+	type jobBasicProcessIDList struct {
+		NumberOfAssignedProcesses uint32
+		NumberOfProcessIdsInList  uint32
+		ProcessIdList             [64]uintptr
+	}
+
+	deadline := time.Now().Add(maxWait)
+	for time.Now().Before(deadline) {
+		var list jobBasicProcessIDList
+		var retLen uint32
+		err := windows.QueryInformationJobObject(
+			job,
+			windows.JobObjectBasicProcessIdList,
+			uintptr(unsafe.Pointer(&list)),
+			uint32(unsafe.Sizeof(list)),
+			&retLen,
+		)
+		if err != nil || list.NumberOfAssignedProcesses == 0 {
+			return
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
 }
 
 func filepathBase(path string) string {

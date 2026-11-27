@@ -14,14 +14,14 @@ import (
 )
 
 var (
-	modKernel32PM              = windows.NewLazySystemDLL("kernel32.dll")
-	procGetSystemTimes         = modKernel32PM.NewProc("GetSystemTimes")
-	procGlobalMemoryStatusEx   = modKernel32PM.NewProc("GlobalMemoryStatusEx")
-	procGetProcessIoCounters   = modKernel32PM.NewProc("GetProcessIoCounters")
-	procGetPriorityClass       = modKernel32PM.NewProc("GetPriorityClass")
-	procSetPriorityClass       = modKernel32PM.NewProc("SetPriorityClass")
-	procSetProcessInformation  = modKernel32PM.NewProc("SetProcessInformation")
-	procGetProcessInformation  = modKernel32PM.NewProc("GetProcessInformation")
+	modKernel32PM             = windows.NewLazySystemDLL("kernel32.dll")
+	procGetSystemTimes        = modKernel32PM.NewProc("GetSystemTimes")
+	procGlobalMemoryStatusEx  = modKernel32PM.NewProc("GlobalMemoryStatusEx")
+	procGetProcessIoCounters  = modKernel32PM.NewProc("GetProcessIoCounters")
+	procGetPriorityClass      = modKernel32PM.NewProc("GetPriorityClass")
+	procSetPriorityClass      = modKernel32PM.NewProc("SetPriorityClass")
+	procSetProcessInformation = modKernel32PM.NewProc("SetProcessInformation")
+	procGetProcessInformation = modKernel32PM.NewProc("GetProcessInformation")
 )
 
 const (
@@ -470,9 +470,27 @@ func formatIORate(bytesPerSec uint64) string {
 	return fmt.Sprintf("%.1f MB/s", float64(bytesPerSec)/(1024.0*1024.0))
 }
 
+func isProtectedPID(pid uint32) bool {
+	if pid == 0 || pid == 4 || pid == uint32(os.Getpid()) {
+		return true
+	}
+	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	if err != nil {
+		return false
+	}
+	defer windows.CloseHandle(h)
+	var buf [windows.MAX_PATH]uint16
+	size := uint32(len(buf))
+	if err := windows.QueryFullProcessImageName(h, 0, &buf[0], &size); err != nil {
+		return false
+	}
+	name := filepath.Base(windows.UTF16ToString(buf[:size]))
+	return isProtectedProcess(name, pid)
+}
+
 // SetProcessEcoMode enables or disables Windows 11 Efficiency Mode (EcoQoS) on a process.
 func SetProcessEcoMode(pid uint32, enable bool) error {
-	if pid == 0 || pid == 4 || pid == uint32(os.Getpid()) {
+	if isProtectedPID(pid) {
 		return fmt.Errorf("cannot modify protected system or self process")
 	}
 	h, err := windows.OpenProcess(windows.PROCESS_SET_INFORMATION, false, pid)
@@ -510,7 +528,7 @@ func SetProcessEcoMode(pid uint32, enable bool) error {
 
 // SetProcessPriority changes the scheduling priority class of a process.
 func SetProcessPriority(pid uint32, level string) error {
-	if pid == 0 || pid == 4 || pid == uint32(os.Getpid()) {
+	if isProtectedPID(pid) {
 		return fmt.Errorf("cannot modify protected system or self process")
 	}
 	var cls uint32

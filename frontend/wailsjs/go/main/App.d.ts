@@ -39,6 +39,8 @@ export function FindLockingProcesses(arg1:string):Promise<Array<backend.LockingP
 
 export function GetAlwaysAdmin():Promise<boolean>;
 
+export function GetAppBuildInfo():Promise<backend.BuildInfo>;
+
 export function GetAppIcons(arg1:Array<string>):Promise<Record<string, string>>;
 
 export function GetBootProfile():Promise<backend.BootProfile>;

@@ -37,13 +37,13 @@ type SystemAboutInfo struct {
 	StorageUsed    string `json:"storageUsed"`
 
 	// Device identity & board
-	DeviceName       string       `json:"deviceName"`
-	Motherboard      string       `json:"motherboard"`
-	Manufacturer     string       `json:"manufacturer"`
-	DeviceID         string       `json:"deviceId"`
-	ProductID        string       `json:"productId"`
-	SystemType       string       `json:"systemType"`
-	Drives           []DriveUsage `json:"drives"`
+	DeviceName   string       `json:"deviceName"`
+	Motherboard  string       `json:"motherboard"`
+	Manufacturer string       `json:"manufacturer"`
+	DeviceID     string       `json:"deviceId"`
+	ProductID    string       `json:"productId"`
+	SystemType   string       `json:"systemType"`
+	Drives       []DriveUsage `json:"drives"`
 
 	// Windows specification
 	Edition     string `json:"edition"`

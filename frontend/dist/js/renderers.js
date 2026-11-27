@@ -682,16 +682,35 @@ function requestChange(id, action) {
 }
 
 function requestFocusMode() {
-  $('modal-title').textContent = 'Activate Focus Mode?';
+  const candidates = [];
+  if (inv && Array.isArray(inv.apps)) {
+    for (const app of inv.apps) {
+      if (app.system) continue;
+      for (const c of (app.components || [])) {
+        if (c.autoStart && c.control === 'yes' && !c.system && !c.caution &&
+            (c.kind === 'run' || c.kind === 'folder' || c.kind === 'task')) {
+          candidates.push({ app: app.name, name: c.name, kind: c.kind });
+        }
+      }
+    }
+  }
+  const previewHtml = candidates.length
+    ? `<div style="margin-top:8px;max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:6px 10px;background:var(--surface-card);font-size:11px">
+        ${candidates.slice(0, 20).map(x => `<div style="display:flex;justify-content:space-between;padding:2px 0"><span><strong>${esc(x.app)}</strong> — ${esc(x.name)}</span><span style="color:var(--text-dim)">${esc(x.kind)}</span></div>`).join('')}
+        ${candidates.length > 20 ? `<div style="color:var(--text-dim);margin-top:4px">…and ${candidates.length - 20} more</div>` : ''}
+       </div>`
+    : `<p style="color:var(--text-2);font-size:11.5px">No eligible third-party startup entries or tasks are currently enabled.</p>`;
+
+  $('modal-title').textContent = `Activate Focus Mode? (${candidates.length} item${candidates.length === 1 ? '' : 's'})`;
   $('modal-body').innerHTML = `
-    <p>Focus Mode disables <strong>third-party automatic startup programs and services</strong> to speed up boot times and free background resources.</p>
-    <p style="color:var(--accent)"><i data-lucide="shield-check" style="width:13px;height:13px;display:inline;margin-right:4px"></i>Windows system components and antivirus software are strictly protected and will not be touched.</p>
-    <p>Every single item is backed up before being modified. You can undo this anytime from <strong>Change history</strong>.</p>
+    <p>Focus Mode safely disables <strong>third-party startup entries and scheduled tasks</strong> to free boot resources. Services, drivers, and caution-flagged items are untouched.</p>
+    ${previewHtml}
+    <p style="margin-top:8px;color:var(--accent)"><i data-lucide="shield-check" style="width:13px;height:13px;display:inline;margin-right:4px"></i>Every item is backed up first and can be restored anytime from <strong>Change history</strong>.</p>
   `;
-  $('modal-confirm').textContent = 'Activate Focus Mode';
+  $('modal-confirm').textContent = candidates.length ? `Disable ${candidates.length} Item${candidates.length === 1 ? '' : 's'}` : 'OK';
   $('modal-confirm').onclick = async () => {
     closeModal();
-    await doFocusMode();
+    if (candidates.length) await doFocusMode();
   };
   openModal();
   refreshIcons();

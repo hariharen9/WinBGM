@@ -10,28 +10,28 @@ import (
 )
 
 var (
-	modUser32Tray          = windows.NewLazySystemDLL("user32.dll")
-	modShell32Tray         = windows.NewLazySystemDLL("shell32.dll")
-	modKernel32Tray        = windows.NewLazySystemDLL("kernel32.dll")
-	procRegisterClassExW   = modUser32Tray.NewProc("RegisterClassExW")
-	procCreateWindowExW    = modUser32Tray.NewProc("CreateWindowExW")
-	procDefWindowProcW     = modUser32Tray.NewProc("DefWindowProcW")
-	procGetMessageW        = modUser32Tray.NewProc("GetMessageW")
-	procTranslateMessage   = modUser32Tray.NewProc("TranslateMessage")
-	procDispatchMessageW   = modUser32Tray.NewProc("DispatchMessageW")
-	procPostMessageW       = modUser32Tray.NewProc("PostMessageW")
-	procPostQuitMessage    = modUser32Tray.NewProc("PostQuitMessage")
-	procDestroyWindow      = modUser32Tray.NewProc("DestroyWindow")
-	procCreatePopupMenu    = modUser32Tray.NewProc("CreatePopupMenu")
-	procAppendMenuW        = modUser32Tray.NewProc("AppendMenuW")
-	procTrackPopupMenu     = modUser32Tray.NewProc("TrackPopupMenu")
-	procDestroyMenu        = modUser32Tray.NewProc("DestroyMenu")
-	procGetCursorPos       = modUser32Tray.NewProc("GetCursorPos")
-	procSetForegroundWin   = modUser32Tray.NewProc("SetForegroundWindow")
-	procLoadIconW          = modUser32Tray.NewProc("LoadIconW")
-	procShellNotifyIconW   = modShell32Tray.NewProc("Shell_NotifyIconW")
-	procExtractIconW       = modShell32Tray.NewProc("ExtractIconW")
-	procGetModuleHandleW   = modKernel32Tray.NewProc("GetModuleHandleW")
+	modUser32Tray        = windows.NewLazySystemDLL("user32.dll")
+	modShell32Tray       = windows.NewLazySystemDLL("shell32.dll")
+	modKernel32Tray      = windows.NewLazySystemDLL("kernel32.dll")
+	procRegisterClassExW = modUser32Tray.NewProc("RegisterClassExW")
+	procCreateWindowExW  = modUser32Tray.NewProc("CreateWindowExW")
+	procDefWindowProcW   = modUser32Tray.NewProc("DefWindowProcW")
+	procGetMessageW      = modUser32Tray.NewProc("GetMessageW")
+	procTranslateMessage = modUser32Tray.NewProc("TranslateMessage")
+	procDispatchMessageW = modUser32Tray.NewProc("DispatchMessageW")
+	procPostMessageW     = modUser32Tray.NewProc("PostMessageW")
+	procPostQuitMessage  = modUser32Tray.NewProc("PostQuitMessage")
+	procDestroyWindow    = modUser32Tray.NewProc("DestroyWindow")
+	procCreatePopupMenu  = modUser32Tray.NewProc("CreatePopupMenu")
+	procAppendMenuW      = modUser32Tray.NewProc("AppendMenuW")
+	procTrackPopupMenu   = modUser32Tray.NewProc("TrackPopupMenu")
+	procDestroyMenu      = modUser32Tray.NewProc("DestroyMenu")
+	procGetCursorPos     = modUser32Tray.NewProc("GetCursorPos")
+	procSetForegroundWin = modUser32Tray.NewProc("SetForegroundWindow")
+	procLoadIconW        = modUser32Tray.NewProc("LoadIconW")
+	procShellNotifyIconW = modShell32Tray.NewProc("Shell_NotifyIconW")
+	procExtractIconW     = modShell32Tray.NewProc("ExtractIconW")
+	procGetModuleHandleW = modKernel32Tray.NewProc("GetModuleHandleW")
 )
 
 const (
@@ -43,8 +43,8 @@ const (
 	wmLButtonDblClk = 0x0203
 	wmRButtonUp     = 0x0205
 
-	nimAdd    = 0x00000000
-	nimDelete = 0x00000002
+	nimAdd     = 0x00000000
+	nimDelete  = 0x00000002
 	nifMessage = 0x00000001
 	nifIcon    = 0x00000002
 	nifTip     = 0x00000004

@@ -1,16 +1,59 @@
 package backend
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// AppVersion is the current WinBGM release version.
-const AppVersion = "1.1.1"
+// Build-time metadata variables (overridable via -ldflags "-X winbgm/backend.AppVersion=...").
+var (
+	AppVersion      = "1.1.1"
+	AppCommit       = ""
+	AppCommitMsgB64 = ""
+)
+
+// BuildInfo exposes version and git commit details for the About UI.
+type BuildInfo struct {
+	Version   string `json:"version"`
+	Commit    string `json:"commit"`
+	CommitMsg string `json:"commitMsg"`
+}
+
+// GetBuildInfo returns the app version and embedded git commit metadata.
+func GetBuildInfo() BuildInfo {
+	commit := strings.TrimSpace(AppCommit)
+	if commit == "" {
+		if bi, ok := debug.ReadBuildInfo(); ok {
+			for _, s := range bi.Settings {
+				if s.Key == "vcs.revision" && s.Value != "" {
+					if len(s.Value) > 7 {
+						commit = s.Value[:7]
+					} else {
+						commit = s.Value
+					}
+					break
+				}
+			}
+		}
+	}
+	var commitMsg string
+	if raw := strings.TrimSpace(AppCommitMsgB64); raw != "" {
+		if b, err := base64.StdEncoding.DecodeString(raw); err == nil {
+			commitMsg = strings.TrimSpace(string(b))
+		}
+	}
+	return BuildInfo{
+		Version:   AppVersion,
+		Commit:    commit,
+		CommitMsg: commitMsg,
+	}
+}
 
 const githubLatestReleaseURL = "https://api.github.com/repos/hariharen9/WinBGM/releases/latest"
 const githubReleasesPageURL = "https://github.com/hariharen9/WinBGM/releases"

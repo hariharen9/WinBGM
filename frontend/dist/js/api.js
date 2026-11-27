@@ -919,6 +919,7 @@ async function executeBatchUninstall(appsToRemove, quiet) {
     showResidualModal({
       appId: 'batch',
       appName: `${appsToRemove.length} Programs`,
+      batchAppIds: appsToRemove.map(x => x.id),
       items: mergedItems,
       totalSize,
       totalSizeFormatted: fmt,
@@ -973,14 +974,22 @@ async function triggerUninstall(appId, quiet = false) {
 
   toast(`Launching official uninstaller for ${appName}…`);
   const a = api();
+  let uninstCode = 0;
+  let uninstFailed = false;
   if (a && a.LaunchUninstaller) {
     try {
-      const code = await a.LaunchUninstaller(appId, quiet);
-      toast(`Uninstaller completed (code: ${code}). Auditing leftovers & dependencies…`);
+      uninstCode = await a.LaunchUninstaller(appId, quiet);
+      if (uninstCode === 1223) {
+        toast(`Uninstall cancelled for ${appName}. Skipping leftover scan.`);
+        return;
+      }
+      toast(`Uninstaller completed (code: ${uninstCode}). Auditing leftovers & dependencies…`);
     } catch (e) {
-      toast(`Uninstaller note: ${e}`);
+      uninstFailed = true;
+      toast(`Uninstaller did not launch cleanly: ${e}`);
     }
   }
+  if (uninstFailed) return;
 
   // Scan residuals post-uninstall
   const report = await scanAppResiduals(appId);
@@ -1019,6 +1028,53 @@ function showResidualModal(report) {
   refreshIcons();
 }
 
+async function rescanCurrentResiduals() {
+  if (!currentResidualReport) return;
+  const prev = currentResidualReport;
+  toast('Re-scanning disk & registry for remaining leftovers…');
+
+  let updatedReport = null;
+  if (prev.appId === 'batch' && Array.isArray(prev.batchAppIds) && prev.batchAppIds.length > 0) {
+    const mergedItems = [];
+    let totalSize = 0;
+    for (const id of prev.batchAppIds) {
+      const r = await scanAppResiduals(id);
+      if (r && r.items && r.items.length) {
+        for (const it of r.items) {
+          mergedItems.push(it);
+          totalSize += (it.sizeBytes || 0);
+        }
+      }
+    }
+    const gb = 1024 ** 3, mb = 1024 ** 2, kb = 1024;
+    const fmt = totalSize >= gb ? (totalSize / gb).toFixed(2) + ' GB'
+      : totalSize >= mb ? (totalSize / mb).toFixed(1) + ' MB'
+      : totalSize >= kb ? (totalSize / kb).toFixed(1) + ' KB'
+      : totalSize + ' B';
+    updatedReport = {
+      appId: 'batch',
+      appName: prev.appName,
+      batchAppIds: prev.batchAppIds,
+      items: mergedItems,
+      totalSize,
+      totalSizeFormatted: fmt,
+    };
+  } else {
+    updatedReport = await scanAppResiduals(prev.appId);
+  }
+
+  if (!updatedReport || !updatedReport.items || updatedReport.items.length === 0) {
+    closeResidualModal();
+    toast(`Clean removal verified! No leftover data remains for ${prev.appName}.`);
+    celebrateSuccess();
+    await loadInstalledApps();
+    return;
+  }
+
+  showResidualModal(updatedReport);
+  toast(`Re-scan complete: ${updatedReport.items.length} leftover item(s) still present.`);
+}
+
 function selectGoodResiduals() {
   if (!currentResidualReport) return;
   selectedResidualIds.clear();
@@ -1050,6 +1106,7 @@ function renderResidualBody() {
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:6px;background:var(--surface-card);border:1px solid var(--border);margin-bottom:4px">
       <span style="font-size:11px;color:var(--text-2)">Nothing is pre-selected for safety. Review confidence ratings or select safe items:</span>
       <div style="display:flex;gap:6px;flex:none">
+        <button class="win-btn" style="height:24px;font-size:10.5px;padding:0 8px" onclick="rescanCurrentResiduals()" title="Re-check disk &amp; registry for remaining leftovers"><i data-lucide="refresh-cw" style="width:11px;height:11px"></i>Re-scan</button>
         <button class="win-btn" style="height:24px;font-size:10.5px;padding:0 8px" onclick="selectGoodResiduals()">Select Good+</button>
         <button class="win-btn subtle" style="height:24px;font-size:10.5px;padding:0 8px" onclick="clearResidualSelection()">Clear</button>
       </div>

@@ -46,9 +46,9 @@ var (
 )
 
 const (
-	certQueryObjectFile                    = 0x00000001
-	certQueryContentFlagPKCS7SignedEmbed   = 1 << 10
-	certQueryFormatFlagAll                 = 0x0000000E
+	certQueryObjectFile                  = 0x00000001
+	certQueryContentFlagPKCS7SignedEmbed = 1 << 10
+	certQueryFormatFlagAll               = 0x0000000E
 )
 
 func fileExists(p string) bool {
@@ -178,9 +178,9 @@ func verifySig(path string) string {
 	fi := &winTrustFileInfo{pcwszFilePath: pp}
 	fi.cbStruct = uint32(unsafe.Sizeof(*fi))
 	d := &winTrustData{
-		dwUIChoice:          2,      // WTD_UI_NONE
-		fdwRevocationChecks: 0,      // WTD_REVOKE_NONE
-		dwUnionChoice:       1,      // WTD_CHOICE_FILE
+		dwUIChoice:          2, // WTD_UI_NONE
+		fdwRevocationChecks: 0, // WTD_REVOKE_NONE
+		dwUnionChoice:       1, // WTD_CHOICE_FILE
 		pFile:               fi,
 		dwStateAction:       1,      // WTD_STATEACTION_VERIFY
 		dwProvFlags:         0x1000, // WTD_CACHE_ONLY_URL_RETRIEVAL
@@ -298,4 +298,3 @@ func getCertSigner(filePath string) (signer string, expired bool) {
 	}
 	return signer, expired
 }
-

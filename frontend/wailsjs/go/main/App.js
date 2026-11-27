@@ -74,6 +74,10 @@ export function GetAlwaysAdmin() {
   return window['go']['main']['App']['GetAlwaysAdmin']();
 }
 
+export function GetAppBuildInfo() {
+  return window['go']['main']['App']['GetAppBuildInfo']();
+}
+
 export function GetAppIcons(arg1) {
   return window['go']['main']['App']['GetAppIcons'](arg1);
 }

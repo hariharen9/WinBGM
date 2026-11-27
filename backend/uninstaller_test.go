@@ -103,15 +103,20 @@ func TestDetectInstallerType(t *testing.T) {
 func TestConfidenceScoring(t *testing.T) {
 	app := InstalledApp{Name: "Ollama", Publisher: "Ollama Inc."}
 	item := ResidualItem{Category: CategoryHeavy, Path: `C:\Users\Admin\.ollama\models`}
-	scoreResidualConfidence(app, &item)
+	scoreResidualConfidence(app, &item, false)
 	if item.ConfidenceLevel != "Very High" || item.ConfidenceScore < 7 {
 		t.Errorf("expected Very High confidence for Heavy item, got %s (%d)", item.ConfidenceLevel, item.ConfidenceScore)
 	}
 
 	sc := ResidualItem{Category: CategoryShortcut, Path: `C:\Users\Admin\Desktop\App.lnk`}
-	scoreResidualConfidence(app, &sc)
+	scoreResidualConfidence(app, &sc, false)
 	if sc.ConfidenceLevel != "Very High" || sc.ConfidenceScore < 7 {
 		t.Errorf("expected Very High confidence for Shortcut item, got %s (%d)", sc.ConfidenceLevel, sc.ConfidenceScore)
 	}
-}
 
+	scInstalled := ResidualItem{Category: CategoryShortcut, Path: `C:\Users\Admin\Desktop\App.lnk`}
+	scoreResidualConfidence(app, &scInstalled, true)
+	if scInstalled.ConfidenceLevel == "Very High" {
+		t.Errorf("expected downgraded confidence when still installed, got %s (%d)", scInstalled.ConfidenceLevel, scInstalled.ConfidenceScore)
+	}
+}

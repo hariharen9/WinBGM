@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
+	"unicode/utf16"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -68,11 +70,15 @@ func CreateCustomStartup(spec CustomStartupSpec) error {
 
 	// Simple instant startup -> HKCU\...\Run
 	if spec.DelaySeconds == 0 && !spec.Elevated && !spec.RunHidden && workDir == "" {
-		k, _, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
+		const runKeyPath = `Software\Microsoft\Windows\CurrentVersion\Run`
+		k, _, err := registry.CreateKey(registry.CURRENT_USER, runKeyPath, registry.QUERY_VALUE|registry.SET_VALUE)
 		if err != nil {
 			return fmt.Errorf("open HKCU Run key: %w", err)
 		}
 		defer k.Close()
+
+		prevVal, _, prevErr := k.GetStringValue(name)
+		prevExisted := prevErr == nil
 
 		val := cmdPath
 		if strings.Contains(cmdPath, " ") && !strings.HasPrefix(cmdPath, `"`) {
@@ -84,6 +90,23 @@ func CreateCustomStartup(spec CustomStartupSpec) error {
 		if err := k.SetStringValue(name, val); err != nil {
 			return fmt.Errorf("write Run value: %w", err)
 		}
+
+		// Record backup/creation in history so overwrites aren't silently lost.
+		_ = appendHistory(HistoryEntry{
+			ID:            fmt.Sprintf("custom-%d", time.Now().UnixNano()),
+			Time:          time.Now().Format(time.RFC3339),
+			AppName:       name,
+			Kind:          "run",
+			Action:        "create",
+			Title:         "Created custom startup entry: " + name,
+			Summary:       fmt.Sprintf("HKCU\\%s\\%s = %s", runKeyPath, name, val),
+			Target:        Target{Kind: "run", Root: "HKCU", Path: runKeyPath, Name: name},
+			Before:        prevVal,
+			BeforeExisted: prevExisted,
+			After:         val,
+			Status:        "applied",
+			Restorable:    false,
+		})
 		return nil
 	}
 
@@ -150,12 +173,13 @@ func CreateCustomStartup(spec CustomStartupSpec) error {
 	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
 
-	// Encode as UTF-16LE with BOM for schtasks /XML compatibility.
+	// Encode as UTF-16LE with BOM (including surrogate pairs for runes > U+FFFF) for schtasks /XML compatibility.
+	encoded := utf16.Encode([]rune(taskXML))
 	var utf16Buf bytes.Buffer
 	utf16Buf.Write([]byte{0xFF, 0xFE})
-	for _, r := range taskXML {
-		utf16Buf.WriteByte(byte(r))
-		utf16Buf.WriteByte(byte(r >> 8))
+	for _, u := range encoded {
+		utf16Buf.WriteByte(byte(u))
+		utf16Buf.WriteByte(byte(u >> 8))
 	}
 	if _, err := tmp.Write(utf16Buf.Bytes()); err != nil {
 		tmp.Close()

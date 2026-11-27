@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	modAdvapi32Sentinel     = windows.NewLazySystemDLL("advapi32.dll")
-	procRegNotifyChangeKey  = modAdvapi32Sentinel.NewProc("RegNotifyChangeKeyValue")
+	modAdvapi32Sentinel    = windows.NewLazySystemDLL("advapi32.dll")
+	procRegNotifyChangeKey = modAdvapi32Sentinel.NewProc("RegNotifyChangeKeyValue")
 )
 
 const (
@@ -200,6 +200,9 @@ func checkForChanges(loc watchedLocation, onAlert func(SentinelAlert)) {
 				Message:   fmt.Sprintf("Application entry %q was added to %s\\%s startup", name, loc.rootName, loc.path),
 			}
 			sentinelAlerts = append(sentinelAlerts, alert)
+			if len(sentinelAlerts) > 50 {
+				sentinelAlerts = sentinelAlerts[len(sentinelAlerts)-50:]
+			}
 			if onAlert != nil {
 				go onAlert(alert)
 			}
@@ -216,6 +219,9 @@ func checkForChanges(loc watchedLocation, onAlert func(SentinelAlert)) {
 				Message:   fmt.Sprintf("Application entry %q was modified or re-enabled in %s\\%s", name, loc.rootName, loc.path),
 			}
 			sentinelAlerts = append(sentinelAlerts, alert)
+			if len(sentinelAlerts) > 50 {
+				sentinelAlerts = sentinelAlerts[len(sentinelAlerts)-50:]
+			}
 			if onAlert != nil {
 				go onAlert(alert)
 			}
@@ -286,7 +292,7 @@ func DisableSentinelAlert(id string) (ChangeResult, error) {
 	inv := BuildInventory()
 	for _, app := range inv.Apps {
 		for _, c := range app.Components {
-			if c.Kind == "run" && strings.EqualFold(c.Name, target.Name) {
+			if c.Kind == "run" && strings.EqualFold(c.Name, target.Name) && strings.HasPrefix(strings.ToUpper(c.Source), strings.ToUpper(target.RootKey)) {
 				res := Apply(&inv, ChangeRequest{
 					ID:     c.ID,
 					Action: "disable",

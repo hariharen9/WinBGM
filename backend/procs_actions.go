@@ -11,14 +11,14 @@ import (
 )
 
 var (
-	modNtdll           = windows.NewLazySystemDLL("ntdll.dll")
-	procNtSuspendProc  = modNtdll.NewProc("NtSuspendProcess")
-	procNtResumeProc   = modNtdll.NewProc("NtResumeProcess")
+	modNtdll          = windows.NewLazySystemDLL("ntdll.dll")
+	procNtSuspendProc = modNtdll.NewProc("NtSuspendProcess")
+	procNtResumeProc  = modNtdll.NewProc("NtResumeProcess")
 
-	modUser32          = windows.NewLazySystemDLL("user32.dll")
-	procEnumWindows    = modUser32.NewProc("EnumWindows")
-	procGetWindowThread= modUser32.NewProc("GetWindowThreadProcessId")
-	procPostMessage    = modUser32.NewProc("PostMessageW")
+	modUser32           = windows.NewLazySystemDLL("user32.dll")
+	procEnumWindows     = modUser32.NewProc("EnumWindows")
+	procGetWindowThread = modUser32.NewProc("GetWindowThreadProcessId")
+	procPostMessage     = modUser32.NewProc("PostMessageW")
 )
 
 const (

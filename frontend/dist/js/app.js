@@ -706,11 +706,34 @@ function openExternalUrl(e, url) {
   return false;
 }
 
+async function loadBuildInfo() {
+  const el = $('about-version-meta');
+  if (!el || !window.go?.main?.App?.GetAppBuildInfo) return;
+  try {
+    const info = await window.go.main.App.GetAppBuildInfo();
+    const ver = info.version || '1.1.1';
+    const commitPart = info.commit ? ` (${info.commit})` : '';
+    el.textContent = `Version ${ver}${commitPart} · All system components protected`;
+    if (info.commitMsg) {
+      el.title = `Commit ${info.commit || ''}: ${info.commitMsg}`;
+      let msgEl = $('about-commit-msg');
+      if (!msgEl) {
+        msgEl = document.createElement('div');
+        msgEl.id = 'about-commit-msg';
+        msgEl.style.cssText = 'font-size:11px;color:var(--text-dim);margin-top:3px';
+        el.closest('.about-details')?.querySelector('.about-desc')?.after(msgEl);
+      }
+      msgEl.textContent = `Build: ${info.commit ? info.commit + ' — ' : ''}${info.commitMsg}`;
+    }
+  } catch {}
+}
+
 // Bootstrap
 applyTheme(currentTheme);
 applyAccent(currentAccent);
 document.documentElement.style.zoom = uiScale;
 navigate('overview');
+loadBuildInfo();
 doScan().then(() => {
   loadHistory();
   loadSnapshots();

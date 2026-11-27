@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -31,11 +32,12 @@ type shFileOpStructW struct {
 }
 
 const (
-	foDelete          = 0x0003
-	fofAllowUndo      = 0x0040 // Moves file/folder to Windows Recycle Bin
-	fofNoConfirmation = 0x0010 // Do not prompt the user for confirmation
-	fofSilent         = 0x0004 // Do not display a progress dialog box
-	fofNoErrorUI      = 0x0400 // Do not display a user interface if an error occurs
+	foDelete           = 0x0003
+	fofAllowUndo       = 0x0040 // Moves file/folder to Windows Recycle Bin
+	fofNoConfirmation  = 0x0010 // Do not prompt the user for confirmation
+	fofSilent          = 0x0004 // Do not display a progress dialog box
+	fofNoErrorUI       = 0x0400 // Do not display a user interface if an error occurs
+	fofWantNukeWarning = 0x4000 // Warn before permanent deletion if Recycle Bin is unavailable or too small
 )
 
 var protectedFolderNames = map[string]bool{
@@ -133,7 +135,7 @@ func SafeRecyclePath(targetPath string) error {
 	op := shFileOpStructW{
 		wFunc:  foDelete,
 		pFrom:  &utf16Path[0],
-		fFlags: fofAllowUndo | fofNoConfirmation | fofSilent | fofNoErrorUI,
+		fFlags: fofAllowUndo | fofNoConfirmation | fofSilent | fofWantNukeWarning,
 	}
 
 	ret, _, _ := procSHFileOperationW.Call(uintptr(unsafe.Pointer(&op)))
@@ -226,11 +228,11 @@ func SafeDeleteRegistryKey(fullKeyPath string) error {
 	}
 
 	_ = appendHistory(HistoryEntry{
-		ID:        fmt.Sprintf("regclean-%d", time.Now().UnixNano()),
-		Time:      time.Now().Format(time.RFC3339),
-		Title:     "Cleaned registry key: " + filepath.Base(subKeyPath),
-		Summary:   fmt.Sprintf("Exported .reg backup to %s before removal", backupFile),
-		Status:    "applied",
+		ID:         fmt.Sprintf("regclean-%d", time.Now().UnixNano()),
+		Time:       time.Now().Format(time.RFC3339),
+		Title:      "Cleaned registry key: " + filepath.Base(subKeyPath),
+		Summary:    fmt.Sprintf("Exported .reg backup to %s before removal", backupFile),
+		Status:     "applied",
 		Restorable: false,
 	})
 	return nil
@@ -239,7 +241,10 @@ func SafeDeleteRegistryKey(fullKeyPath string) error {
 func deleteKeyRecursively(root registry.Key, subPath string) error {
 	k, err := registry.OpenKey(root, subPath, registry.READ|registry.WRITE)
 	if err != nil {
-		return nil // already absent or inaccessible
+		if errors.Is(err, registry.ErrNotExist) {
+			return nil // already absent
+		}
+		return err
 	}
 	defer k.Close()
 
@@ -253,8 +258,13 @@ func deleteKeyRecursively(root registry.Key, subPath string) error {
 		}
 	}
 
-	parentPath := filepath.Dir(subPath)
-	keyName := filepath.Base(subPath)
+	// Split on '\' only (not filepath.Dir/Base) so registry key names containing '/' are preserved.
+	idx := strings.LastIndex(subPath, `\`)
+	if idx <= 0 {
+		return registry.DeleteKey(root, subPath)
+	}
+	parentPath := subPath[:idx]
+	keyName := subPath[idx+1:]
 
 	parentKey, err := registry.OpenKey(root, parentPath, registry.WRITE)
 	if err != nil {

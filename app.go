@@ -557,3 +557,7 @@ func (a *App) CheckForUpdates() backend.UpdateCheckResult {
 	return backend.CheckForUpdates()
 }
 
+// GetAppBuildInfo returns the embedded version and git commit metadata.
+func (a *App) GetAppBuildInfo() backend.BuildInfo {
+	return backend.GetBuildInfo()
+}

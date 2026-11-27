@@ -327,7 +327,7 @@ func summaryOf(kind, before, after string) string {
 
 func scanStateOf(c *Component, kind string) string {
 	switch kind {
-	case "run", "folder":
+	case "run", "folder", "shellex":
 		if c.Enabled {
 			return "on"
 		}
@@ -535,8 +535,8 @@ type BatchResult struct {
 	Entries  []string `json:"entries"`
 }
 
-// ApplyFocusMode disables third-party automatic startup items safely.
-// Each item is backed up individually to history first and can be undone at any time.
+// ApplyFocusMode disables third-party automatic startup entries and scheduled tasks safely.
+// Services, drivers, and caution-flagged items are excluded. Each item is backed up individually to history first.
 func ApplyFocusMode(last *Inventory) BatchResult {
 	if last == nil {
 		return BatchResult{Message: "Run a scan first."}
@@ -547,7 +547,8 @@ func ApplyFocusMode(last *Inventory) BatchResult {
 			continue
 		}
 		for _, c := range app.Components {
-			if c.AutoStart && c.Control == "yes" && !c.System && c.Kind != "process" && c.Kind != "storeapp" {
+			if c.AutoStart && c.Control == "yes" && !c.System && c.Caution == "" &&
+				(c.Kind == "run" || c.Kind == "folder" || c.Kind == "task") {
 				toDisable = append(toDisable, ChangeRequest{ID: c.ID, Action: "disable"})
 			}
 		}
@@ -603,4 +604,3 @@ func RestoreBatch(batchID string) BatchResult {
 	res.Message = fmt.Sprintf("Batch restore: %d restored, %d failed.", res.Modified, res.Failed)
 	return res
 }
-

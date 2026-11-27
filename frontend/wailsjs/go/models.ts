@@ -222,6 +222,22 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class BuildInfo {
+	    version: string;
+	    commit: string;
+	    commitMsg: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new BuildInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.commit = source["commit"];
+	        this.commitMsg = source["commitMsg"];
+	    }
+	}
 	export class ChangeRequest {
 	    id: string;
 	    action: string;
