@@ -46,6 +46,11 @@ jobs:
         run: |
           go test -v ./backend
 
+      - name: Install & Lint Frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+
       - name: Build Wails Binary (${{ matrix.platform }})
         shell: pwsh
         run: |

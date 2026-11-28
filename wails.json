@@ -2,7 +2,7 @@
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "WinBGM",
   "outputfilename": "WinBGM",
-  "frontend:install": "npm --prefix .. ci --no-audit --no-fund",
+  "frontend:install": "",
   "frontend:build": "npm --prefix .. run lint",
   "author": { "name": "Hariharen" }
 }
