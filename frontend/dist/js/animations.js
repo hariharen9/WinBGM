@@ -75,9 +75,10 @@ function closeModal() {
     pending = null;
     if ($('modal-confirm')) {
       $('modal-confirm').style.display = '';
+      $('modal-confirm').disabled = false;
       $('modal-confirm').onclick = confirmChange;
     }
-    if ($('modal-cancel')) $('modal-cancel').textContent = 'Cancel';
+    if ($('modal-cancel')) { $('modal-cancel').textContent = 'Cancel'; $('modal-cancel').disabled = false; }
     if (inv) render();
   };
   if (window.anime && m.classList.contains('show')) {

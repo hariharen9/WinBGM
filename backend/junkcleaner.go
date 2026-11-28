@@ -18,11 +18,12 @@ import (
 // Junk & Cache Cleaner
 //
 // A system-wide cleanup tool built on the same safety model as the residual
-// engine: nothing is ever pre-selected, files go strictly to the Windows
-// Recycle Bin (SHFileOperationW with FOF_ALLOWUNDO — never a permanent
-// delete), registry keys are exported to .reg backups first, and the backend
-// never trusts paths from the UI: every cleanup request is verified against
-// the scan's internal cache before anything is touched.
+// engine: nothing is ever pre-selected, regenerable junk is deleted
+// permanently by default (the only mode that actually frees space; the UI may
+// downgrade to a Recycle Bin move per clean), registry keys are exported to
+// .reg backups first, and the backend never trusts paths from the UI: every
+// cleanup request is verified against the scan's internal cache before
+// anything is touched.
 // ============================================================================
 
 // JunkCategory groups cleanup targets by what they are and how safe they are.
@@ -611,7 +612,41 @@ func ScanJunk() JunkReport {
 // Cleaning
 // ============================================================================
 
-// CleanJunkItems recycles the selected junk items. Every request is verified
+// JunkProgress is emitted while CleanJunkItems works so the UI can show live
+// progress instead of a frozen-looking dialog on large folders.
+type JunkProgress struct {
+	Phase        string `json:"phase"`                  // "start" | "item" | "done"
+	Index        int    `json:"index"`                  // 1-based index of the current item
+	Total        int    `json:"total"`                  // number of selected items
+	Title        string `json:"title,omitempty"`        // display name of the current item
+	Mode         string `json:"mode,omitempty"`         // "permanent" | "recycle" | "registry" | "recyclebin"
+	FilesDeleted int    `json:"filesDeleted,omitempty"` // intra-item counter (permanent mode)
+}
+
+var (
+	junkProgressMu sync.Mutex
+	junkProgressFn func(JunkProgress)
+)
+
+// SetJunkProgressFunc installs (or, with nil, removes) the callback invoked
+// during CleanJunkItems. It exists so the Wails app layer can bridge progress
+// to the frontend without the cleaner depending on Wails.
+func SetJunkProgressFunc(fn func(JunkProgress)) {
+	junkProgressMu.Lock()
+	junkProgressFn = fn
+	junkProgressMu.Unlock()
+}
+
+func emitJunkProgress(p JunkProgress) {
+	junkProgressMu.Lock()
+	fn := junkProgressFn
+	junkProgressMu.Unlock()
+	if fn != nil {
+		fn(p)
+	}
+}
+
+// CleanJunkItems cleans the selected junk items. Every request is verified
 // against the scan cache first: an item whose ID is unknown or whose path no
 // longer matches is rejected, exactly like the residual cleaner.
 func CleanJunkItems(items []JunkItem) (CleanResult, error) {
@@ -619,10 +654,20 @@ func CleanJunkItems(items []JunkItem) (CleanResult, error) {
 	elevated := isElevated()
 	usedRecycleBin := false
 
+	total := 0
+	for _, reqItem := range items {
+		if reqItem.IsSelected {
+			total++
+		}
+	}
+	emitJunkProgress(JunkProgress{Phase: "start", Total: total})
+
+	idx := 0
 	for _, reqItem := range items {
 		if !reqItem.IsSelected {
 			continue
 		}
+		idx++
 		junkCacheMu.Lock()
 		authItem, ok := junkCache[reqItem.ID]
 		junkCacheMu.Unlock()
@@ -634,6 +679,17 @@ func CleanJunkItems(items []JunkItem) (CleanResult, error) {
 			result.Errors = append(result.Errors, fmt.Sprintf("Skipped %q: administrator rights are required (use Restart as administrator)", authItem.Title))
 			continue
 		}
+
+		mode := "permanent"
+		switch {
+		case authItem.Category == JunkCatRecycleBin:
+			mode = "recyclebin"
+		case authItem.IsRegistry:
+			mode = "registry"
+		case reqItem.UseRecycleBin:
+			mode = "recycle"
+		}
+		emitJunkProgress(JunkProgress{Phase: "item", Index: idx, Total: total, Title: authItem.Title, Mode: mode})
 
 		switch {
 		case authItem.Category == JunkCatRecycleBin:
@@ -678,13 +734,26 @@ func CleanJunkItems(items []JunkItem) (CleanResult, error) {
 					usedRecycleBin = true
 				}
 			} else {
-				freed, files, errs = permanentlyDeleteJunkTargets(targets)
+				// Throttled per-file progress: one Wails event per file would
+				// flood the bridge on folders with thousands of entries.
+				var nDeleted int
+				lastEmit := time.Now()
+				onFile := func(n int) {
+					nDeleted += n
+					if now := time.Now(); now.Sub(lastEmit) >= 60*time.Millisecond {
+						lastEmit = now
+						emitJunkProgress(JunkProgress{Phase: "item", Index: idx, Total: total, Title: authItem.Title, Mode: mode, FilesDeleted: nDeleted})
+					}
+				}
+				freed, files, errs = permanentlyDeleteJunkTargets(targets, onFile)
+				emitJunkProgress(JunkProgress{Phase: "item", Index: idx, Total: total, Title: authItem.Title, Mode: mode, FilesDeleted: nDeleted})
 			}
 			result.FreedBytes += freed
 			result.DeletedFilesCount += files
 			result.Errors = append(result.Errors, errs...)
 		}
 	}
+	emitJunkProgress(JunkProgress{Phase: "done", Index: total, Total: total})
 
 	result.FreedSizeFormatted = FormatBytes(result.FreedBytes)
 
@@ -720,7 +789,7 @@ func CleanJunkItems(items []JunkItem) (CleanResult, error) {
 // artifacts Windows or the owning app rebuilds automatically. Guards: paths
 // come from the scan cache, reparse points are never followed, sensitive
 // basenames are re-checked, and long paths get the \\?\ prefix.
-func permanentlyDeleteJunkTargets(targets []string) (freed uint64, files int, errs []string) {
+func permanentlyDeleteJunkTargets(targets []string, onFile func(deleted int)) (freed uint64, files int, errs []string) {
 	for _, p := range targets {
 		fi, err := os.Lstat(p)
 		if err != nil {
@@ -740,14 +809,65 @@ func permanentlyDeleteJunkTargets(targets []string) (freed uint64, files int, er
 		} else {
 			size = uint64(fi.Size())
 		}
-		if err := os.RemoveAll(longPathSafe(p)); err != nil {
+		n, err := deleteTreeProgress(p, onFile)
+		files += n
+		if err != nil {
 			errs = append(errs, fmt.Sprintf("%s: %v", p, err))
-			continue
+			if n == 0 {
+				continue
+			}
 		}
 		freed += size
-		files++
 	}
 	return freed, files, errs
+}
+
+// deleteTreeProgress deletes p, reporting every file removed through onFile so
+// the UI can show live progress inside large folders. It deletes children
+// one-by-one (deepest-first via recursion) instead of one RemoveAll call,
+// which turns a minutes-long silent stall on huge caches (Delivery
+// Optimization, shader caches) into visible, per-file progress — and lets
+// partial failures remove everything that could be removed. Falls back to a
+// plain RemoveAll when the directory cannot be enumerated.
+func deleteTreeProgress(p string, onFile func(deleted int)) (int, error) {
+	fi, err := os.Lstat(p)
+	if err != nil {
+		return 0, nil // vanished: nothing to do
+	}
+	if isReparsePoint(p, fi) {
+		return 0, fmt.Errorf("skipped (symlink or junction)")
+	}
+	lp := longPathSafe(p)
+	if !fi.IsDir() {
+		if err := os.Remove(lp); err != nil {
+			return 0, err
+		}
+		if onFile != nil {
+			onFile(1)
+		}
+		return 1, nil
+	}
+	entries, err := os.ReadDir(lp)
+	if err != nil {
+		// Cannot enumerate (locked or access denied): try the whole tree.
+		if err := os.RemoveAll(lp); err != nil {
+			return 0, err
+		}
+		return 0, nil
+	}
+	deleted := 0
+	var firstErr error
+	for _, e := range entries {
+		n, err := deleteTreeProgress(filepath.Join(p, e.Name()), onFile)
+		deleted += n
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	if err := os.Remove(lp); err != nil && firstErr == nil {
+		firstErr = err
+	}
+	return deleted, firstErr
 }
 
 // longPathSafe prefixes paths longer than the classic MAXPATH limit with the

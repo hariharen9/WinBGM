@@ -53,6 +53,38 @@ async function doRestoreBatch(batchId) {
   }
 }
 
+// Junk cleaner live progress (emitted by the backend while CleanJunkItems works)
+if (window.runtime && window.runtime.EventsOn) {
+  window.runtime.EventsOn('junk_progress', p => updateJunkProgress(p));
+}
+
+function updateJunkProgress(p) {
+  if (!p || !p.phase) return;
+  const bar = document.getElementById('junk-progress-fill');
+  const label = document.getElementById('junk-progress-label');
+  const sub = document.getElementById('junk-progress-sub');
+  const counter = document.getElementById('junk-progress-files');
+  if (!bar || !label) return;
+  if (p.phase === 'start') {
+    bar.style.width = '0%';
+    if (sub) sub.textContent = `0 / ${p.total} item(s)`;
+    if (counter) counter.textContent = '';
+  } else if (p.phase === 'item') {
+    const pct = p.total > 0 ? Math.round((p.index / p.total) * 100) : 0;
+    bar.style.width = pct + '%';
+    label.textContent = p.title || 'Cleaning…';
+    if (sub) sub.textContent = `${p.index} / ${p.total} item(s)`;
+    if (counter) {
+      counter.textContent = p.filesDeleted ? `${p.filesDeleted.toLocaleString()} file${p.filesDeleted === 1 ? '' : 's'} deleted…` : '';
+    }
+  } else if (p.phase === 'done') {
+    bar.style.width = '100%';
+    if (label) label.textContent = 'Finishing up…';
+    if (sub) sub.textContent = `${p.total} / ${p.total} item(s)`;
+    if (counter) counter.textContent = '';
+  }
+}
+
 // Live background process polling listener
 if (window.runtime && window.runtime.EventsOn) {
   window.runtime.EventsOn('process_poll', poll => {
@@ -1352,8 +1384,31 @@ async function doExecuteJunkClean() {
   const itemsToClean = junkReport.items
     .filter(it => selectedJunkIds.has(it.id))
     .map(it => Object.assign({}, it, { isSelected: true, useRecycleBin: useBin }));
-  const confirmBtn = $('modal-confirm');
-  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = useBin ? 'Moving to Recycle Bin…' : 'Deleting…'; }
+  const total = itemsToClean.reduce((acc, it) => acc + (it.sizeBytes || 0), 0);
+
+  // Swap the dialog to a live progress view immediately, so a long cleanup
+  // (Delivery Optimization, shader caches — thousands of files) never looks
+  // like a stuck app. The backend streams "junk_progress" events that
+  // updateJunkProgress() renders into this markup.
+  $('modal-title').textContent = useBin ? 'Moving junk to the Recycle Bin…' : 'Cleaning junk…';
+  $('modal-confirm').style.display = 'none';
+  $('modal-cancel').textContent = 'Working…';
+  $('modal-cancel').disabled = true;
+  $('modal-body').innerHTML = `
+    <p style="margin-bottom:10px;color:var(--text-2);font-size:12.5px"><strong>${itemsToClean.length}</strong> location(s) · <strong>${formatRAM(total)}</strong> · ${useBin ? 'moving to the Recycle Bin' : 'deleting permanently'}</p>
+    <div style="display:flex;align-items:center;gap:10px">
+      <i data-lucide="loader-2" style="width:16px;height:16px;color:var(--accent);animation:spinCw 1s linear infinite"></i>
+      <strong id="junk-progress-label" style="font-size:12.5px">Preparing…</strong>
+      <span id="junk-progress-files" style="margin-left:auto;font-size:11px;color:var(--text-2)"></span>
+    </div>
+    <div style="margin-top:10px;height:6px;border-radius:3px;background:var(--surface-hover);overflow:hidden">
+      <div id="junk-progress-fill" style="height:100%;width:0%;border-radius:3px;background:var(--accent);transition:width .25s ease"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <span id="junk-progress-sub" style="font-size:11px;color:var(--muted)"></span>
+      <span style="font-size:11px;color:var(--muted)">Locked files are skipped automatically</span>
+    </div>`;
+  refreshIcons();
   try {
     const a = api();
     if (!a || !a.CleanJunkItems) throw new Error('only available in the desktop app');
@@ -1371,7 +1426,11 @@ async function doExecuteJunkClean() {
     loadHistory();
   } catch (e) {
     toast('Cleanup failed: ' + e);
-    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete permanently'; }
+    $('modal-cancel').disabled = false;
+    $('modal-cancel').textContent = 'Close';
+    $('modal-confirm').style.display = '';
+    $('modal-confirm').textContent = 'Delete permanently';
+    $('modal-confirm').onclick = doExecuteJunkClean;
   }
 }
 

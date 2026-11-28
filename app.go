@@ -470,9 +470,16 @@ func (a *App) ScanJunk() backend.JunkReport {
 	return backend.ScanJunk()
 }
 
-// CleanJunkItems moves selected junk items to the Recycle Bin (or empties it),
-// with registry keys backed up first. Paths are verified against the last scan.
+// CleanJunkItems cleans selected junk items (permanent delete by default,
+// Recycle Bin move when the UI downgrades), with registry keys backed up
+// first. Paths are verified against the last scan. Live progress is streamed
+// to the frontend as "junk_progress" events so large folders (Delivery
+// Optimization, shader caches) never look like a frozen app.
 func (a *App) CleanJunkItems(items []backend.JunkItem) (backend.CleanResult, error) {
+	backend.SetJunkProgressFunc(func(p backend.JunkProgress) {
+		runtime.EventsEmit(a.ctx, "junk_progress", p)
+	})
+	defer backend.SetJunkProgressFunc(nil)
 	return backend.CleanJunkItems(items)
 }
 
