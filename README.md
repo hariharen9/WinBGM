@@ -57,7 +57,7 @@ _A fast, safe, all-in-one startup, background process, deep uninstaller, junk cl
 - **One-Click Package Upgrades**: Lists every application the **Windows Package Manager** can upgrade (including `msstore` apps and unknown-version entries) and updates them with `winget upgrade --id … --exact --silent`.
 - **Batch Queue with Live Status**: Select multiple packages and update them one-by-one with per-row **Updating… / Updated / Failed** badges; the list auto-rescans when the queue finishes so versions reflect reality.
 - **Guardrailed Updates**: Only package IDs from the most recent scan can be updated, winget runs with all agreements pre-accepted and interactivity disabled (it can never hang waiting for input in a hidden window), and WinBGM refuses to update **itself** from inside the running app.
-- **Friendly Failure Reporting**: Common winget errors (hash mismatch, elevation required, cancelled UAC, pinned packages) are translated into plain English with the CLI's output tail attached.
+- **Friendly Failure Reporting**: Common winget errors (hash mismatch, elevation required, cancelled UAC, pinned packages) are translated into plain English. Failures are surfaced where you need them: the per-row **Failed** badge carries the reason in its tooltip and opens the full details — including winget's output tail — on click, and a session-wide **Update Log** (top-right of the page) records every attempt, success or failure, with its complete output.
 
 ### ⚡ Live Processes, Efficiency Mode & Network Monitor
 

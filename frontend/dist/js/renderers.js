@@ -1408,6 +1408,12 @@ function renderWingetUpdates() {
 function wingetActionCell(u, st, disabled) {
   if (st === 'updating') return '<span class="winget-status"><span class="badge blue" style="font-size:10px;padding:1px 6px"><i data-lucide="refresh-cw" style="width:11px;height:11px"></i> Updating…</span></span>';
   if (st === 'ok') return '<span class="winget-status"><span class="badge green" style="font-size:10px;padding:1px 6px">Updated</span></span>';
-  if (st === 'failed') return '<span class="winget-status"><span class="badge red" style="font-size:10px;padding:1px 6px" title="See the toast for winget\'s error output">Failed</span></span>';
-  return `<span class="winget-status"><button class="win-btn" style="height:24px;font-size:10.5px;padding:0 8px" ${disabled ? 'disabled' : ''} onclick="updateOneWinget('${esc(u.id)}')">Update</button></span>`;
+  if (st === 'failed') {
+    const f = typeof wingetFailures !== 'undefined' ? wingetFailures[u.id] : null;
+    const short = f && f.message ? String(f.message).split('\n')[0].slice(0, 200) : 'winget reported an error — click for details';
+    return `<span class="winget-status"><span class="badge red" style="font-size:10px;padding:1px 6px;cursor:pointer" title="${esc(short)} — click for full details" onclick="event.stopPropagation();showWingetFailure('${esc(u.id)}')">Failed</span></span>`;
+  }
+  const prevFail = typeof wingetFailures !== 'undefined' ? wingetFailures[u.id] : null;
+  const prevTitle = prevFail ? ` title="Last attempt failed: ${esc(String(prevFail.message).split('\n')[0].slice(0, 200))}"` : '';
+  return `<span class="winget-status"><button class="win-btn" style="height:24px;font-size:10.5px;padding:0 8px" ${disabled ? 'disabled' : ''}${prevTitle} onclick="updateOneWinget('${esc(u.id)}')">Update</button></span>`;
 }

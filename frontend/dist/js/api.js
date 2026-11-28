@@ -1796,23 +1796,105 @@ async function runWingetUpdates(ids) {
   let okCount = 0, failCount = 0;
   for (const id of ids) {
     setWingetItemState(id, 'updating');
+    const u = wingetReport && wingetReport.updates.find(x => x.id === id);
     try {
       const res = await a.UpdateWingetPackage(id);
-      if (res && res.ok) { okCount++; setWingetItemState(id, 'ok'); toast(res.message); }
-      else { failCount++; setWingetItemState(id, 'failed'); toast((res && res.message) || 'Update failed.'); }
+      const msg = (res && res.message) || '';
+      if (res && res.ok) {
+        okCount++;
+        delete wingetFailures[id];
+        setWingetItemState(id, 'ok');
+        toast(msg || 'Update succeeded.');
+      } else {
+        failCount++;
+        wingetFailures[id] = { message: msg || 'winget reported a failure.', outputTail: (res && res.outputTail) || '', at: new Date() };
+        setWingetItemState(id, 'failed');
+        toast(`${u ? u.name : id} failed — click the Failed badge for the reason.`);
+      }
+      wingetLog.push({
+        id, name: u ? u.name : id,
+        from: u ? u.currentVersion : '', to: u ? u.availableVersion : '',
+        status: res && res.ok ? 'ok' : 'failed',
+        message: msg, outputTail: (res && res.outputTail) || '',
+        at: new Date(),
+      });
     } catch (e) {
       failCount++;
+      const msg = 'Update failed: ' + e;
+      wingetFailures[id] = { message: String(e), outputTail: '', at: new Date() };
       setWingetItemState(id, 'failed');
-      toast('Update failed: ' + e);
+      toast(`${u ? u.name : id} failed — click the Failed badge for the reason.`);
+      wingetLog.push({
+        id, name: u ? u.name : id,
+        from: u ? u.currentVersion : '', to: u ? u.availableVersion : '',
+        status: 'failed', message: String(e), outputTail: '', at: new Date(),
+      });
     }
   }
   wingetBatchRunning = false;
   if (batchBtn) batchBtn.disabled = false;
-  celebrateSuccess();
+  if (okCount > 0) celebrateSuccess();
   if (okCount > 0) {
     toast(`Updated ${okCount} package(s)${failCount ? ` · ${failCount} failed` : ''} — refreshing the list…`);
     await loadWingetUpdates(true);
   } else if (failCount > 0) {
-    toast(`${failCount} update(s) failed — see the Failed badges for details.`);
+    toast(`${failCount} update(s) failed — click the Failed badge for the reason, or open the Update Log (top-right).`);
   }
+}
+
+function showWingetFailure(id) {
+  const f = wingetFailures[id];
+  if (!f) { toast('No failure details recorded for this package.'); return; }
+  const u = wingetReport && wingetReport.updates.find(x => x.id === id);
+  pending = null; // keep the generic confirm handler inert
+  $('modal-title').textContent = 'Why did this update fail?';
+  $('modal-confirm').style.display = 'none';
+  $('modal-cancel').textContent = 'Close';
+  $('modal-body').innerHTML = `
+    <p style="margin-bottom:4px"><strong>${esc(u ? u.name : id)}</strong>${u && u.currentVersion ? ` <span style="color:var(--text-2)">${esc(u.currentVersion)} → ${esc(u.availableVersion || '')}</span>` : ''}</p>
+    <p style="color:#f87171;margin-top:6px;white-space:pre-wrap">${esc(f.message || 'winget reported a failure.')}</p>
+    ${f.outputTail ? `
+      <div style="margin-top:10px;font-size:11px;color:var(--text-2);font-weight:600">winget output (last lines)</div>
+      <pre style="margin-top:4px;max-height:260px;overflow:auto;background:var(--surface-card);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:10.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word">${esc(f.outputTail)}</pre>` : ''}
+    ${f.at ? `<p style="margin-top:8px;color:var(--muted);font-size:11px">Failed at ${f.at.toLocaleTimeString()}</p>` : ''}`;
+  openModal();
+  refreshIcons();
+}
+
+function showWingetLog() {
+  pending = null; // keep the generic confirm handler inert
+  $('modal-title').textContent = 'Winget update log';
+  $('modal-confirm').style.display = 'none';
+  $('modal-cancel').textContent = 'Close';
+  if (!wingetLog.length) {
+    $('modal-body').innerHTML = '<p style="color:var(--text-2)">No updates have been run yet in this session. Every update attempt (success or failure) is recorded here with winget\'s output.</p>';
+  } else {
+    const badge = (s) => s === 'ok'
+      ? '<span class="badge green" style="font-size:10px;padding:1px 6px">Updated</span>'
+      : '<span class="badge red" style="font-size:10px;padding:1px 6px">Failed</span>';
+    $('modal-body').innerHTML = `
+      <p style="color:var(--text-2);font-size:12px;margin-bottom:8px">${wingetLog.length} attempt(s) this session · newest last</p>
+      <div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;background:var(--surface-card)">
+        ${wingetLog.map(e => `
+          <div style="padding:8px 10px;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              ${badge(e.status)}
+              <strong style="font-size:12px">${esc(e.name)}</strong>
+              ${e.from ? `<span style="font-size:11px;color:var(--text-2)">${esc(e.from)} → ${esc(e.to || '?')}</span>` : ''}
+              <span style="margin-left:auto;font-size:10.5px;color:var(--muted)">${e.at ? e.at.toLocaleTimeString() : ''}</span>
+            </div>
+            ${e.message ? `<div style="margin-top:4px;font-size:11px;color:${e.status === 'ok' ? 'var(--text-2)' : '#f87171'};white-space:pre-wrap;word-break:break-word">${esc(e.message)}</div>` : ''}
+            ${e.outputTail ? `<pre style="margin-top:6px;max-height:180px;overflow:auto;background:var(--surface-hover);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:10.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word">${esc(e.outputTail)}</pre>` : ''}
+          </div>`).join('')}
+      </div>
+      <p style="margin-top:8px"><a href="#" onclick="clearWingetLog();return false" style="font-size:11px;color:var(--accent)">Clear log</a></p>`;
+  }
+  openModal();
+  refreshIcons();
+}
+
+function clearWingetLog() {
+  wingetLog.length = 0;
+  closeModal();
+  toast('Update log cleared.');
 }

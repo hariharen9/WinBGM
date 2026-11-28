@@ -218,7 +218,11 @@ func UpdateWingetPackage(id string) (WingetUpdateResult, error) {
 		res.OutputTail = tail
 		res.Message = friendlyWingetFailure(id, err, out)
 		appendWingetHistory(res, cached, "failed")
-		return res, fmt.Errorf("%s", res.Message)
+		// Return the result (with OK=false) instead of an error: a non-nil
+		// error makes Wails reject the JS promise and discard res, which
+		// would throw away Message and OutputTail — the details the UI needs
+		// to show WHY the update failed.
+		return res, nil
 	}
 
 	res.OK = true

@@ -229,6 +229,8 @@ let wingetScanning = false;
 let wingetBatchRunning = false;
 let selectedWingetIds = new Set();
 const wingetItemStates = {};  // id -> 'updating' | 'ok' | 'failed'
+const wingetFailures = {};    // id -> { message, outputTail, at } — reason of the last failed attempt
+const wingetLog = [];         // session update log: { id, name, from, to, status, message, outputTail, at }
 
 
 function sigText(c) {
