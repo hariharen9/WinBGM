@@ -2,6 +2,9 @@ package main
 
 import (
 	"embed"
+	"os"
+
+	"winbgm/backend"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -13,11 +16,26 @@ import (
 var assets embed.FS
 
 func main() {
+	// `--quit` is passed by the Inno Setup uninstaller to stop a running
+	// WinBGM (including one minimized to the tray) before removal.
+	for _, arg := range os.Args[1:] {
+		if arg == "--quit" || arg == "-quit" {
+			backend.SignalQuit()
+			return
+		}
+	}
+
+	// Only one WinBGM at a time; a second launch just focuses the first.
+	if !backend.AcquireSingleInstanceLock() {
+		backend.FocusExistingWindow()
+		return
+	}
+
 	app := NewApp()
 	err := wails.Run(&options.App{
 		Title:            "WinBGM",
-		Width:            1280,
-		Height:           820,
+		Width:            defaultWindowWidth,
+		Height:           defaultWindowHeight,
 		MinWidth:         900,
 		MinHeight:        600,
 		AssetServer:      &assetserver.Options{Assets: assets},

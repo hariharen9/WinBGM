@@ -374,10 +374,22 @@ function dismissSentinelAlert(id) {
   renderSentinelAlerts();
 }
 
+// Marks the row controls for a pending change so the UI stays responsive
+// and honest about what is in flight (instead of freezing/rebuilding the list).
+function setChangePending(cid, on) {
+  document.querySelectorAll('[data-cid]').forEach(el => {
+    if (el.dataset.cid === cid) el.classList.toggle('pending', on);
+  });
+}
+
+let changeInFlight = false;
+
 async function confirmChange() {
   const p = pending;
   closeModal();
-  if (!p) return;
+  if (!p || changeInFlight) return;
+  changeInFlight = true;
+  setChangePending(p.id, true);
   try {
     const r = await api().Apply(p);
     toast(r.message);
@@ -391,6 +403,9 @@ async function confirmChange() {
   } catch (e) {
     toast('Change failed: ' + e);
     render();
+  } finally {
+    changeInFlight = false;
+    setChangePending(p.id, false);
   }
 }
 

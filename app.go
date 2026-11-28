@@ -26,6 +26,7 @@ type App struct {
 	installedCache []backend.InstalledApp
 	minimizeToTray bool
 	forceQuit      bool
+	windowVisible  bool // tracked from the frontend; gates the 3s polling loop
 }
 
 func NewApp() *App { return &App{} }
@@ -36,11 +37,36 @@ func trayFlagPath() string {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.windowVisible = true // Assume visible until the frontend reports otherwise.
 	if _, err := os.Stat(trayFlagPath()); err == nil {
 		a.minimizeToTray = true
 	}
 
-	// Lightweight real-time process, RAM & network socket polling every 3 seconds
+	// Restore the saved window geometry (position, size, maximized).
+	a.applyWindowState(loadWindowState())
+
+	// The installer runs `WinBGM.exe --quit` before uninstalling; that signals
+	// this named event so even a tray-minimized instance exits cleanly.
+	quit := backend.StartQuitWatcher()
+	go func() {
+		<-quit
+		a.forceQuit = true
+		runtime.Quit(a.ctx)
+	}()
+
+	// Track window visibility from the frontend so background polling can
+	// pause while WinBGM is hidden or minimized.
+	runtime.EventsOn(a.ctx, "window_visibility", func(optionalData ...interface{}) {
+		if len(optionalData) > 0 {
+			if v, ok := optionalData[0].(bool); ok {
+				a.windowVisible = v
+			}
+		}
+	})
+
+	// Lightweight real-time process, RAM & network socket polling every 3 seconds.
+	// Skipped entirely while the window is hidden or minimized — nothing can be
+	// seen then, and the saved CPU/battery shows up as a silent background cost.
 	go func() {
 		ticker := time.NewTicker(3 * time.Second)
 		defer ticker.Stop()
@@ -48,7 +74,12 @@ func (a *App) startup(ctx context.Context) {
 			select {
 			case <-a.ctx.Done():
 				return
+			case <-quit:
+				return
 			case <-ticker.C:
+				if !a.windowVisible {
+					continue
+				}
 				res := backend.PollProcesses()
 				runtime.EventsEmit(a.ctx, "process_poll", res)
 			}
@@ -90,6 +121,7 @@ func (a *App) onBeforeClose(ctx context.Context) bool {
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	a.saveWindowState()
 	backend.StopTray()
 }
 

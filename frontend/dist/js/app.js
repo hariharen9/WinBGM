@@ -732,6 +732,18 @@ async function loadBuildInfo() {
 applyTheme(currentTheme);
 applyAccent(currentAccent);
 document.documentElement.style.zoom = uiScale;
+
+// Report window visibility to the backend so the 3s process/RAM polling loop
+// pauses while WinBGM is hidden or minimized, and refreshes on return.
+if (window.runtime && window.runtime.EventsEmit) {
+  const reportVisibility = () => window.runtime.EventsEmit('window_visibility', !document.hidden);
+  reportVisibility();
+  document.addEventListener('visibilitychange', () => {
+    reportVisibility();
+    if (!document.hidden && page === 'processes') loadLiveProcesses();
+  });
+}
+
 navigate('overview');
 loadBuildInfo();
 doScan().then(() => {
