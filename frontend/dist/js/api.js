@@ -1245,6 +1245,130 @@ async function openAppVirusTotal(appId) {
   window.open('https://www.virustotal.com/gui/search/' + encodeURIComponent(base(app.exePath)), '_blank');
 }
 
+// --- Junk & Cache Cleaner ---
+
+async function loadJunk(force = false) {
+  const tbody = $('junk-body');
+  if (!tbody || junkScanning) return;
+  if (junkReport && !force) { renderJunk(); return; }
+  junkScanning = true;
+  const btns = document.querySelectorAll('#page-junk .header-actions button');
+  btns.forEach(b => { b.disabled = true; });
+  $('junk-count-meta').textContent = 'Scanning…';
+  tbody.innerHTML = '<tr><td colspan="5"><div class="loading">Scanning temporary files, caches and leftovers…</div></td></tr>';
+  try {
+    const a = api();
+    if (!a || !a.ScanJunk) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Junk Cleaner is only available in the desktop app.</div></td></tr>'; return; }
+    junkReport = await a.ScanJunk();
+    selectedJunkIds.clear();
+    const navJunk = $('nav-junk');
+    if (navJunk) navJunk.textContent = junkReport.items.length;
+    renderJunk();
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Junk scan failed: ${esc(String(e))}</div></td></tr>`;
+    toast('Junk scan failed: ' + e);
+  } finally {
+    junkScanning = false;
+    btns.forEach(b => { b.disabled = false; });
+  }
+}
+
+function updateJunkActionBar() {
+  const bar = $('junk-action-bar');
+  const info = $('junk-selected-info');
+  const sizeEl = $('junk-selected-size');
+  if (!bar || !junkReport) return;
+  let count = 0, bytes = 0;
+  for (const it of junkReport.items) {
+    if (selectedJunkIds.has(it.id)) { count++; bytes += it.sizeBytes || 0; }
+  }
+  bar.style.display = count > 0 ? 'flex' : 'none';
+  if (info) info.textContent = `${count} selected`;
+  if (sizeEl) sizeEl.textContent = formatRAM(bytes);
+  const all = $('junk-select-all');
+  if (all) all.checked = junkReport.items.length > 0 && count === junkReport.items.length;
+}
+
+function toggleJunkItem(id, checked) {
+  if (checked) selectedJunkIds.add(id); else selectedJunkIds.delete(id);
+  document.querySelectorAll('tr[data-junk-id]').forEach(tr => {
+    if (tr.dataset.junkId === id) tr.classList.toggle('selected', checked);
+  });
+  updateJunkActionBar();
+}
+
+function toggleAllJunk(checked) {
+  if (!junkReport) return;
+  selectedJunkIds.clear();
+  if (checked) junkReport.items.forEach(it => selectedJunkIds.add(it.id));
+  renderJunk();
+}
+
+function selectSafeJunk() {
+  if (!junkReport) return;
+  selectedJunkIds.clear();
+  for (const it of junkReport.items) {
+    if (!it.requiresAdmin && !it.warning) selectedJunkIds.add(it.id);
+  }
+  renderJunk();
+  const n = selectedJunkIds.size;
+  toast(n ? `Selected ${n} safe item(s) — review, then clean.` : 'No warning-free items to preselect.');
+}
+
+function clearJunkSelection() {
+  selectedJunkIds.clear();
+  renderJunk();
+}
+
+function executeJunkClean() {
+  if (!junkReport || selectedJunkIds.size === 0) return;
+  const chosen = junkReport.items.filter(it => selectedJunkIds.has(it.id));
+  const total = chosen.reduce((acc, it) => acc + (it.sizeBytes || 0), 0);
+  const warned = chosen.filter(it => it.warning).length;
+  const admin = chosen.filter(it => it.requiresAdmin).length;
+
+  pending = null; // keep the generic confirm handler inert
+  $('modal-title').textContent = 'Move junk to the Recycle Bin?';
+  $('modal-confirm').style.display = '';
+  $('modal-cancel').textContent = 'Cancel';
+  $('modal-body').innerHTML = `
+    <p><strong>${chosen.length}</strong> location(s) · <strong>${formatRAM(total)}</strong> will be moved to the Recycle Bin.</p>
+    ${warned ? `<p style="color:#e6c27e">${warned} selected item(s) carry a warning — check them in the list below the dialog.</p>` : ''}
+    ${admin ? `<p style="color:#e6c27e">${admin} selected item(s) need administrator rights; without elevation they will be skipped.</p>` : ''}
+    <p style="margin-top:8px">You can restore cleaned files from the Recycle Bin. Emptying the Recycle Bin permanently erases them.</p>`;
+  $('modal-confirm').textContent = 'Clean selected';
+  $('modal-confirm').onclick = doExecuteJunkClean;
+  openModal();
+  refreshIcons();
+}
+
+async function doExecuteJunkClean() {
+  if (!junkReport || selectedJunkIds.size === 0) return;
+  const itemsToClean = junkReport.items
+    .filter(it => selectedJunkIds.has(it.id))
+    .map(it => Object.assign({}, it, { isSelected: true }));
+  const confirmBtn = $('modal-confirm');
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Moving to Recycle Bin…'; }
+  try {
+    const a = api();
+    if (!a || !a.CleanJunkItems) throw new Error('only available in the desktop app');
+    const res = await a.CleanJunkItems(itemsToClean);
+    if (res.errors && res.errors.length) {
+      toast(`Cleaned ${res.freedSizeFormatted} · ${res.errors.length} item(s) skipped (locked or access denied)`);
+    } else {
+      toast(`Freed ${res.freedSizeFormatted} (${res.deletedFilesCount} files, ${res.deletedKeysCount} keys) — restored to the Recycle Bin.`);
+      celebrateSuccess();
+    }
+    closeModal();
+    selectedJunkIds.clear();
+    await loadJunk(true); // rescan so sizes reflect reality
+    loadHistory();
+  } catch (e) {
+    toast('Cleanup failed: ' + e);
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Clean selected'; }
+  }
+}
+
 async function executeResidualClean() {
   if (!currentResidualReport || selectedResidualIds.size === 0) return;
 

@@ -22,6 +22,10 @@ export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
 }
 
+export function CleanJunkItems(arg1) {
+  return window['go']['main']['App']['CleanJunkItems'](arg1);
+}
+
 export function CleanResidualItems(arg1) {
   return window['go']['main']['App']['CleanResidualItems'](arg1);
 }
@@ -176,6 +180,10 @@ export function Scan() {
 
 export function ScanAppResiduals(arg1) {
   return window['go']['main']['App']['ScanAppResiduals'](arg1);
+}
+
+export function ScanJunk() {
+  return window['go']['main']['App']['ScanJunk']();
 }
 
 export function SetAlwaysAdmin(arg1) {

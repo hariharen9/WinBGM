@@ -1244,3 +1244,83 @@ function renderLockResults(target) {
   refreshIcons();
 }
 
+
+// --- Junk & Cache Cleaner ---
+
+function renderJunk() {
+  const sumEl = $('junk-summary');
+  const countMeta = $('junk-count-meta');
+  const tbody = $('junk-body');
+  if (!tbody) return;
+
+  if (!junkReport || !junkReport.items || !junkReport.items.length) {
+    if (sumEl) sumEl.innerHTML = '';
+    if (countMeta) countMeta.textContent = 'Nothing to clean';
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No junk found — this system is already clean. 🎉</div></td></tr>';
+    updateJunkActionBar();
+    refreshIcons();
+    return;
+  }
+
+  if (sumEl) {
+    const catCount = new Set(junkReport.items.map(it => it.category)).size;
+    sumEl.innerHTML = `
+      <div class="summary-item">Reclaimable: <strong>${esc(junkReport.totalSizeFormatted || '0 B')}</strong></div>
+      <span class="summary-separator"></span>
+      <div class="summary-item"><strong>${junkReport.items.length}</strong> locations across <strong>${catCount}</strong> categories</div>
+      <span class="summary-separator"></span>
+      <div class="summary-item">Scan took <strong>${(junkReport.durationMs / 1000).toFixed(1)}s</strong></div>
+      ${junkReport.elevated ? '' : '<span class="summary-separator"></span><div class="summary-item"><span class="badge amber" style="font-size:10px;padding:1px 6px" title="System-level locations (Windows temp, Update cache, dumps) need administrator rights to clean">Some items need admin</span></div>'}
+    `;
+  }
+  if (countMeta) countMeta.textContent = `Scanned ${fmtTime(junkReport.scannedAt)} · Nothing is pre-selected`;
+
+  // Group by category, preserving the backend's safety-first ordering.
+  const groups = [];
+  const byCat = new Map();
+  for (const it of junkReport.items) {
+    if (!byCat.has(it.category)) {
+      const g = { cat: it.category, title: it.categoryTitle, items: [] };
+      byCat.set(it.category, g);
+      groups.push(g);
+    }
+    byCat.get(it.category).items.push(it);
+  }
+
+  let html = '';
+  for (const g of groups) {
+    const meta = JUNK_CATS[g.cat] || { icon: 'file', color: 'var(--accent)' };
+    const catBytes = g.items.reduce((acc, it) => acc + (it.sizeBytes || 0), 0);
+    html += `
+      <tr class="junk-cat-row">
+        <td colspan="5" style="background:var(--surface-hover)">
+          <span style="display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600">
+            <i data-lucide="${meta.icon}" style="width:14px;height:14px;color:${meta.color}"></i>
+            ${esc(g.title)}
+            <span style="color:var(--text-2);font-weight:400;font-size:11px">· ${g.items.length} location(s) · ${formatRAM(catBytes)}</span>
+          </span>
+        </td>
+      </tr>`;
+    for (const it of g.items) {
+      const sel = selectedJunkIds.has(it.id);
+      const adminBadge = it.requiresAdmin ? '<span class="badge amber" style="font-size:10px;padding:1px 6px;margin-left:6px" title="Needs administrator rights to clean — use Restart as administrator">Admin</span>' : '';
+      const warnBadge = it.warning ? `<span class="badge amber" style="font-size:10px;padding:1px 6px;margin-left:6px" title="${esc(it.warning)}">⚠ Warning</span>` : '';
+      const recyclerBadge = it.isRegistry ? '<span class="badge blue" style="font-size:10px;padding:1px 6px;margin-left:6px" title="Registry key — exported to a .reg backup before removal">Registry</span>' : '';
+      html += `
+        <tr class="clickable ${sel ? 'selected' : ''}" data-junk-id="${esc(it.id)}" onclick="toggleJunkItem('${esc(it.id)}', ${!sel})" title="${esc(it.description)}${it.warning ? ' — ' + esc(it.warning) : ''}">
+          <td style="text-align:center"><input type="checkbox" ${sel ? 'checked' : ''} onclick="event.stopPropagation();toggleJunkItem('${esc(it.id)}', ${!sel})" aria-label="Select ${esc(it.title)}" /></td>
+          <td>
+            <div class="app-name" style="font-size:11px">${esc(it.title)}${adminBadge}${warnBadge}${recyclerBadge}</div>
+            <div style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;font-size:10.5px;color:var(--text-dim);margin-top:2px" title="${esc(it.path)}">${esc(it.path)}</div>
+            <div style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--muted);margin-top:2px">${esc(it.description)}</div>
+          </td>
+          <td><span style="font-size:11px;color:${meta.color}">${esc(it.categoryTitle)}</span></td>
+          <td style="text-align:right">${it.isRegistry ? '—' : it.itemCount || '—'}</td>
+          <td style="text-align:right;font-weight:500">${esc(it.sizeFormatted || '0 B')}</td>
+        </tr>`;
+    }
+  }
+  tbody.innerHTML = html;
+  updateJunkActionBar();
+  refreshIcons();
+}

@@ -3,7 +3,7 @@
 # <img src="assets/WinBGM.png" alt="WinBGM Logo" width="38" height="38" align="absmiddle" style="vertical-align: middle;" /> WinBGM
 
 **Windows Background Manager**  
-_A fast, safe, all-in-one startup, background process, deep uninstaller, and system diagnostics manager for Windows 10 and 11._
+_A fast, safe, all-in-one startup, background process, deep uninstaller, junk cleaner, and system diagnostics manager for Windows 10 and 11._
 
 [![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Wails v2](https://img.shields.io/badge/Built%20with-Wails%20v2-E3646E?style=flat&logo=wails)](https://wails.io/)
@@ -43,6 +43,14 @@ _A fast, safe, all-in-one startup, background process, deep uninstaller, and sys
 - **Batch Multi-Select Uninstall**: Queue multiple apps to uninstall sequentially, then review and clean all leftover files and registry keys in one unified pass.
 - **Heavy Dependency Profiling**: Detects external payloads that standard uninstallers leave behind (Ollama/LM Studio/ComfyUI models, Android SDKs/AVDs, IDE extensions, media caches).
 - **Safe Cleanup**: Nothing is ever pre-selected; leftover files move strictly to the **Windows Recycle Bin** (`SHFileOperationW`), and registry keys are exported to `.reg` backups before removal.
+
+### 🧽 Junk & Cache Cleaner
+
+- **Nine Cleanup Categories in One Scan**: User & system temp folders, browser caches (Chrome/Edge/Firefox/Brave/Opera profiles), Windows Update delivery & download cache, DirectX/GLSL/Vulkan shader caches, thumbnail & icon caches, crash dumps & old logs, `Windows.old` upgrade leftovers, the Recycle Bin itself, and orphaned uninstall registry entries.
+- **Recycle-Bin-Only Deletion**: Every file and folder is moved with `SHFileOperationW` + `FOF_ALLOWUNDO` — nothing is ever permanently erased, so any cleanup is fully reversible from the Recycle Bin.
+- **Sensitive Data Denylist**: Cookies, logins, saved passwords, history, sessions, bookmarks, IndexedDB and Local Storage are never offered for cleaning, even inside cache folders.
+- **Freshness & Integrity Filters**: Items younger than 24 h (temp) or 7 d (logs/dumps) are skipped, symlinks/junctions are never followed, and admin-gated locations are clearly badged instead of failing silently.
+- **Registry Orphan Sweep**: Detects uninstall entries whose target executables no longer exist (MSI products excluded), exports each key to a `.reg` backup, then removes it.
 
 ### ⚡ Live Processes, Efficiency Mode & Network Monitor
 
@@ -86,6 +94,7 @@ Every safety boundary is enforced in **compiled Go backend code** before any wri
 
 - **Protected Targets**: WinBGM refuses to modify Windows OS paths (`\Windows\`), critical services (`WinDefend`, `RpcSs`, `DcomLaunch`, `CryptSvc`, etc.), antivirus/security products, kernel processes (`csrss.exe`, `lsass.exe`, `svchost.exe`, `dwm.exe`), shared vendor roots, or WinBGM itself.
 - **Pre-Flight Backup & Verification**: Every toggle records its prior state to `%APPDATA%\WinBGM\history.json` **before** applying, verifies the live OS state afterward, and auto-reverts on mismatch.
+- **Junk Cleaning Is Always Reversible**: The junk cleaner only moves items to the Recycle Bin (never permanent deletes), re-verifies every path against the in-memory scan cache before touching it, refuses sensitive browser-data paths, and skips files younger than its age thresholds.
 - **System Restore Point**: 1-click native Windows `srclient.dll` restore point creation inside **Settings**.
 
 ---

@@ -32,6 +32,11 @@ function renderCommandBar(p) {
       { icon: 'refresh-cw', label: 'Rescan Programs', fn: 'loadInstalledApps(true)' },
       { icon: 'download', label: 'Export', fn: 'openExportModal()' },
     ],
+    junk: [
+      { icon: 'refresh-cw', label: 'Scan for Junk', fn: 'loadJunk(true)' },
+      { icon: 'check-check', label: 'Select Safe', fn: 'selectSafeJunk()' },
+      { icon: 'download', label: 'Export', fn: 'openExportModal()' },
+    ],
     services: [
       { id: 'scan-btn', cls: 'btn-scan', icon: 'refresh-cw', label: 'Scan now', fn: 'doScan()' },
       { icon: 'download', label: 'Export', fn: 'openExportModal()' },
@@ -78,6 +83,7 @@ function navigate(p) {
     processes: 'Live Processes & Efficiency Mode',
     applications: 'Applications',
     uninstaller: 'Installed Programs & Deep Uninstaller',
+    junk: 'Junk & Cache Cleaner',
     services: 'Services',
     tasks: 'Scheduled tasks',
     sources: 'Startup locations',
@@ -92,6 +98,7 @@ function navigate(p) {
   if (p === 'applications') renderApps();
   if (p === 'processes') loadLiveProcesses();
   if (p === 'uninstaller') loadInstalledApps();
+  if (p === 'junk') loadJunk();
   if (p === 'history') loadHistory();
   if (p === 'snapshots') loadSnapshots();
   if (p === 'overview') animateCounters();

@@ -464,6 +464,18 @@ func (a *App) CleanResidualItems(items []backend.ResidualItem) (backend.CleanRes
 	return backend.CleanResidualItems(items)
 }
 
+// ScanJunk audits system-wide junk and caches (temp files, browser caches,
+// update leftovers, shader caches, crash dumps, Recycle Bin). It changes nothing.
+func (a *App) ScanJunk() backend.JunkReport {
+	return backend.ScanJunk()
+}
+
+// CleanJunkItems moves selected junk items to the Recycle Bin (or empties it),
+// with registry keys backed up first. Paths are verified against the last scan.
+func (a *App) CleanJunkItems(items []backend.JunkItem) (backend.CleanResult, error) {
+	return backend.CleanJunkItems(items)
+}
+
 // GetFileVirusTotalURL computes the SHA-256 hash of a file and returns its VirusTotal URL.
 func (a *App) GetFileVirusTotalURL(path string) string {
 	return backend.FileVirusTotalURL(path)

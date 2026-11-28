@@ -13,6 +13,8 @@ export function BrowseStartupExecutable():Promise<string>;
 
 export function CheckForUpdates():Promise<backend.UpdateCheckResult>;
 
+export function CleanJunkItems(arg1:Array<backend.JunkItem>):Promise<backend.CleanResult>;
+
 export function CleanResidualItems(arg1:Array<backend.ResidualItem>):Promise<backend.CleanResult>;
 
 export function ClearSentinelAlerts():Promise<void>;
@@ -90,6 +92,8 @@ export function SaveSnapshot(arg1:string):Promise<backend.SnapshotMeta>;
 export function Scan():Promise<backend.Inventory>;
 
 export function ScanAppResiduals(arg1:string):Promise<backend.ResidualReport>;
+
+export function ScanJunk():Promise<backend.JunkReport>;
 
 export function SetAlwaysAdmin(arg1:boolean):Promise<boolean>;
 

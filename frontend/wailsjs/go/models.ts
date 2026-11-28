@@ -644,6 +644,84 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class JunkItem {
+	    id: string;
+	    category: string;
+	    categoryTitle: string;
+	    title: string;
+	    path: string;
+	    sizeBytes: number;
+	    sizeFormatted: string;
+	    itemCount: number;
+	    description: string;
+	    isSelected: boolean;
+	    requiresAdmin: boolean;
+	    isRegistry: boolean;
+	    warning?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new JunkItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.category = source["category"];
+	        this.categoryTitle = source["categoryTitle"];
+	        this.title = source["title"];
+	        this.path = source["path"];
+	        this.sizeBytes = source["sizeBytes"];
+	        this.sizeFormatted = source["sizeFormatted"];
+	        this.itemCount = source["itemCount"];
+	        this.description = source["description"];
+	        this.isSelected = source["isSelected"];
+	        this.requiresAdmin = source["requiresAdmin"];
+	        this.isRegistry = source["isRegistry"];
+	        this.warning = source["warning"];
+	    }
+	}
+	export class JunkReport {
+	    items: JunkItem[];
+	    totalSizeBytes: number;
+	    totalSizeFormatted: string;
+	    scannableCount: number;
+	    scannedAt: string;
+	    durationMs: number;
+	    elevated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new JunkReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.items = this.convertValues(source["items"], JunkItem);
+	        this.totalSizeBytes = source["totalSizeBytes"];
+	        this.totalSizeFormatted = source["totalSizeFormatted"];
+	        this.scannableCount = source["scannableCount"];
+	        this.scannedAt = source["scannedAt"];
+	        this.durationMs = source["durationMs"];
+	        this.elevated = source["elevated"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class LockingProcess {
 	    pid: number;
 	    appName: string;

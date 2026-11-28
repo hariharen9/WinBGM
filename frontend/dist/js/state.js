@@ -206,6 +206,23 @@ const telemetryHistory = {
 let lockResults = [];
 const appIconCache = {}; // lowercase path/spec -> data:image/png;base64,... or ''
 
+// Junk & Cache Cleaner State
+let junkReport = null;
+let junkScanning = false;
+let selectedJunkIds = new Set();
+
+const JUNK_CATS = {
+  temp:       { icon: 'file-clock',  color: '#38bdf8' },
+  browser:    { icon: 'globe',       color: '#a78bfa' },
+  update:     { icon: 'package',     color: '#34d399' },
+  shader:     { icon: 'sparkles',    color: '#fbbf24' },
+  thumbnails: { icon: 'image',       color: '#f472b6' },
+  logs:       { icon: 'bug',         color: '#f87171' },
+  windowsold: { icon: 'archive',     color: '#fb923c' },
+  recyclebin: { icon: 'trash-2',     color: '#94a3b8' },
+  orphanreg:  { icon: 'ghost',       color: '#c084fc' }
+};
+
 
 function sigText(c) {
   if (c.signer) {

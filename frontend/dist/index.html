@@ -76,6 +76,10 @@
               <i data-lucide="trash-2"></i><span>Uninstaller</span
               ><span class="nav-count" id="nav-uninstaller"></span>
             </button>
+            <button class="nav-item" data-page="junk">
+              <i data-lucide="broom"></i><span>Junk Cleaner</span
+              ><span class="nav-count" id="nav-junk"></span>
+            </button>
             <button class="nav-item" data-page="services">
               <i data-lucide="cog"></i><span>Services</span
               ><span class="nav-count" id="nav-services"></span>
@@ -349,6 +353,93 @@
             </section>
 
             <!-- Live Processes Page -->
+            <section class="page" id="page-junk">
+              <div class="page-header">
+                <div>
+                  <h1>Junk &amp; Cache Cleaner</h1>
+                  <p class="page-subtitle">
+                    Reclaim disk space from temporary files, browser caches,
+                    update leftovers, shader caches, and crash dumps. Nothing is
+                    pre-selected; everything moves to the Recycle Bin.
+                  </p>
+                </div>
+                <div class="header-actions">
+                  <button class="win-btn" onclick="loadJunk(true)">
+                    <i
+                      data-lucide="refresh-cw"
+                      style="width: 13px; height: 13px; margin-right: 4px"
+                    ></i
+                    >Scan for junk
+                  </button>
+                </div>
+              </div>
+              <div class="system-summary" id="junk-summary"></div>
+              <div class="page-section">
+                <div class="section-heading">
+                  <strong>Cleanable items</strong
+                  ><span id="junk-count-meta">Scanning…</span>
+                </div>
+                <div class="batch-uninstall-bar" id="junk-action-bar" style="display: none">
+                  <div class="batch-uninstall-info" id="junk-selected-info">0 selected</div>
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <button class="win-btn" onclick="selectSafeJunk()" title="Select only non-admin items with no warnings">
+                      <i data-lucide="shield-check" style="width: 13px; height: 13px; margin-right: 4px"></i>Select safe
+                    </button>
+                    <button class="win-btn" onclick="clearJunkSelection()">Clear</button>
+                    <button class="win-btn primary" onclick="executeJunkClean()">
+                      <i data-lucide="trash-2" style="width: 13px; height: 13px; margin-right: 4px"></i>
+                      Clean Selected (<span id="junk-selected-size">0 B</span>)
+                    </button>
+                  </div>
+                </div>
+                <div style="overflow-x: auto">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 34px; text-align: center">
+                          <input
+                            type="checkbox"
+                            id="junk-select-all"
+                            onchange="toggleAllJunk(this.checked)"
+                            title="Select all visible items"
+                          />
+                        </th>
+                        <th style="min-width: 300px">Location</th>
+                        <th>Category</th>
+                        <th style="text-align: right">Files</th>
+                        <th style="text-align: right">Size</th>
+                      </tr>
+                    </thead>
+                    <tbody id="junk-body">
+                      <tr>
+                        <td colspan="5">
+                          <div class="loading">Scanning for junk…</div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="notice-line" style="margin-top: 14px">
+                <i
+                  data-lucide="shield-check"
+                  style="
+                    width: 14px;
+                    height: 14px;
+                    flex: none;
+                    color: #10b981;
+                    margin-top: 1px;
+                  "
+                ></i>
+                <span
+                  >Everything moves to the <strong>Windows Recycle Bin</strong>
+                  — restore anything you miss. Files younger than 24h (7 days
+                  for reports) are kept, locked files are skipped, and cookies,
+                  passwords, and history are never touched.</span
+                >
+              </div>
+            </section>
+
             <section class="page" id="page-processes">
               <div class="page-header">
                 <div>
