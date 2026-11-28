@@ -1,0 +1,15 @@
+{
+  "name": "winbgm-frontend",
+  "private": true,
+  "type": "module",
+  "description": "Zero-dep vanilla frontend tooling (ESLint + Prettier) for WinBGM",
+  "scripts": {
+    "lint": "eslint \"frontend/dist/js/*.js\"",
+    "format": "prettier --write \"frontend/dist/js/*.js\" \"frontend/dist/css/*.css\"",
+    "format:check": "prettier --check \"frontend/dist/js/*.js\" \"frontend/dist/css/*.css\""
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0"
+  }
+}

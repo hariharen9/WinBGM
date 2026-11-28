@@ -693,9 +693,15 @@ async function checkForAppUpdates() {
       box.innerHTML = `<span>Update check failed: ${esc(res.error)}</span>`;
     } else if (res.updateAvailable) {
       box.classList.add('has-update');
+      const installBtn = res.assetUrl
+        ? `<button class="win-btn primary" id="install-update-btn" style="padding: 3px 9px; font-size: 11px" onclick="installAppUpdate('${esc(res.assetUrl)}','${esc(res.assetName || '')}','${esc(res.checksumsUrl || '')}',${!!res.isInstaller})">${res.isInstaller ? 'Install Update' : 'Download &amp; Verify'}</button>`
+        : '';
       box.innerHTML = `
-        <span><strong>Update available: v${esc(res.latestVersion)}</strong> (current: v${esc(res.currentVersion)})</span>
-        <a href="${esc(res.releaseUrl)}" class="win-btn primary" style="padding: 3px 9px; font-size: 11px; text-decoration: none" onclick="return openExternalUrl(event, this.href)">Download Release</a>
+        <span id="update-status-text"><strong>Update available: v${esc(res.latestVersion)}</strong> (current: v${esc(res.currentVersion)})</span>
+        <span style="display:inline-flex;gap:6px;align-items:center">
+          ${installBtn}
+          <a href="${esc(res.releaseUrl)}" class="win-btn" style="padding: 3px 9px; font-size: 11px; text-decoration: none" onclick="return openExternalUrl(event, this.href)">Release Notes</a>
+        </span>
       `;
     } else {
       box.innerHTML = `<span>You are on the latest version (<strong>v${esc(res.currentVersion)}</strong>).</span>`;
@@ -706,6 +712,39 @@ async function checkForAppUpdates() {
   } finally {
     if (btn) btn.disabled = false;
     if (label) label.textContent = 'Check for updates';
+  }
+}
+
+async function installAppUpdate(assetUrl, assetName, checksumsUrl, isInstaller) {
+  const a = api();
+  if (!a || !a.DownloadAndInstallUpdate) return;
+  const btn = $('install-update-btn');
+  const txt = $('update-status-text');
+  if (btn) btn.disabled = true;
+
+  let unsub = null;
+  if (window.runtime && window.runtime.EventsOn) {
+    unsub = window.runtime.EventsOn('update_progress', p => {
+      if (!txt || !p) return;
+      if (p.phase === 'checksum') txt.textContent = 'Fetching SHA256SUMS.txt…';
+      else if (p.phase === 'download') txt.textContent = `Downloading ${assetName}… ${p.percent || 0}%`;
+      else if (p.phase === 'verify') txt.textContent = 'Verifying SHA-256 signature…';
+      else if (p.phase === 'launch') txt.textContent = 'Launching installer…';
+    });
+  }
+
+  try {
+    const dest = await a.DownloadAndInstallUpdate(assetUrl, assetName, checksumsUrl);
+    if (!isInstaller && txt) {
+      txt.innerHTML = `Verified &amp; saved to <code>${esc(dest)}</code>`;
+      toast('Verified archive opened in Explorer.');
+    }
+  } catch (err) {
+    if (txt) txt.textContent = 'Update failed: ' + err;
+    toast('Update failed: ' + err);
+    if (btn) btn.disabled = false;
+  } finally {
+    if (typeof unsub === 'function') unsub();
   }
 }
 
@@ -724,7 +763,7 @@ async function loadBuildInfo() {
   if (!el || !window.go?.main?.App?.GetAppBuildInfo) return;
   try {
     const info = await window.go.main.App.GetAppBuildInfo();
-    const ver = info.version || '1.1.1';
+    const ver = info.version || '1.2.0';
     const commitPart = info.commit ? ` (${info.commit})` : '';
     el.textContent = `Version ${ver}${commitPart} · All system components protected`;
     if (info.commitMsg) {

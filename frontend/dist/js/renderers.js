@@ -1074,6 +1074,135 @@ function updateOverviewTelemetryUI() {
 
 // --- Live Processes & Efficiency Mode Renderer ---
 
+function setProcViewMode(mode) {
+  procViewMode = mode === 'tree' ? 'tree' : 'grouped';
+  const host = $('proc-view-mode');
+  if (host) {
+    host.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === procViewMode);
+    });
+  }
+  renderLiveProcesses();
+}
+
+function renderProcessTreeView(tbody, countMeta, totalGroups) {
+  const byPid = new Map();
+  for (const g of liveProcessGroups) {
+    for (const ch of (g.children || [])) {
+      byPid.set(ch.pid, {
+        ...ch,
+        exePath: ch.exePath || g.exePath || '',
+        hasWindow: g.hasWindow,
+        children: [],
+      });
+    }
+  }
+
+  const roots = [];
+  for (const node of byPid.values()) {
+    const parent = node.ppid && node.ppid !== node.pid ? byPid.get(node.ppid) : null;
+    if (parent) {
+      parent.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  const q = (procSearch || '').toLowerCase();
+  const matchesSelf = n => {
+    if (procFilter === 'windowed' && !n.hasWindow) return false;
+    if (procFilter === 'eco' && !n.ecoMode) return false;
+    if (procFilter === 'network' && !(n.connCount > 0)) return false;
+    if (procFilter === 'frozen' && !n.suspended) return false;
+    if (q) {
+      const hay = `${n.name} ${n.exePath} ${n.pid} ${n.ppid}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  };
+
+  const sortNodes = arr => {
+    if (procSort === 'cpu') arr.sort((a, b) => (b.cpuPercent || 0) - (a.cpuPercent || 0));
+    else if (procSort === 'io') arr.sort((a, b) => (b.ioBytesPerSec || 0) - (a.ioBytesPerSec || 0));
+    else if (procSort === 'name') arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    else arr.sort((a, b) => (b.ramBytes || 0) - (a.ramBytes || 0));
+  };
+
+  const visited = new Set();
+  const keepSet = new Set();
+  const markKeep = node => {
+    if (visited.has(node.pid)) return false;
+    visited.add(node.pid);
+    let anyChild = false;
+    for (const c of node.children) {
+      if (markKeep(c)) anyChild = true;
+    }
+    const ok = matchesSelf(node) || anyChild;
+    if (ok) keepSet.add(node.pid);
+    return ok;
+  };
+  sortNodes(roots);
+  for (const r of roots) markKeep(r);
+
+  const flat = [];
+  const emitted = new Set();
+  const emit = (node, depth) => {
+    if (emitted.has(node.pid) || !keepSet.has(node.pid)) return;
+    emitted.add(node.pid);
+    flat.push({ node, depth });
+    sortNodes(node.children);
+    for (const c of node.children) emit(c, depth + 1);
+  };
+  for (const r of roots) emit(r, 0);
+
+  if (countMeta) countMeta.textContent = `Showing ${flat.length} processes in PPID tree (${totalGroups} groups)`;
+
+  if (!flat.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No running processes match this filter.</div></td></tr>';
+    refreshIcons(tbody);
+    return;
+  }
+
+  tbody.innerHTML = flat.slice(0, 300).map(({ node: p, depth }) => {
+    const indent = Math.min(depth, 6) * 18;
+    const prefix = depth > 0 ? `<span style="color:var(--text-dim);font-family:monospace;margin-right:4px">└─</span>` : '';
+    const ecoTag = p.ecoMode ? `<span class="eco-pill" style="margin-left:6px">🍃 Eco</span>` : '';
+    const frozenTag = p.suspended ? `<span class="badge blue" style="font-size:10px;padding:1px 6px;margin-left:6px">❄️ Frozen</span>` : '';
+    const protTag = p.protected ? `<span class="badge gray" style="font-size:10px;padding:1px 6px;margin-left:6px">Protected</span>` : '';
+    const cpuDisp = (p.cpuPercent || 0).toFixed(1) + '%';
+    const controls = p.protected
+      ? `<span style="font-size:11px;color:var(--muted)">System protected</span>`
+      : `<div style="display:inline-flex;align-items:center;gap:5px">
+           <button class="win-btn" style="height:24px;padding:0 7px;font-size:10.5px" onclick="togglePidEcoMode(${p.pid}, ${!p.ecoMode})">${p.ecoMode ? 'Normal' : '🍃 Eco'}</button>
+           <button class="win-btn" style="height:24px;padding:0 7px;font-size:10.5px" onclick="freezeProcessPid(${p.pid}, ${!p.suspended})">${p.suspended ? 'Resume' : 'Freeze'}</button>
+           <button class="win-btn" style="height:24px;padding:0 7px;font-size:10.5px;color:#f87171" onclick="killProcessPid(${p.pid})">End</button>
+         </div>`;
+    return `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;padding-left:${indent}px">
+            ${prefix}
+            <div style="min-width:0">
+              <div style="font-weight:600;font-size:12px;color:var(--text);display:flex;align-items:center;flex-wrap:wrap">
+                <span>${esc(p.name)}</span>
+                <span class="badge" style="font-size:10px;padding:1px 5px;margin-left:6px;font-family:monospace">PID ${p.pid}</span>
+                ${ecoTag}${frozenTag}${protTag}
+              </div>
+              <div style="font-size:10.5px;color:var(--text-dim)">PPID ${p.ppid}${p.exePath ? ' · ' + esc(p.exePath) : ''}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-variant-numeric:tabular-nums">${cpuDisp}</td>
+        <td style="font-weight:600;font-variant-numeric:tabular-nums">${esc(p.ramFormatted || '—')}</td>
+        <td style="color:var(--text-dim);font-variant-numeric:tabular-nums">${esc(p.ioFormatted || '0 KB/s')}</td>
+        <td><span class="badge">${esc(p.priority || 'Normal')}</span></td>
+        <td style="text-align:right">${controls}</td>
+      </tr>
+    `;
+  }).join('');
+  refreshIcons(tbody);
+}
+
 function renderLiveProcesses() {
   const sumEl = $('processes-summary');
   const countMeta = $('proc-count-meta');
@@ -1096,6 +1225,11 @@ function renderLiveProcesses() {
       <span class="summary-separator"></span>
       <div class="summary-item"><span class="eco-pill">🍃 ${ecoCount} in Efficiency Mode</span></div>
     `;
+  }
+
+  if (procViewMode === 'tree') {
+    renderProcessTreeView(tbody, countMeta, totalGroups);
+    return;
   }
 
   const q = (procSearch || '').toLowerCase();

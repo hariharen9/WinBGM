@@ -1,6 +1,24 @@
 // --- Backend Bridge (Wails Go & Offline Demo Fallback) ---
 
-const api = () => (window.go && window.go.main && window.go.main.App) ? window.go.main.App : null;
+let _apiFacade = null;
+const api = () => {
+  const m = window.go && window.go.main;
+  if (!m || !m.App) return null;
+  if (_apiFacade) return _apiFacade;
+  const targets = [m.App, m.UninstallerService, m.ProcessService, m.DiagnosticsService].filter(Boolean);
+  _apiFacade = new Proxy(m.App, {
+    get(_, prop) {
+      for (const t of targets) {
+        if (prop in t) {
+          const v = t[prop];
+          return typeof v === 'function' ? v.bind(t) : v;
+        }
+      }
+      return undefined;
+    }
+  });
+  return _apiFacade;
+};
 
 async function doScan() {
   const btns = document.querySelectorAll('.btn-scan, #scan-btn');
@@ -1560,6 +1578,31 @@ async function freezeProcessGroup(groupId, freeze) {
     await loadLiveProcesses();
   } catch (e) {
     toast('Process control error: ' + e);
+  }
+}
+
+async function freezeProcessPid(pid, freeze) {
+  const a = api();
+  if (!a) return;
+  try {
+    if (freeze && a.SuspendProcess) await a.SuspendProcess(pid);
+    else if (!freeze && a.ResumeProcess) await a.ResumeProcess(pid);
+    toast((freeze ? '❄️ Frozen PID ' : 'Resumed PID ') + pid);
+    await loadLiveProcesses();
+  } catch (e) {
+    toast('Process control error: ' + e);
+  }
+}
+
+async function killProcessPid(pid) {
+  const a = api();
+  if (!a || !a.KillProcess) return;
+  try {
+    await a.KillProcess(pid);
+    toast('Ended PID ' + pid);
+    await loadLiveProcesses();
+  } catch (e) {
+    toast('End task error: ' + e);
   }
 }
 

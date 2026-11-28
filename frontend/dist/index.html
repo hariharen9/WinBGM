@@ -588,6 +588,10 @@
                   <button data-filter="frozen">❄️ Frozen</button>
                 </div>
                 <div class="toolbar-flex"></div>
+                <div class="segmented" id="proc-view-mode" title="Switch between exe-grouped view and parent/child PPID tree">
+                  <button class="active" data-mode="grouped" onclick="setProcViewMode('grouped')">Grouped</button>
+                  <button data-mode="tree" onclick="setProcViewMode('tree')">Tree (PPID)</button>
+                </div>
                 <label class="filter-search"
                   ><i
                     data-lucide="search"
@@ -1277,7 +1281,7 @@
                   <div class="about-details" style="flex: 1; min-width: 0">
                     <div class="about-top-row">
                       <div class="about-name">WinBGM</div>
-                      <span class="about-meta" id="about-version-meta">Version 1.1.1 · All system components protected</span>
+                      <span class="about-meta" id="about-version-meta">Version 1.2.0 · All system components protected</span>
                     </div>
                     <div class="about-desc">
                       Windows Background Manager · Monitor, understand, and

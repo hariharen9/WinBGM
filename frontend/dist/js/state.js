@@ -78,33 +78,44 @@ const KNOWN = [
 ];
 
 const SCALES = ['100%', '110%', '120%', '130%', '140%'];
-
-// State
-let history = [];
-let snapshots = [];
-let sentinelAlerts = [];
-let pending = null;
-let inv = null;
-let sel = null;
-let filter = 'all';
-let query = '';
-let sortMode = 'name';
-let showSystem = false;
-let page = 'overview';
-let toastTimer = null;
-const expanded = new Set();
-
-try { showSystem = localStorage.getItem('bgm.showSystem') === '1'; } catch (e) {}
-let uiScale = '100%';
-try { uiScale = localStorage.getItem('bgm.uiScale') || '100%'; } catch (e) {}
-
 const THEMES = ['system', 'dark', 'light', 'amoled'];
 const ACCENTS = ['blue', 'purple', 'emerald', 'amber', 'rose', 'cyan'];
 
-let currentTheme = 'dark';
-try { currentTheme = localStorage.getItem('bgm.theme') || 'dark'; } catch (e) {}
-let currentAccent = 'blue';
-try { currentAccent = localStorage.getItem('bgm.accent') || 'blue'; } catch (e) {}
+// Single centralized application store (avoids colliding top-level globals across scripts).
+const store = {
+  history: [],
+  snapshots: [],
+  sentinelAlerts: [],
+  pending: null,
+  inv: null,
+  sel: null,
+  filter: 'all',
+  query: '',
+  sortMode: 'name',
+  showSystem: false,
+  uiScale: '100%',
+  currentTheme: 'dark',
+  currentAccent: 'blue',
+  page: 'overview',
+  toastTimer: null,
+  expanded: new Set(),
+  procViewMode: 'grouped',
+};
+
+try { store.showSystem = localStorage.getItem('bgm.showSystem') === '1'; } catch (e) {}
+try { store.uiScale = localStorage.getItem('bgm.uiScale') || '100%'; } catch (e) {}
+try { store.currentTheme = localStorage.getItem('bgm.theme') || 'dark'; } catch (e) {}
+try { store.currentAccent = localStorage.getItem('bgm.accent') || 'blue'; } catch (e) {}
+
+// Backward-compatible window property proxies backed by `store`.
+for (const key of Object.keys(store)) {
+  Object.defineProperty(window, key, {
+    get() { return store[key]; },
+    set(val) { store[key] = val; },
+    enumerable: true,
+    configurable: true,
+  });
+}
 
 function isEffectiveLight() {
   if (currentTheme === 'light') return true;

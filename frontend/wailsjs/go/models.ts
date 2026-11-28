@@ -1281,6 +1281,11 @@ export namespace backend {
 	    releaseUrl: string;
 	    releaseNotes: string;
 	    publishedAt: string;
+	    assetName?: string;
+	    assetUrl?: string;
+	    assetSize?: number;
+	    checksumsUrl?: string;
+	    isInstaller: boolean;
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -1295,6 +1300,11 @@ export namespace backend {
 	        this.releaseUrl = source["releaseUrl"];
 	        this.releaseNotes = source["releaseNotes"];
 	        this.publishedAt = source["publishedAt"];
+	        this.assetName = source["assetName"];
+	        this.assetUrl = source["assetUrl"];
+	        this.assetSize = source["assetSize"];
+	        this.checksumsUrl = source["checksumsUrl"];
+	        this.isInstaller = source["isInstaller"];
 	        this.error = source["error"];
 	    }
 	}

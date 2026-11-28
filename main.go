@@ -43,8 +43,13 @@ func main() {
 		OnStartup:        app.startup,
 		OnBeforeClose:    app.onBeforeClose,
 		OnShutdown:       app.shutdown,
-		Bind:             []interface{}{app},
-		Windows:          &wwin.Options{Theme: wwin.Dark},
+		Bind: []interface{}{
+			app,
+			NewUninstallerService(app),
+			NewProcessService(app),
+			NewDiagnosticsService(app),
+		},
+		Windows: &wwin.Options{Theme: wwin.Dark},
 	})
 	if err != nil {
 		println("Error:", err.Error())

@@ -10,24 +10,12 @@ export function ApplyFocusMode() {
   return window['go']['main']['App']['ApplyFocusMode']();
 }
 
-export function BrowseForLockedFile() {
-  return window['go']['main']['App']['BrowseForLockedFile']();
-}
-
 export function BrowseStartupExecutable() {
   return window['go']['main']['App']['BrowseStartupExecutable']();
 }
 
 export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
-}
-
-export function CleanJunkItems(arg1) {
-  return window['go']['main']['App']['CleanJunkItems'](arg1);
-}
-
-export function CleanResidualItems(arg1) {
-  return window['go']['main']['App']['CleanResidualItems'](arg1);
 }
 
 export function ClearSentinelAlerts() {
@@ -42,20 +30,16 @@ export function CreateSystemRestorePoint(arg1) {
   return window['go']['main']['App']['CreateSystemRestorePoint'](arg1);
 }
 
-export function DeleteSnapshot(arg1) {
-  return window['go']['main']['App']['DeleteSnapshot'](arg1);
-}
-
-export function DiffSnapshots(arg1) {
-  return window['go']['main']['App']['DiffSnapshots'](arg1);
-}
-
 export function DisableSentinelAlert(arg1) {
   return window['go']['main']['App']['DisableSentinelAlert'](arg1);
 }
 
 export function DismissSentinelAlert(arg1) {
   return window['go']['main']['App']['DismissSentinelAlert'](arg1);
+}
+
+export function DownloadAndInstallUpdate(arg1, arg2, arg3) {
+  return window['go']['main']['App']['DownloadAndInstallUpdate'](arg1, arg2, arg3);
 }
 
 export function Export() {
@@ -70,10 +54,6 @@ export function ExportMarkdown() {
   return window['go']['main']['App']['ExportMarkdown']();
 }
 
-export function FindLockingProcesses(arg1) {
-  return window['go']['main']['App']['FindLockingProcesses'](arg1);
-}
-
 export function GetAlwaysAdmin() {
   return window['go']['main']['App']['GetAlwaysAdmin']();
 }
@@ -86,72 +66,20 @@ export function GetAppIcons(arg1) {
   return window['go']['main']['App']['GetAppIcons'](arg1);
 }
 
-export function GetBootProfile() {
-  return window['go']['main']['App']['GetBootProfile']();
-}
-
 export function GetFileVirusTotalURL(arg1) {
   return window['go']['main']['App']['GetFileVirusTotalURL'](arg1);
-}
-
-export function GetInstalledApps() {
-  return window['go']['main']['App']['GetInstalledApps']();
-}
-
-export function GetLiveProcesses() {
-  return window['go']['main']['App']['GetLiveProcesses']();
 }
 
 export function GetMinimizeToTray() {
   return window['go']['main']['App']['GetMinimizeToTray']();
 }
 
-export function GetPowerReport() {
-  return window['go']['main']['App']['GetPowerReport']();
-}
-
 export function GetSentinelAlerts() {
   return window['go']['main']['App']['GetSentinelAlerts']();
 }
 
-export function GetSystemAbout() {
-  return window['go']['main']['App']['GetSystemAbout']();
-}
-
-export function GetWingetStatus() {
-  return window['go']['main']['App']['GetWingetStatus']();
-}
-
-export function GracefulCloseProcess(arg1) {
-  return window['go']['main']['App']['GracefulCloseProcess'](arg1);
-}
-
 export function History() {
   return window['go']['main']['App']['History']();
-}
-
-export function IsProcessSuspended(arg1) {
-  return window['go']['main']['App']['IsProcessSuspended'](arg1);
-}
-
-export function KillProcess(arg1) {
-  return window['go']['main']['App']['KillProcess'](arg1);
-}
-
-export function KillProcessTree(arg1) {
-  return window['go']['main']['App']['KillProcessTree'](arg1);
-}
-
-export function LaunchUninstaller(arg1, arg2) {
-  return window['go']['main']['App']['LaunchUninstaller'](arg1, arg2);
-}
-
-export function ListSnapshots() {
-  return window['go']['main']['App']['ListSnapshots']();
-}
-
-export function PollProcesses() {
-  return window['go']['main']['App']['PollProcesses']();
 }
 
 export function RestartAsAdmin() {
@@ -166,58 +94,18 @@ export function RestoreBatch(arg1) {
   return window['go']['main']['App']['RestoreBatch'](arg1);
 }
 
-export function ResumeProcess(arg1) {
-  return window['go']['main']['App']['ResumeProcess'](arg1);
-}
-
 export function Reveal(arg1) {
   return window['go']['main']['App']['Reveal'](arg1);
-}
-
-export function SaveSnapshot(arg1) {
-  return window['go']['main']['App']['SaveSnapshot'](arg1);
 }
 
 export function Scan() {
   return window['go']['main']['App']['Scan']();
 }
 
-export function ScanAppResiduals(arg1) {
-  return window['go']['main']['App']['ScanAppResiduals'](arg1);
-}
-
-export function ScanJunk() {
-  return window['go']['main']['App']['ScanJunk']();
-}
-
-export function ScanWingetUpdates() {
-  return window['go']['main']['App']['ScanWingetUpdates']();
-}
-
 export function SetAlwaysAdmin(arg1) {
   return window['go']['main']['App']['SetAlwaysAdmin'](arg1);
 }
 
-export function SetGroupEcoMode(arg1, arg2) {
-  return window['go']['main']['App']['SetGroupEcoMode'](arg1, arg2);
-}
-
 export function SetMinimizeToTray(arg1) {
   return window['go']['main']['App']['SetMinimizeToTray'](arg1);
-}
-
-export function SetProcessEcoMode(arg1, arg2) {
-  return window['go']['main']['App']['SetProcessEcoMode'](arg1, arg2);
-}
-
-export function SetProcessPriority(arg1, arg2) {
-  return window['go']['main']['App']['SetProcessPriority'](arg1, arg2);
-}
-
-export function SuspendProcess(arg1) {
-  return window['go']['main']['App']['SuspendProcess'](arg1);
-}
-
-export function UpdateWingetPackage(arg1) {
-  return window['go']['main']['App']['UpdateWingetPackage'](arg1);
 }

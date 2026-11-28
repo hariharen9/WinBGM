@@ -125,59 +125,6 @@ func (a *App) shutdown(ctx context.Context) {
 	backend.StopTray()
 }
 
-// SuspendProcess freezes all threads of a running process without terminating it.
-func (a *App) SuspendProcess(pid uint32) error {
-	return backend.SuspendProcess(pid)
-}
-
-// ResumeProcess unfreezes a suspended process.
-func (a *App) ResumeProcess(pid uint32) error {
-	return backend.ResumeProcess(pid)
-}
-
-// GracefulCloseProcess sends WM_CLOSE to process windows.
-func (a *App) GracefulCloseProcess(pid uint32) error {
-	return backend.GracefulCloseProcess(pid)
-}
-
-// KillProcess forcefully terminates a process.
-func (a *App) KillProcess(pid uint32) error {
-	return backend.KillProcess(pid)
-}
-
-// IsProcessSuspended checks if a process was suspended by WinBGM.
-func (a *App) IsProcessSuspended(pid uint32) bool {
-	return backend.IsProcessSuspended(pid)
-}
-
-// SaveSnapshot saves a baseline snapshot to disk.
-func (a *App) SaveSnapshot(name string) (backend.SnapshotMeta, error) {
-	if a.last == nil {
-		inv := backend.BuildInventory()
-		a.last = &inv
-	}
-	return backend.SaveSnapshot(name, *a.last)
-}
-
-// ListSnapshots returns all saved baseline snapshots.
-func (a *App) ListSnapshots() ([]backend.SnapshotMeta, error) {
-	return backend.ListSnapshots()
-}
-
-// DeleteSnapshot removes a snapshot.
-func (a *App) DeleteSnapshot(id string) error {
-	return backend.DeleteSnapshot(id)
-}
-
-// DiffSnapshots compares a saved baseline snapshot against the live inventory.
-func (a *App) DiffSnapshots(baseID string) (backend.SnapshotDiff, error) {
-	if a.last == nil {
-		inv := backend.BuildInventory()
-		a.last = &inv
-	}
-	return backend.DiffSnapshots(baseID, a.last)
-}
-
 // GetSentinelAlerts returns active re-add sentinel notifications.
 func (a *App) GetSentinelAlerts() []backend.SentinelAlert {
 	return backend.GetSentinelAlerts()
@@ -188,24 +135,9 @@ func (a *App) ClearSentinelAlerts() {
 	backend.ClearSentinelAlerts()
 }
 
-// PollProcesses runs an immediate lightweight process & RAM snapshot (<5ms).
-func (a *App) PollProcesses() backend.ProcessPollResult {
-	return backend.PollProcesses()
-}
-
 // RestoreBatch undoes all restorable changes from a batch session in a single action.
 func (a *App) RestoreBatch(batchID string) backend.BatchResult {
 	return backend.RestoreBatch(batchID)
-}
-
-// GetBootProfile returns boot duration metrics and app boot degradation delays from Windows Diagnostics.
-func (a *App) GetBootProfile() backend.BootProfile {
-	return backend.GetBootProfile()
-}
-
-// GetPowerReport checks active sleep and display turn-off blocker requests.
-func (a *App) GetPowerReport() backend.PowerReport {
-	return backend.GetPowerReport()
 }
 
 // Scan inspects the machine and returns the full inventory. It changes nothing.
@@ -411,94 +343,6 @@ func (a *App) ExportCSV() (string, error) {
 	return p, os.WriteFile(p, buf.Bytes(), 0o644)
 }
 
-// GetInstalledApps returns all installed programs on the machine along with aggregate size and counts.
-func (a *App) GetInstalledApps() (backend.InstalledAppsResponse, error) {
-	apps, summary, err := backend.ScanInstalledApps()
-	if err != nil {
-		return backend.InstalledAppsResponse{}, err
-	}
-	a.installedCache = apps
-	return backend.InstalledAppsResponse{
-		Apps:    apps,
-		Summary: summary,
-	}, nil
-}
-
-func (a *App) findInstalledApp(appID string) (backend.InstalledApp, bool) {
-	for _, app := range a.installedCache {
-		if app.ID == appID {
-			return app, true
-		}
-	}
-	apps, _, err := backend.ScanInstalledApps()
-	if err == nil {
-		a.installedCache = apps
-		for _, app := range apps {
-			if app.ID == appID {
-				return app, true
-			}
-		}
-	}
-	return backend.InstalledApp{}, false
-}
-
-// ScanAppResiduals audits leftover directories, heavy models, caches, and registry keys for an app.
-func (a *App) ScanAppResiduals(appID string) (backend.ResidualReport, error) {
-	if app, ok := a.findInstalledApp(appID); ok {
-		return backend.ScanResiduals(app)
-	}
-	return backend.ScanResiduals(backend.InstalledApp{ID: appID, Name: appID})
-}
-
-// LaunchUninstaller triggers the official uninstaller for an app and waits for completion.
-func (a *App) LaunchUninstaller(appID string, quiet bool) (int, error) {
-	app, ok := a.findInstalledApp(appID)
-	if !ok {
-		return -1, fmt.Errorf("application %s not found", appID)
-	}
-	return backend.LaunchUninstaller(app, quiet)
-}
-
-// CleanResidualItems safely cleans selected leftover files (to Recycle Bin) and registry keys.
-func (a *App) CleanResidualItems(items []backend.ResidualItem) (backend.CleanResult, error) {
-	return backend.CleanResidualItems(items)
-}
-
-// ScanJunk audits system-wide junk and caches (temp files, browser caches,
-// update leftovers, shader caches, crash dumps, Recycle Bin). It changes nothing.
-func (a *App) ScanJunk() backend.JunkReport {
-	return backend.ScanJunk()
-}
-
-// CleanJunkItems cleans selected junk items (permanent delete by default,
-// Recycle Bin move when the UI downgrades), with registry keys backed up
-// first. Paths are verified against the last scan. Live progress is streamed
-// to the frontend as "junk_progress" events so large folders (Delivery
-// Optimization, shader caches) never look like a frozen app.
-func (a *App) CleanJunkItems(items []backend.JunkItem) (backend.CleanResult, error) {
-	backend.SetJunkProgressFunc(func(p backend.JunkProgress) {
-		runtime.EventsEmit(a.ctx, "junk_progress", p)
-	})
-	defer backend.SetJunkProgressFunc(nil)
-	return backend.CleanJunkItems(items)
-}
-
-// GetWingetStatus reports whether the Windows Package Manager (winget) is available.
-func (a *App) GetWingetStatus() backend.WingetStatus {
-	return backend.GetWingetStatus()
-}
-
-// ScanWingetUpdates lists upgradable packages via `winget upgrade`. Read-only.
-func (a *App) ScanWingetUpdates() backend.WingetReport {
-	return backend.ScanWingetUpdates()
-}
-
-// UpdateWingetPackage updates one package via `winget upgrade --id ... --exact --silent`.
-// The id must come from the last scan.
-func (a *App) UpdateWingetPackage(id string) (backend.WingetUpdateResult, error) {
-	return backend.UpdateWingetPackage(id)
-}
-
 // GetFileVirusTotalURL computes the SHA-256 hash of a file and returns its VirusTotal URL.
 func (a *App) GetFileVirusTotalURL(path string) string {
 	return backend.FileVirusTotalURL(path)
@@ -543,70 +387,9 @@ type LiveProcessesResponse struct {
 	Telemetry backend.SystemTelemetry `json:"telemetry"`
 }
 
-// GetLiveProcesses returns all running processes grouped by application alongside CPU/RAM/socket telemetry.
-func (a *App) GetLiveProcesses() LiveProcessesResponse {
-	groups, tel := backend.GetLiveProcessGroups()
-	return LiveProcessesResponse{Groups: groups, Telemetry: tel}
-}
-
-// SetProcessEcoMode toggles Windows 11 Efficiency Mode (EcoQoS) on a single PID.
-func (a *App) SetProcessEcoMode(pid uint32, enable bool) error {
-	return backend.SetProcessEcoMode(pid, enable)
-}
-
-// SetGroupEcoMode toggles Windows 11 Efficiency Mode (EcoQoS) across all PIDs of an app group.
-func (a *App) SetGroupEcoMode(pids []uint32, enable bool) error {
-	var lastErr error
-	for _, pid := range pids {
-		if err := backend.SetProcessEcoMode(pid, enable); err != nil {
-			lastErr = err
-		}
-	}
-	return lastErr
-}
-
-// SetProcessPriority updates the scheduling priority class of a PID.
-func (a *App) SetProcessPriority(pid uint32, level string) error {
-	return backend.SetProcessPriority(pid, level)
-}
-
-// KillProcessTree terminates all PIDs belonging to a process group.
-func (a *App) KillProcessTree(pids []uint32) error {
-	var killed int
-	var lastErr error
-	for _, pid := range pids {
-		if err := backend.KillProcess(pid); err != nil {
-			lastErr = err
-		} else {
-			killed++
-		}
-	}
-	if killed > 0 {
-		return nil
-	}
-	return lastErr
-}
-
-// FindLockingProcesses queries Windows Restart Manager to identify processes locking a file or folder.
-func (a *App) FindLockingProcesses(targetPath string) ([]backend.LockingProcess, error) {
-	return backend.FindLockingProcesses(targetPath)
-}
-
-// BrowseForLockedFile opens a native Windows file picker dialog for the Lock Finder tool.
-func (a *App) BrowseForLockedFile() (string, error) {
-	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select a locked file to inspect",
-	})
-}
-
 // GetAppIcons extracts 32x32 PNG icons for a batch of executable or icon paths.
 func (a *App) GetAppIcons(paths []string) map[string]string {
 	return backend.GetAppIcons(paths)
-}
-
-// GetSystemAbout returns hardware, motherboard, storage, and Windows OS details.
-func (a *App) GetSystemAbout() backend.SystemAboutInfo {
-	return backend.GetSystemAbout()
 }
 
 // CreateCustomStartup creates a custom startup entry or delayed logon scheduled task.
@@ -628,6 +411,22 @@ func (a *App) BrowseStartupExecutable() (string, error) {
 // CheckForUpdates checks GitHub Releases for a newer version of WinBGM.
 func (a *App) CheckForUpdates() backend.UpdateCheckResult {
 	return backend.CheckForUpdates()
+}
+
+// DownloadAndInstallUpdate downloads the verified release asset and runs the installer.
+func (a *App) DownloadAndInstallUpdate(assetURL, assetName, checksumsURL string) (string, error) {
+	path, err := backend.DownloadAndInstallUpdate(a.ctx, assetURL, assetName, checksumsURL, func(p backend.UpdateProgress) {
+		runtime.EventsEmit(a.ctx, "update_progress", p)
+	})
+	if err != nil {
+		return "", err
+	}
+	if strings.HasSuffix(strings.ToLower(assetName), ".exe") {
+		time.AfterFunc(400*time.Millisecond, func() {
+			runtime.Quit(a.ctx)
+		})
+	}
+	return path, nil
 }
 
 // GetAppBuildInfo returns the embedded version and git commit metadata.
