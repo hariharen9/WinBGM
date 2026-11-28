@@ -29,7 +29,7 @@ function renderCommandBar(p) {
       { icon: 'download', label: 'Export', fn: 'openExportModal()' },
     ],
     uninstaller: [
-      { icon: 'refresh-cw', label: 'Rescan Programs', fn: 'loadInstalledApps()' },
+      { icon: 'refresh-cw', label: 'Rescan Programs', fn: 'loadInstalledApps(true)' },
       { icon: 'download', label: 'Export', fn: 'openExportModal()' },
     ],
     services: [
@@ -737,5 +737,4 @@ loadBuildInfo();
 doScan().then(() => {
   loadHistory();
   loadSnapshots();
-  loadInstalledApps();
 });

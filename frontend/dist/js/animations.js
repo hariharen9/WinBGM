@@ -1,9 +1,10 @@
 // --- Animation & Interactivity System ---
 
-function refreshIcons() {
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    try { window.lucide.createIcons(); } catch (e) {}
-  }
+function refreshIcons(root) {
+  if (!window.lucide || typeof window.lucide.createIcons !== 'function') return;
+  const scope = (root && root.nodeType === 1) ? root : (document.querySelector('main') || document.body);
+  if (!scope || !scope.querySelector('[data-lucide]')) return;
+  try { window.lucide.createIcons({ nodes: [scope] }); } catch (e) {}
 }
 
 function celebrateSuccess() {

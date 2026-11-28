@@ -137,7 +137,7 @@ if (window.runtime && window.runtime.EventsOn) {
         const netEl = $('detail-network-host');
         if (netEl && typeof renderDetailNetwork === 'function') {
           netEl.innerHTML = renderDetailNetwork(activeApp);
-          refreshIcons();
+          refreshIcons(netEl);
         }
       }
     }
@@ -714,7 +714,13 @@ const DEMO_UNINSTALLER_SUMMARY = {
   systemAppsCount: 14
 };
 
-async function loadInstalledApps() {
+let installedAppsLoaded = false;
+
+async function loadInstalledApps(force = false) {
+  if (!force && installedAppsLoaded && installedApps.length > 0) {
+    renderUninstaller();
+    return;
+  }
   const metaEl = $('uninstaller-count-meta');
   if (metaEl) metaEl.textContent = 'Auditing installed programs…';
   
@@ -741,6 +747,7 @@ async function loadInstalledApps() {
     uninstallerSummary = DEMO_UNINSTALLER_SUMMARY;
   }
 
+  installedAppsLoaded = true;
   const badge = $('nav-uninstaller');
   if (badge) badge.textContent = installedApps.length || '';
 
@@ -927,7 +934,7 @@ async function executeBatchUninstall(appsToRemove, quiet) {
   } else {
     toast(`Batch uninstall complete! No leftover data found.`);
     celebrateSuccess();
-    await loadInstalledApps();
+    await loadInstalledApps(true);
   }
 }
 
@@ -998,7 +1005,7 @@ async function triggerUninstall(appId, quiet = false) {
   } else {
     toast(`Clean removal verified! No leftover data found for ${appName}.`);
     celebrateSuccess();
-    await loadInstalledApps();
+    await loadInstalledApps(true);
   }
 }
 
@@ -1067,7 +1074,7 @@ async function rescanCurrentResiduals() {
     closeResidualModal();
     toast(`Clean removal verified! No leftover data remains for ${prev.appName}.`);
     celebrateSuccess();
-    await loadInstalledApps();
+    await loadInstalledApps(true);
     return;
   }
 
@@ -1259,31 +1266,42 @@ async function executeResidualClean() {
 
 // --- Live Process Manager & Efficiency Mode API ---
 
+let liveProcLoading = false;
+
 async function loadLiveProcesses() {
+  if (liveProcLoading || document.hidden) return;
+  liveProcLoading = true;
   const a = api();
-  if (a && a.GetLiveProcesses) {
-    try {
-      const res = await a.GetLiveProcesses();
-      liveProcessGroups = (res && res.groups) ? res.groups : [];
-      if (res && res.telemetry) liveTelemetry = res.telemetry;
-    } catch (e) {
-      console.error('Failed to load live processes:', e);
-    }
-  } else {
-    liveProcessGroups = [
-      {
-        id: 'brave.exe', name: 'Brave Browser', exePath: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
-        pids: [1240, 2248, 3310], processCount: 12, cpuPercent: 4.8, ramBytes: 1450000000, ramFormatted: '1.35 GB',
-        ioBytesPerSec: 128000, ioFormatted: '125.0 KB/s', priority: 'Normal', ecoMode: false, suspended: false,
-        hasWindow: true, protected: false, connCount: 8, telemetryCount: 0,
-        children: [{ pid: 1240, ppid: 800, name: 'brave.exe', cpuPercent: 2.1, ramFormatted: '420.0 MB', ioFormatted: '80.0 KB/s', priority: 'Normal', ecoMode: false, suspended: false, protected: false }]
+  try {
+    if (a && a.GetLiveProcesses) {
+      try {
+        const res = await a.GetLiveProcesses();
+        liveProcessGroups = (res && res.groups) ? res.groups : [];
+        if (res && res.telemetry) liveTelemetry = res.telemetry;
+      } catch (e) {
+        console.error('Failed to load live processes:', e);
       }
-    ];
+    } else {
+      liveProcessGroups = [
+        {
+          id: 'brave.exe', name: 'Brave Browser', exePath: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+          pids: [1240, 2248, 3310], processCount: 12, cpuPercent: 4.8, ramBytes: 1450000000, ramFormatted: '1.35 GB',
+          ioBytesPerSec: 128000, ioFormatted: '125.0 KB/s', priority: 'Normal', ecoMode: false, suspended: false,
+          hasWindow: true, protected: false, connCount: 8, telemetryCount: 0,
+          children: [{ pid: 1240, ppid: 800, name: 'brave.exe', cpuPercent: 2.1, ramFormatted: '420.0 MB', ioFormatted: '80.0 KB/s', priority: 'Normal', ecoMode: false, suspended: false, protected: false }]
+        }
+      ];
+    }
+    const nav = $('nav-processes');
+    if (nav) nav.textContent = liveProcessGroups.length || '';
+    const scrollHost = $('page-processes');
+    const prevScroll = scrollHost ? scrollHost.scrollTop : 0;
+    if (typeof renderLiveProcesses === 'function') renderLiveProcesses();
+    if (scrollHost && prevScroll > 0) scrollHost.scrollTop = prevScroll;
+    fetchProcessIcons();
+  } finally {
+    liveProcLoading = false;
   }
-  const nav = $('nav-processes');
-  if (nav) nav.textContent = liveProcessGroups.length || '';
-  if (typeof renderLiveProcesses === 'function') renderLiveProcesses();
-  fetchProcessIcons();
 }
 
 async function toggleGroupEcoMode(groupId, enable) {

@@ -389,9 +389,9 @@ function renderSourceInspectorItems() {
       <button class="win-btn" style="height:24px;font-size:10px;padding:2px 8px" onclick="event.stopPropagation();sel='${esc(c.appId)}';navigate('applications');" title="Inspect application"><i data-lucide="layers" style="width:11px;height:11px;margin-right:2px"></i>App</button>
     `;
 
-    const vtBtn = c.virusTotalURL ? `
-      <a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:24px;font-size:10px;padding:2px 8px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:2px" title="Check SHA-256 on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VT</a>
-    ` : '';
+    const vtBtn = c.virusTotalURL
+      ? `<a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:24px;font-size:10px;padding:2px 8px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:2px" title="Check SHA-256 on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VT</a>`
+      : (c.exePath ? `<button class="win-btn" style="height:24px;font-size:10px;padding:2px 8px;color:var(--accent);display:inline-flex;align-items:center;gap:2px" onclick="event.stopPropagation();checkPathVirusTotal('${esc(c.exePath).replace(/'/g, "\\'")}')" title="Compute SHA-256 &amp; check on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VT</button>` : '');
 
     const statusBadge = c.enabled ? `<span class="badge green">Enabled</span>` : `<span class="badge amber">Blocked / Off</span>`;
     const runningBadge = c.running ? `<span class="badge blue" style="font-size:9px;padding:1px 4px;margin-left:4px">Running</span>` : '';
@@ -626,7 +626,9 @@ function toggleOn(c) {
 
 function controlHtml(c) {
   const badge = c.locked === 'yes' ? '<span class="badge amber">Locked</span>' : c.review ? '<span class="badge amber">Review</span>' : '';
-  const vtBtn = c.virusTotalURL ? `<a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:22px;font-size:9.5px;padding:1px 6px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:2px" title="Verify executable on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VT</a>` : '';
+  const vtBtn = c.virusTotalURL
+    ? `<a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:22px;font-size:9.5px;padding:1px 6px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:2px" title="Verify executable on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VT</a>`
+    : (c.exePath ? `<button class="win-btn" style="height:22px;font-size:9.5px;padding:1px 6px;color:var(--accent);display:inline-flex;align-items:center;gap:2px" onclick="event.stopPropagation();checkPathVirusTotal('${esc(c.exePath).replace(/'/g, "\\'")}')" title="Compute SHA-256 &amp; verify on VirusTotal"><i data-lucide="shield-check" style="width:11px;height:11px"></i>VT</button>` : '');
   if (!CHANGEABLE.includes(c.kind)) return `<span style="display:flex;gap:6px;align-items:center">${badge}${vtBtn}</span>`;
   const dis = c.control !== 'yes';
   return `<span style="display:flex;gap:6px;align-items:center">${badge}${vtBtn}<input class="toggle" type="checkbox" data-cid="${esc(c.id)}" ${toggleOn(c) ? 'checked' : ''} ${dis ? 'disabled' : ''} title="${esc(dis ? (c.controlNote || '') : 'Starts automatically')}" aria-label="Start automatically" onchange="requestChange(this.dataset.cid, this.checked ? 'enable' : 'disable')"></span>`;
@@ -645,6 +647,8 @@ function actionButtons(c) {
   // VirusTotal lookup action button directly alongside disable/enable
   if (c.virusTotalURL) {
     out += `<a href="${esc(c.virusTotalURL)}" target="_blank" rel="noopener" class="win-btn" style="height:26px;font-size:10px;text-decoration:none;color:var(--accent);display:inline-flex;align-items:center;gap:4px" title="Scan or check executable on VirusTotal"><i data-lucide="shield-check" style="width:12px;height:12px"></i>Check on VirusTotal</a>`;
+  } else if (c.exePath) {
+    out += `<button class="win-btn" style="height:26px;font-size:10px;color:var(--accent);display:inline-flex;align-items:center;gap:4px" onclick="event.stopPropagation();checkPathVirusTotal('${esc(c.exePath).replace(/'/g, "\\'")}')" title="Compute SHA-256 &amp; check on VirusTotal"><i data-lucide="shield-check" style="width:12px;height:12px"></i>Check on VirusTotal</button>`;
   }
   if (c.exePath) {
     out += `<button class="win-btn" style="height:26px;font-size:10px;display:inline-flex;align-items:center;gap:4px" onclick="event.stopPropagation();api().Reveal('${esc(c.exePath).replace(/'/g, "\\'")}')" title="Open containing folder in File Explorer"><i data-lucide="folder-search" style="width:12px;height:12px"></i>Open Folder</button>`;
@@ -1129,23 +1133,26 @@ function renderLiveProcesses() {
     const rowId = 'proc_' + g.id;
     const isExp = expanded.has(rowId);
     const letter = (g.name || 'P').slice(0, 2).toUpperCase();
-    const countTag = g.processCount > 1 ? `<span class="badge" style="font-size:10px;padding:1px 6px;margin-left:6px">${g.processCount}</span>` : '';
-    const ecoTag = g.ecoMode ? `<span class="eco-pill" style="margin-left:6px">🍃 Eco</span>` : '';
-    const frozenTag = g.suspended ? `<span class="badge blue" style="font-size:10px;padding:1px 6px;margin-left:6px">❄️ Frozen</span>` : '';
-    const netTag = g.connCount > 0 ? `<span class="badge ${g.telemetryCount > 0 ? 'amber' : 'green'}" style="font-size:10px;padding:1px 6px;margin-left:6px">🌐 ${g.connCount}</span>` : '';
-    const protTag = g.protected ? `<span class="badge gray" style="font-size:10px;padding:1px 6px;margin-left:6px">Protected</span>` : '';
+    const countTag = g.processCount > 1 ? `<span class="badge" style="font-size:10px;padding:1px 6px;margin-left:6px" title="${g.processCount} running subprocesses (PIDs) — click row to expand">${g.processCount}</span>` : '';
+    const ecoTag = g.ecoMode ? `<span class="eco-pill" style="margin-left:6px" title="Windows 11 Efficiency Mode (EcoQoS) active">🍃 Eco</span>` : '';
+    const frozenTag = g.suspended ? `<span class="badge blue" style="font-size:10px;padding:1px 6px;margin-left:6px" title="Process threads are suspended (frozen)">❄️ Frozen</span>` : '';
+    const netTitle = g.telemetryCount > 0
+      ? `${g.connCount} active network socket(s) (${g.telemetryCount} telemetry/analytics)`
+      : `${g.connCount} active TCP/UDP network socket(s)`;
+    const netTag = g.connCount > 0 ? `<span class="badge ${g.telemetryCount > 0 ? 'amber' : 'green'}" style="font-size:10px;padding:1px 6px;margin-left:6px" title="${netTitle}">🌐 ${g.connCount}</span>` : '';
+    const protTag = g.protected ? `<span class="badge gray" style="font-size:10px;padding:1px 6px;margin-left:6px" title="Protected Windows or security process — controls disabled">Protected</span>` : '';
 
     const cpuDisp = (g.cpuPercent || 0).toFixed(1) + '%';
     const cpuColor = g.cpuPercent > 25 ? 'var(--amber)' : 'var(--text)';
 
     const controlsHtml = g.protected
       ? `<span style="font-size:11px;color:var(--muted)">System protected</span>`
-      : `<div style="display:inline-flex;align-items:center;gap:5px" onclick="event.stopPropagation()">
-           <button class="win-btn" style="height:25px;padding:0 7px;font-size:10.5px" onclick="toggleGroupEcoMode('${esc(g.id).replace(/'/g, "\\'")}', ${!g.ecoMode})" title="Toggle Windows 11 Efficiency Mode (EcoQoS)">${g.ecoMode ? 'Normal' : '🍃 Eco'}</button>
-           <button class="win-btn" style="height:25px;padding:0 7px;font-size:10.5px" onclick="freezeProcessGroup('${esc(g.id).replace(/'/g, "\\'")}', ${!g.suspended})" title="${g.suspended ? 'Resume process threads' : 'Freeze process without killing'}">${g.suspended ? 'Resume' : 'Freeze'}</button>
-           ${g.exePath ? `<button class="win-btn subtle" style="height:25px;padding:0 6px" onclick="openProcVT('${esc(g.exePath).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" title="Check on VirusTotal"><i data-lucide="shield-check" style="width:13px;height:13px;color:var(--accent)"></i></button>` : ''}
-           ${g.exePath ? `<button class="win-btn subtle" style="height:25px;padding:0 6px" onclick="openProcLocation('${esc(g.exePath).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" title="Open file location"><i data-lucide="folder-open" style="width:13px;height:13px"></i></button>` : ''}
-           <button class="win-btn" style="height:25px;padding:0 7px;font-size:10.5px;color:#f87171" onclick="killProcessGroup('${esc(g.id).replace(/'/g, "\\'")}')" title="End all processes in this group">End</button>
+      : `<div style="display:inline-flex;align-items:center;gap:5px" data-gid="${esc(g.id)}" data-exe="${esc(g.exePath || '')}" onclick="event.stopPropagation()">
+           <button class="win-btn" style="height:25px;padding:0 7px;font-size:10.5px" onclick="toggleGroupEcoMode(this.parentElement.dataset.gid, ${!g.ecoMode})" title="Toggle Windows 11 Efficiency Mode (EcoQoS)">${g.ecoMode ? 'Normal' : '🍃 Eco'}</button>
+           <button class="win-btn" style="height:25px;padding:0 7px;font-size:10.5px" onclick="freezeProcessGroup(this.parentElement.dataset.gid, ${!g.suspended})" title="${g.suspended ? 'Resume process threads' : 'Freeze process without killing'}">${g.suspended ? 'Resume' : 'Freeze'}</button>
+           ${g.exePath ? `<button class="win-btn subtle" style="height:25px;padding:0 6px" onclick="openProcVT(this.parentElement.dataset.exe)" title="Check on VirusTotal"><i data-lucide="shield-check" style="width:13px;height:13px;color:var(--accent)"></i></button>` : ''}
+           ${g.exePath ? `<button class="win-btn subtle" style="height:25px;padding:0 6px" onclick="openProcLocation(this.parentElement.dataset.exe)" title="Open file location"><i data-lucide="folder-open" style="width:13px;height:13px"></i></button>` : ''}
+           <button class="win-btn" style="height:25px;padding:0 7px;font-size:10.5px;color:#f87171" onclick="killProcessGroup(this.parentElement.dataset.gid)" title="End all processes in this group">End</button>
          </div>`;
 
     let childRows = '';

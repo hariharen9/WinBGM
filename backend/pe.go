@@ -3,10 +3,12 @@ package backend
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -16,14 +18,22 @@ import (
 )
 
 type exeInfo struct {
-	Company, Product, Sig, Signer, SHA256 string
-	Expired                               bool
-	Exists                                bool
+	Company string `json:"company,omitempty"`
+	Product string `json:"product,omitempty"`
+	Sig     string `json:"sig,omitempty"`
+	Signer  string `json:"signer,omitempty"`
+	SHA256  string `json:"sha256,omitempty"`
+	Expired bool   `json:"expired,omitempty"`
+	Exists  bool   `json:"exists,omitempty"`
+	Mtime   int64  `json:"mtime,omitempty"`
+	Size    int64  `json:"size,omitempty"`
 }
 
 var (
 	infoMu    sync.Mutex
 	infoCache = map[string]exeInfo{}
+	infoOnce  sync.Once
+	infoDirty bool
 
 	modVersion = windows.NewLazySystemDLL("version.dll")
 	pVerSize   = modVersion.NewProc("GetFileVersionInfoSizeW")
@@ -74,18 +84,79 @@ func calcSHA256(path string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+func exeCachePath() string {
+	d, err := os.UserConfigDir()
+	if err != nil {
+		d = os.TempDir()
+	}
+	return filepath.Join(d, "WinBGM", "exe_cache.json")
+}
+
+func loadExeCache() {
+	infoOnce.Do(func() {
+		b, err := os.ReadFile(exeCachePath())
+		if err != nil {
+			return
+		}
+		var loaded map[string]exeInfo
+		if json.Unmarshal(b, &loaded) == nil && loaded != nil {
+			infoMu.Lock()
+			infoCache = loaded
+			infoMu.Unlock()
+		}
+	})
+}
+
+func saveExeCache() {
+	infoMu.Lock()
+	if !infoDirty {
+		infoMu.Unlock()
+		return
+	}
+	snap := make(map[string]exeInfo, len(infoCache))
+	for k, v := range infoCache {
+		snap[k] = v
+	}
+	infoDirty = false
+	infoMu.Unlock()
+
+	p := exeCachePath()
+	_ = os.MkdirAll(filepath.Dir(p), 0o755)
+	b, err := json.Marshal(snap)
+	if err != nil {
+		return
+	}
+	tmp := p + ".tmp"
+	if os.WriteFile(tmp, b, 0o644) == nil {
+		_ = os.Rename(tmp, p)
+	}
+}
+
 func lookupInfo(path string) exeInfo {
+	loadExeCache()
 	key := strings.ToLower(path)
+
+	fi, statErr := os.Stat(path)
+	var mtime, sz int64
+	if statErr == nil && !fi.IsDir() {
+		mtime = fi.ModTime().UnixNano()
+		sz = fi.Size()
+	}
+
 	infoMu.Lock()
 	if v, ok := infoCache[key]; ok {
-		infoMu.Unlock()
-		return v
+		if (statErr != nil && !v.Exists) || (statErr == nil && v.Exists && v.Mtime == mtime && v.Size == sz) {
+			infoMu.Unlock()
+			return v
+		}
 	}
 	infoMu.Unlock()
 
 	var e exeInfo
-	if fileExists(path) {
+	if statErr == nil && !fi.IsDir() {
 		e.Exists = true
+		e.Mtime = mtime
+		e.Size = sz
 		e.Company, e.Product = versionStrings(path)
 		e.Sig = verifySig(path)
 		if e.Sig == "valid" {
@@ -94,10 +165,10 @@ func lookupInfo(path string) exeInfo {
 			e.Sig = "catalog"
 			e.Signer = "Microsoft Windows"
 		}
-		e.SHA256 = calcSHA256(path)
 	}
 	infoMu.Lock()
 	infoCache[key] = e
+	infoDirty = true
 	infoMu.Unlock()
 	return e
 }

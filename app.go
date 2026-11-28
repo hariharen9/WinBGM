@@ -505,11 +505,17 @@ func (a *App) SetProcessPriority(pid uint32, level string) error {
 
 // KillProcessTree terminates all PIDs belonging to a process group.
 func (a *App) KillProcessTree(pids []uint32) error {
+	var killed int
 	var lastErr error
 	for _, pid := range pids {
 		if err := backend.KillProcess(pid); err != nil {
 			lastErr = err
+		} else {
+			killed++
 		}
+	}
+	if killed > 0 {
+		return nil
 	}
 	return lastErr
 }

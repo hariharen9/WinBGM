@@ -56,6 +56,7 @@ func BuildInventory() Inventory {
 		}(i, s)
 	}
 	wg.Wait()
+	go saveExeCache()
 
 	counts := map[string]int{}
 	var comps []Component
@@ -202,6 +203,7 @@ func enrich(comps []Component, pt procTable) {
 		}(c.ExePath)
 	}
 	wg.Wait()
+	go saveExeCache()
 
 	for i := range comps {
 		c := &comps[i]
