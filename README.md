@@ -3,7 +3,7 @@
 # <img src="assets/WinBGM.png" alt="WinBGM Logo" width="38" height="38" align="absmiddle" style="vertical-align: middle;" /> WinBGM
 
 **Windows Background Manager**  
-_A fast, safe, all-in-one startup, background process, deep uninstaller, junk cleaner, and system diagnostics manager for Windows 10 and 11._
+_A fast, safe, all-in-one startup, background process, deep uninstaller, junk cleaner, winget updates, and system diagnostics manager for Windows 10 and 11._
 
 [![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Wails v2](https://img.shields.io/badge/Built%20with-Wails%20v2-E3646E?style=flat&logo=wails)](https://wails.io/)
@@ -52,6 +52,13 @@ _A fast, safe, all-in-one startup, background process, deep uninstaller, junk cl
 - **Freshness & Integrity Filters**: Items younger than 24 h (temp) or 7 d (logs/dumps) are skipped, symlinks/junctions are never followed, and admin-gated locations are clearly badged instead of failing silently.
 - **Registry Orphan Sweep**: Detects uninstall entries whose target executables no longer exist (MSI products excluded), exports each key to a `.reg` backup, then removes it.
 
+### ⬆️ Winget Updates
+
+- **One-Click Package Upgrades**: Lists every application the **Windows Package Manager** can upgrade (including `msstore` apps and unknown-version entries) and updates them with `winget upgrade --id … --exact --silent`.
+- **Batch Queue with Live Status**: Select multiple packages and update them one-by-one with per-row **Updating… / Updated / Failed** badges; the list auto-rescans when the queue finishes so versions reflect reality.
+- **Guardrailed Updates**: Only package IDs from the most recent scan can be updated, winget runs with all agreements pre-accepted and interactivity disabled (it can never hang waiting for input in a hidden window), and WinBGM refuses to update **itself** from inside the running app.
+- **Friendly Failure Reporting**: Common winget errors (hash mismatch, elevation required, cancelled UAC, pinned packages) are translated into plain English with the CLI's output tail attached.
+
 ### ⚡ Live Processes, Efficiency Mode & Network Monitor
 
 - **Grouped Process Tree**: Monitor running apps grouped by executable with live **CPU %**, **Memory**, **Disk I/O**, and **Active Sockets**.
@@ -95,6 +102,7 @@ Every safety boundary is enforced in **compiled Go backend code** before any wri
 - **Protected Targets**: WinBGM refuses to modify Windows OS paths (`\Windows\`), critical services (`WinDefend`, `RpcSs`, `DcomLaunch`, `CryptSvc`, etc.), antivirus/security products, kernel processes (`csrss.exe`, `lsass.exe`, `svchost.exe`, `dwm.exe`), shared vendor roots, or WinBGM itself.
 - **Pre-Flight Backup & Verification**: Every toggle records its prior state to `%APPDATA%\WinBGM\history.json` **before** applying, verifies the live OS state afterward, and auto-reverts on mismatch.
 - **Junk Cleaning Is Always Reversible**: The junk cleaner only moves items to the Recycle Bin (never permanent deletes), re-verifies every path against the in-memory scan cache before touching it, refuses sensitive browser-data paths, and skips files younger than its age thresholds.
+- **Package Updates Are Guardrailed**: Winget updates validate the package ID against a strict charset *and* the last scan's cache, spawn winget directly (never through a shell), run one update at a time, and never touch WinBGM itself.
 - **System Restore Point**: 1-click native Windows `srclient.dll` restore point creation inside **Settings**.
 
 ---

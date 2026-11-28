@@ -223,6 +223,13 @@ const JUNK_CATS = {
   orphanreg:  { icon: 'ghost',       color: '#c084fc' }
 };
 
+// Winget Updates State
+let wingetReport = null;      // last ScanWingetUpdates() result
+let wingetScanning = false;
+let wingetBatchRunning = false;
+let selectedWingetIds = new Set();
+const wingetItemStates = {};  // id -> 'updating' | 'ok' | 'failed'
+
 
 function sigText(c) {
   if (c.signer) {

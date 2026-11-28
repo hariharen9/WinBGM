@@ -476,6 +476,22 @@ func (a *App) CleanJunkItems(items []backend.JunkItem) (backend.CleanResult, err
 	return backend.CleanJunkItems(items)
 }
 
+// GetWingetStatus reports whether the Windows Package Manager (winget) is available.
+func (a *App) GetWingetStatus() backend.WingetStatus {
+	return backend.GetWingetStatus()
+}
+
+// ScanWingetUpdates lists upgradable packages via `winget upgrade`. Read-only.
+func (a *App) ScanWingetUpdates() backend.WingetReport {
+	return backend.ScanWingetUpdates()
+}
+
+// UpdateWingetPackage updates one package via `winget upgrade --id ... --exact --silent`.
+// The id must come from the last scan.
+func (a *App) UpdateWingetPackage(id string) (backend.WingetUpdateResult, error) {
+	return backend.UpdateWingetPackage(id)
+}
+
 // GetFileVirusTotalURL computes the SHA-256 hash of a file and returns its VirusTotal URL.
 func (a *App) GetFileVirusTotalURL(path string) string {
 	return backend.FileVirusTotalURL(path)

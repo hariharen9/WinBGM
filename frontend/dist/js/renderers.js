@@ -1324,3 +1324,85 @@ function renderJunk() {
   updateJunkActionBar();
   refreshIcons();
 }
+
+// --- Winget Updates ---
+
+function renderWingetUpdates() {
+  const sumEl = $('winget-summary');
+  const countMeta = $('winget-count-meta');
+  const tbody = $('winget-body');
+  if (!tbody) return;
+
+  if (!wingetReport) {
+    if (countMeta) countMeta.textContent = 'Checking…';
+    return;
+  }
+
+  if (!wingetReport.available) {
+    if (sumEl) sumEl.innerHTML = '';
+    if (countMeta) countMeta.textContent = 'winget not found';
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">Windows Package Manager (winget) not found</div>
+      <div style="max-width:520px;margin:0 auto">${esc(wingetReport.errors && wingetReport.errors[0] || 'Install "App Installer" from the Microsoft Store, then rescan.')}</div>
+      <div style="margin-top:10px"><button class="win-btn" onclick="window.open('https://aka.ms/getwinget','_blank')"><i data-lucide="globe" style="width:12px;height:12px;margin-right:4px"></i>Open aka.ms/getwinget</button></div>
+    </div></td></tr>`;
+    updateWingetActionBar();
+    refreshIcons();
+    return;
+  }
+
+  const updates = wingetReport.updates || [];
+  if (sumEl) {
+    sumEl.innerHTML = `
+      <div class="summary-item"><strong>${updates.length}</strong> upgrade(s) available</div>
+      <span class="summary-separator"></span>
+      <div class="summary-item">winget <strong>${esc(wingetReport.wingetVersion || '')}</strong></div>
+      <span class="summary-separator"></span>
+      <div class="summary-item">Scan took <strong>${(wingetReport.durationMs / 1000).toFixed(1)}s</strong></div>
+      ${wingetReport.elevated ? '<span class="summary-separator"></span><div class="summary-item"><span class="badge green" style="font-size:10px;padding:1px 6px">Elevated</span></div>' : ''}
+    `;
+  }
+
+  if (!updates.length) {
+    if (countMeta) countMeta.textContent = `Checked ${fmtTime(wingetReport.scannedAt)}`;
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">Everything is up to date — no winget upgrades available. ✨</div></td></tr>';
+    updateWingetActionBar();
+    refreshIcons();
+    return;
+  }
+  if (countMeta) countMeta.textContent = `Checked ${fmtTime(wingetReport.scannedAt)} · Nothing runs until you confirm`;
+
+  tbody.innerHTML = updates.map(u => {
+    const st = wingetItemStates[u.id];
+    const sel = selectedWingetIds.has(u.id);
+    const warnBadge = u.warning ? `<span class="badge amber" style="font-size:10px;padding:1px 6px;margin-left:6px" title="${esc(u.warning)}">⚠ Warning</span>` : '';
+    const unknownBadge = u.unknownAvailable ? '<span class="badge gray" style="font-size:10px;padding:1px 6px;margin-left:6px" title="winget cannot determine the available version">Unknown</span>' : '';
+    const pinnedBadge = u.pinned ? '<span class="badge amber" style="font-size:10px;padding:1px 6px;margin-left:6px" title="A version pin may block this upgrade">Pinned</span>' : '';
+    const disabled = wingetBatchRunning || st === 'updating';
+    return `
+      <tr class="clickable ${sel ? 'selected' : ''} ${st === 'ok' ? 'winget-done' : ''} ${st === 'failed' ? 'winget-failed' : ''}" data-winget-id="${esc(u.id)}" onclick="toggleWingetItem('${esc(u.id)}', ${!sel})" title="${esc(u.id)}">
+        <td style="text-align:center" onclick="event.stopPropagation()">
+          <input type="checkbox" ${sel ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="toggleWingetItem('${esc(u.id)}', this.checked)" aria-label="Select ${esc(u.name)}" />
+        </td>
+        <td>
+          <div class="app-name" style="font-size:11.5px">${esc(u.name)}${warnBadge}${unknownBadge}${pinnedBadge}</div>
+          <div style="font-family:monospace;font-size:10px;color:var(--text-dim);margin-top:2px">${esc(u.id)}</div>
+        </td>
+        <td style="font-family:monospace;font-size:10.5px">${esc(u.currentVersion || '—')}</td>
+        <td style="font-family:monospace;font-size:10.5px;font-weight:600;color:var(--green)">${esc(u.availableVersion || '—')}</td>
+        <td><span class="badge ${u.source === 'msstore' ? 'blue' : 'gray'}" style="font-size:10px;padding:1px 6px">${esc(u.source || '—')}</span></td>
+        <td style="text-align:right" onclick="event.stopPropagation()">${wingetActionCell(u, st, disabled)}</td>
+      </tr>`;
+  }).join('');
+  updateWingetActionBar();
+  refreshIcons();
+}
+
+// wingetActionCell renders either the Update button or a state badge; it is
+// re-rendered in place by setWingetItemState() while a batch runs.
+function wingetActionCell(u, st, disabled) {
+  if (st === 'updating') return '<span class="winget-status"><span class="badge blue" style="font-size:10px;padding:1px 6px"><i data-lucide="refresh-cw" style="width:11px;height:11px"></i> Updating…</span></span>';
+  if (st === 'ok') return '<span class="winget-status"><span class="badge green" style="font-size:10px;padding:1px 6px">Updated</span></span>';
+  if (st === 'failed') return '<span class="winget-status"><span class="badge red" style="font-size:10px;padding:1px 6px" title="See the toast for winget\'s error output">Failed</span></span>';
+  return `<span class="winget-status"><button class="win-btn" style="height:24px;font-size:10.5px;padding:0 8px" ${disabled ? 'disabled' : ''} onclick="updateOneWinget('${esc(u.id)}')">Update</button></span>`;
+}

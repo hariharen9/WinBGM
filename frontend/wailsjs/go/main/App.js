@@ -118,6 +118,10 @@ export function GetSystemAbout() {
   return window['go']['main']['App']['GetSystemAbout']();
 }
 
+export function GetWingetStatus() {
+  return window['go']['main']['App']['GetWingetStatus']();
+}
+
 export function GracefulCloseProcess(arg1) {
   return window['go']['main']['App']['GracefulCloseProcess'](arg1);
 }
@@ -186,6 +190,10 @@ export function ScanJunk() {
   return window['go']['main']['App']['ScanJunk']();
 }
 
+export function ScanWingetUpdates() {
+  return window['go']['main']['App']['ScanWingetUpdates']();
+}
+
 export function SetAlwaysAdmin(arg1) {
   return window['go']['main']['App']['SetAlwaysAdmin'](arg1);
 }
@@ -208,4 +216,8 @@ export function SetProcessPriority(arg1, arg2) {
 
 export function SuspendProcess(arg1) {
   return window['go']['main']['App']['SuspendProcess'](arg1);
+}
+
+export function UpdateWingetPackage(arg1) {
+  return window['go']['main']['App']['UpdateWingetPackage'](arg1);
 }

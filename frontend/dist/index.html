@@ -80,6 +80,10 @@
               <i data-lucide="broom"></i><span>Junk Cleaner</span
               ><span class="nav-count" id="nav-junk"></span>
             </button>
+            <button class="nav-item" data-page="updates">
+              <i data-lucide="package-check"></i><span>Updates</span
+              ><span class="nav-count" id="nav-updates"></span>
+            </button>
             <button class="nav-item" data-page="services">
               <i data-lucide="cog"></i><span>Services</span
               ><span class="nav-count" id="nav-services"></span>
@@ -436,6 +440,108 @@
                   — restore anything you miss. Files younger than 24h (7 days
                   for reports) are kept, locked files are skipped, and cookies,
                   passwords, and history are never touched.</span
+                >
+              </div>
+            </section>
+
+            <section class="page" id="page-updates">
+              <div class="page-header">
+                <div>
+                  <h1>Winget Updates</h1>
+                  <p class="page-subtitle">
+                    Upgrade installed applications through the Windows Package
+                    Manager. Updates run with
+                    <code>winget upgrade --id … --exact --silent</code>; winget
+                    shows any UAC prompts it needs.
+                  </p>
+                </div>
+                <div class="header-actions">
+                  <button class="win-btn" onclick="loadWingetUpdates(true)">
+                    <i
+                      data-lucide="download-cloud"
+                      style="width: 13px; height: 13px; margin-right: 4px"
+                    ></i
+                    >Check for updates
+                  </button>
+                </div>
+              </div>
+              <div class="system-summary" id="winget-summary"></div>
+              <div class="page-section">
+                <div class="section-heading">
+                  <strong>Available upgrades</strong
+                  ><span id="winget-count-meta">Checking…</span>
+                </div>
+                <div
+                  class="batch-uninstall-bar"
+                  id="winget-action-bar"
+                  style="display: none"
+                >
+                  <div class="batch-uninstall-info" id="winget-selected-info">
+                    0 selected
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <button class="win-btn" onclick="clearWingetSelection()">
+                      Clear
+                    </button>
+                    <button
+                      class="win-btn primary"
+                      id="winget-batch-btn"
+                      onclick="executeWingetBatch()"
+                    >
+                      <i
+                        data-lucide="download-cloud"
+                        style="width: 13px; height: 13px; margin-right: 4px"
+                      ></i>
+                      Update Selected
+                    </button>
+                  </div>
+                </div>
+                <div style="overflow-x: auto">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 34px; text-align: center">
+                          <input
+                            type="checkbox"
+                            id="winget-select-all"
+                            onchange="toggleAllWinget(this.checked)"
+                            title="Select all visible packages"
+                          />
+                        </th>
+                        <th style="min-width: 260px">Package</th>
+                        <th>Installed</th>
+                        <th>Available</th>
+                        <th>Source</th>
+                        <th style="width: 130px; text-align: right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="winget-body">
+                      <tr>
+                        <td colspan="6">
+                          <div class="loading">Checking for updates…</div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="notice-line" style="margin-top: 14px">
+                <i
+                  data-lucide="shield-check"
+                  style="
+                    width: 14px;
+                    height: 14px;
+                    flex: none;
+                    color: #10b981;
+                    margin-top: 1px;
+                  "
+                ></i>
+                <span
+                  >Updates run through the official
+                  <strong>winget</strong> CLI with vendor-signed installers.
+                  Only packages from the last scan can be updated, WinBGM never
+                  updates itself from inside the app, and every update is
+                  recorded in <strong>Change history</strong>.</span
                 >
               </div>
             </section>

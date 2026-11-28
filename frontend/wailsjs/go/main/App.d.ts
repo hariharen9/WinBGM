@@ -61,6 +61,8 @@ export function GetSentinelAlerts():Promise<Array<backend.SentinelAlert>>;
 
 export function GetSystemAbout():Promise<backend.SystemAboutInfo>;
 
+export function GetWingetStatus():Promise<backend.WingetStatus>;
+
 export function GracefulCloseProcess(arg1:number):Promise<void>;
 
 export function History():Promise<Array<backend.HistoryEntry>>;
@@ -95,6 +97,8 @@ export function ScanAppResiduals(arg1:string):Promise<backend.ResidualReport>;
 
 export function ScanJunk():Promise<backend.JunkReport>;
 
+export function ScanWingetUpdates():Promise<backend.WingetReport>;
+
 export function SetAlwaysAdmin(arg1:boolean):Promise<boolean>;
 
 export function SetGroupEcoMode(arg1:Array<number>,arg2:boolean):Promise<void>;
@@ -106,3 +110,5 @@ export function SetProcessEcoMode(arg1:number,arg2:boolean):Promise<void>;
 export function SetProcessPriority(arg1:number,arg2:string):Promise<void>;
 
 export function SuspendProcess(arg1:number):Promise<void>;
+
+export function UpdateWingetPackage(arg1:string):Promise<backend.WingetUpdateResult>;

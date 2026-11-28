@@ -1662,3 +1662,151 @@ function fetchProcessIcons() {
 }
 
 
+
+// --- Winget Updates ---
+
+async function loadWingetUpdates(force = false) {
+  const tbody = $('winget-body');
+  if (!tbody || wingetScanning) return;
+  if (wingetReport && !force) { renderWingetUpdates(); return; }
+  wingetScanning = true;
+  const btns = document.querySelectorAll('#page-updates .header-actions button');
+  btns.forEach(b => { b.disabled = true; });
+  $('winget-count-meta').textContent = 'Checking…';
+  tbody.innerHTML = '<tr><td colspan="6"><div class="loading">Asking winget for available upgrades…</div></td></tr>';
+  try {
+    const a = api();
+    if (!a || !a.ScanWingetUpdates) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">Winget updates are only available in the desktop app.</div></td></tr>';
+      return;
+    }
+    wingetReport = await a.ScanWingetUpdates();
+    selectedWingetIds.clear();
+    for (const k of Object.keys(wingetItemStates)) delete wingetItemStates[k];
+    const nav = $('nav-updates');
+    if (nav) nav.textContent = wingetReport.updates.length;
+    renderWingetUpdates();
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">Update check failed: ${esc(String(e))}</div></td></tr>`;
+    toast('Update check failed: ' + e);
+  } finally {
+    wingetScanning = false;
+    btns.forEach(b => { b.disabled = false; });
+  }
+}
+
+function updateWingetActionBar() {
+  const bar = $('winget-action-bar');
+  const info = $('winget-selected-info');
+  if (!bar || !wingetReport) return;
+  const count = [...selectedWingetIds].length;
+  bar.style.display = count > 0 ? 'flex' : 'none';
+  if (info) info.textContent = `${count} selected`;
+  const all = $('winget-select-all');
+  if (all) all.checked = wingetReport.updates.length > 0 && count === wingetReport.updates.length;
+}
+
+function toggleWingetItem(id, checked) {
+  if (wingetBatchRunning) return;
+  if (checked) selectedWingetIds.add(id); else selectedWingetIds.delete(id);
+  document.querySelectorAll('tr[data-winget-id]').forEach(tr => {
+    if (tr.dataset.wingetId === id) tr.classList.toggle('selected', checked);
+  });
+  updateWingetActionBar();
+}
+
+function toggleAllWinget(checked) {
+  if (wingetBatchRunning || !wingetReport) return;
+  selectedWingetIds.clear();
+  if (checked) wingetReport.updates.forEach(u => selectedWingetIds.add(u.id));
+  renderWingetUpdates();
+}
+
+function clearWingetSelection() {
+  if (wingetBatchRunning) return;
+  selectedWingetIds.clear();
+  renderWingetUpdates();
+}
+
+function setWingetItemState(id, st) {
+  if (st) wingetItemStates[id] = st; else delete wingetItemStates[id];
+  const tr = document.querySelector(`tr[data-winget-id="${CSS.escape(id)}"]`);
+  if (tr) {
+    const cell = tr.querySelector('.winget-status');
+    const u = wingetReport && wingetReport.updates.find(x => x.id === id);
+    if (cell && u) cell.outerHTML = wingetActionCell(u, st, wingetBatchRunning);
+    tr.classList.toggle('winget-done', st === 'ok');
+    tr.classList.toggle('winget-failed', st === 'failed');
+    refreshIcons();
+  }
+}
+
+function updateOneWinget(id) {
+  if (wingetBatchRunning) return;
+  const u = wingetReport && wingetReport.updates.find(x => x.id === id);
+  if (!u) return;
+  pending = null; // keep the generic confirm handler inert
+  $('modal-title').textContent = 'Update with winget?';
+  $('modal-confirm').style.display = '';
+  $('modal-cancel').textContent = 'Cancel';
+  $('modal-body').innerHTML = `
+    <p><strong>${esc(u.name)}</strong> ${u.currentVersion ? esc(u.currentVersion) : ''} → <strong>${esc(u.availableVersion)}</strong></p>
+    ${u.warning ? `<p style="color:#e6c27e">${esc(u.warning)}</p>` : ''}
+    <p style="margin-top:6px">Runs <code>winget upgrade --id ${esc(u.id)} --exact --silent</code>. System-level packages may show a UAC prompt.</p>`;
+  $('modal-confirm').textContent = 'Update now';
+  $('modal-confirm').onclick = () => { closeModal(); runWingetUpdates([id]); };
+  openModal();
+  refreshIcons();
+}
+
+async function executeWingetBatch() {
+  if (wingetBatchRunning || selectedWingetIds.size === 0) return;
+  const ids = [...selectedWingetIds];
+  const names = (wingetReport ? wingetReport.updates.filter(u => selectedWingetIds.has(u.id)).map(u => u.name) : []);
+  pending = null; // keep the generic confirm handler inert
+  $('modal-title').textContent = 'Update packages with winget?';
+  $('modal-confirm').style.display = '';
+  $('modal-cancel').textContent = 'Cancel';
+  $('modal-body').innerHTML = `
+    <p><strong>${ids.length}</strong> package(s) will be updated one-by-one via <code>winget upgrade --exact --silent</code>:</p>
+    <div style="margin:8px 0;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:6px 10px;background:var(--surface-card);font-size:11px">
+      ${names.map(n => `<div style="padding:1px 0">${esc(n)}</div>`).join('')}
+    </div>
+    <p style="color:#e6c27e">Installers may show a UAC prompt for system-level packages. Keep the PC plugged in and don't close WinBGM until the queue finishes.</p>`;
+  $('modal-confirm').textContent = `Update ${ids.length} package${ids.length === 1 ? '' : 's'}`;
+  $('modal-confirm').onclick = () => { closeModal(); runWingetUpdates(ids); };
+  openModal();
+  refreshIcons();
+}
+
+async function runWingetUpdates(ids) {
+  const a = api();
+  if (!a || !a.UpdateWingetPackage) { toast('Only available in the desktop app.'); return; }
+  wingetBatchRunning = true;
+  selectedWingetIds.clear();
+  updateWingetActionBar();
+  const batchBtn = $('winget-batch-btn');
+  if (batchBtn) batchBtn.disabled = true;
+  let okCount = 0, failCount = 0;
+  for (const id of ids) {
+    setWingetItemState(id, 'updating');
+    try {
+      const res = await a.UpdateWingetPackage(id);
+      if (res && res.ok) { okCount++; setWingetItemState(id, 'ok'); toast(res.message); }
+      else { failCount++; setWingetItemState(id, 'failed'); toast((res && res.message) || 'Update failed.'); }
+    } catch (e) {
+      failCount++;
+      setWingetItemState(id, 'failed');
+      toast('Update failed: ' + e);
+    }
+  }
+  wingetBatchRunning = false;
+  if (batchBtn) batchBtn.disabled = false;
+  celebrateSuccess();
+  if (okCount > 0) {
+    toast(`Updated ${okCount} package(s)${failCount ? ` · ${failCount} failed` : ''} — refreshing the list…`);
+    await loadWingetUpdates(true);
+  } else if (failCount > 0) {
+    toast(`${failCount} update(s) failed — see the Failed badges for details.`);
+  }
+}
