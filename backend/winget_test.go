@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -194,5 +195,36 @@ func TestParseWingetUpgradesLive(t *testing.T) {
 		if u.UnknownAvailable && u.AvailableVersion != "Unknown" {
 			t.Errorf("unknownAvailable without Unknown literal: %+v", u)
 		}
+	}
+}
+
+func TestBuildUTF16PathList(t *testing.T) {
+	a := filepath.Join("C:", "a", "b.txt")
+	b := filepath.Join("C:", "c d", "e")
+	list, err := buildUTF16PathList([]string{a, b})
+	if err != nil {
+		t.Fatalf("buildUTF16PathList: %v", err)
+	}
+	want := []uint16{}
+	for _, s := range []string{a, b} {
+		for _, r := range s {
+			want = append(want, uint16(r))
+		}
+		want = append(want, 0)
+	}
+	want = append(want, 0)
+	if len(list) != len(want) {
+		t.Fatalf("length mismatch: got %d want %d", len(list), len(want))
+	}
+	for i := range want {
+		if list[i] != want[i] {
+			t.Fatalf("byte %d mismatch: got %d want %d", i, list[i], want[i])
+		}
+	}
+	if _, err := buildUTF16PathList([]string{"a" + string(rune(0)) + "b"}); err == nil {
+		t.Errorf("embedded NUL inside a path should be rejected")
+	}
+	if _, err := buildUTF16PathList([]string{""}); err == nil {
+		t.Errorf("empty path should be rejected")
 	}
 }

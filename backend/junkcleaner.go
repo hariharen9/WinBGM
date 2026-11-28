@@ -61,22 +61,48 @@ var junkCategoryTitles = map[JunkCategory]string{
 // JunkItem is one cleanable target. IsSelected is always false from a scan;
 // the user opts in explicitly.
 type JunkItem struct {
-	ID            string        `json:"id"`
-	Category      JunkCategory  `json:"category"`
-	CategoryTitle string        `json:"categoryTitle"`
-	Title         string        `json:"title"`
-	Path          string        `json:"path"`
-	SizeBytes     uint64        `json:"sizeBytes"`
-	SizeFormatted string        `json:"sizeFormatted"`
-	ItemCount     int           `json:"itemCount"`
-	Description   string        `json:"description"`
-	IsSelected    bool          `json:"isSelected"`
-	RequiresAdmin bool          `json:"requiresAdmin"`
-	IsRegistry    bool          `json:"isRegistry"`
-	Warning       string        `json:"warning,omitempty"`
-	contentsOnly  bool          // clean children of Path, keep the directory itself
-	minAge        time.Duration // skip entries modified more recently than this
-	matchPattern  func(name string) bool
+	ID            string       `json:"id"`
+	Category      JunkCategory `json:"category"`
+	CategoryTitle string       `json:"categoryTitle"`
+	Title         string       `json:"title"`
+	Path          string       `json:"path"`
+	SizeBytes     uint64       `json:"sizeBytes"`
+	SizeFormatted string       `json:"sizeFormatted"`
+	ItemCount     int          `json:"itemCount"`
+	Description   string       `json:"description"`
+	IsSelected    bool         `json:"isSelected"`
+	RequiresAdmin bool         `json:"requiresAdmin"`
+	IsRegistry    bool         `json:"isRegistry"`
+	Warning       string       `json:"warning,omitempty"`
+	// UseRecycleBin is the one field the UI may set, and it can only make the
+	// cleanup MORE conservative: the backend's per-category policy is
+	// "permanent" for regenerable junk (temp/caches/dumps — recycling frees no
+	// space until the bin is emptied), and the UI may downgrade that to a
+	// Recycle Bin move, never the reverse.
+	UseRecycleBin bool `json:"useRecycleBin,omitempty"`
+	// DeletionMode mirrors what the backend will actually do for this item
+	// ("permanent" or "recycle-bin") so the UI can label rows honestly.
+	DeletionMode string `json:"deletionMode,omitempty"`
+
+	contentsOnly bool          // clean children of Path, keep the directory itself
+	minAge       time.Duration // skip entries modified more recently than this
+	matchPattern func(name string) bool
+}
+
+// junkDeletionModes records the safety policy per file category. Every junk
+// category holds regenerable artifacts (caches, temp files, dumps, old
+// installs), so the default is permanent deletion — that is what frees disk
+// space immediately and what Windows' own Disk Cleanup / Storage Sense do.
+// The UI can still send UseRecycleBin to get a recoverable Recycle Bin move.
+var junkDeletionModes = map[JunkCategory]string{
+	JunkCatTemp:       "permanent",
+	JunkCatBrowser:    "permanent",
+	JunkCatUpdate:     "permanent",
+	JunkCatShader:     "permanent",
+	JunkCatThumbs:     "permanent",
+	JunkCatLogs:       "permanent",
+	JunkCatWindowsOld: "permanent",
+	JunkCatRecycleBin: "permanent", // emptying the bin is permanent by definition
 }
 
 // JunkReport is the full system-wide audit result.
@@ -125,7 +151,7 @@ const (
 // Scanning
 // ============================================================================
 
-func localAppData() string  { return os.Getenv("LOCALAPPDATA") }
+func localAppData() string   { return os.Getenv("LOCALAPPDATA") }
 func roamingAppData() string { return os.Getenv("APPDATA") }
 
 func systemRoot() string {
@@ -523,6 +549,7 @@ func ScanJunk() JunkReport {
 			bytes, count := measureJunkItem(c)
 			c.SizeBytes, c.ItemCount = bytes, count
 			c.SizeFormatted = FormatBytes(bytes)
+			c.DeletionMode = junkDeletionModes[c.Category]
 			results[i] = c
 		}(i)
 	}
@@ -590,6 +617,7 @@ func ScanJunk() JunkReport {
 func CleanJunkItems(items []JunkItem) (CleanResult, error) {
 	var result CleanResult
 	elevated := isElevated()
+	usedRecycleBin := false
 
 	for _, reqItem := range items {
 		if !reqItem.IsSelected {
@@ -631,13 +659,27 @@ func CleanJunkItems(items []JunkItem) (CleanResult, error) {
 			var targets []string
 			if authItem.contentsOnly {
 				targets = eligibleJunkChildren(authItem.Path, authItem.minAge, authItem.matchPattern)
-			} else if _, err := os.Stat(authItem.Path); err == nil {
+			} else if _, err := os.Lstat(authItem.Path); err == nil {
 				targets = []string{authItem.Path}
 			}
 			if len(targets) == 0 {
 				continue
 			}
-			freed, files, errs := recycleJunkPaths(targets)
+			// Policy: permanent deletion (the only mode that actually frees
+			// space, and safe because every junk category is regenerable) —
+			// unless the UI explicitly asked for the recoverable Recycle Bin
+			// move. The UI can only downgrade, never upgrade, the policy.
+			var freed uint64
+			var files int
+			var errs []string
+			if reqItem.UseRecycleBin {
+				freed, files, errs = recycleJunkPaths(targets)
+				if files > 0 {
+					usedRecycleBin = true
+				}
+			} else {
+				freed, files, errs = permanentlyDeleteJunkTargets(targets)
+			}
 			result.FreedBytes += freed
 			result.DeletedFilesCount += files
 			result.Errors = append(result.Errors, errs...)
@@ -647,7 +689,12 @@ func CleanJunkItems(items []JunkItem) (CleanResult, error) {
 	result.FreedSizeFormatted = FormatBytes(result.FreedBytes)
 
 	if result.DeletedFilesCount > 0 || result.DeletedKeysCount > 0 || len(result.Errors) > 0 {
-		summary := fmt.Sprintf("Freed %s (%d files, %d registry keys) to the Recycle Bin.", result.FreedSizeFormatted, result.DeletedFilesCount, result.DeletedKeysCount)
+		var summary string
+		if usedRecycleBin {
+			summary = fmt.Sprintf("Freed %s (%d files, %d registry keys) — items were moved to the Recycle Bin and can be restored from there.", result.FreedSizeFormatted, result.DeletedFilesCount, result.DeletedKeysCount)
+		} else {
+			summary = fmt.Sprintf("Freed %s (%d files, %d registry keys) — regenerable junk deleted permanently; the Recycle Bin was not used.", result.FreedSizeFormatted, result.DeletedFilesCount, result.DeletedKeysCount)
+		}
 		if len(result.Errors) > 0 {
 			summary += fmt.Sprintf(" %d item(s) reported errors.", len(result.Errors))
 		}
@@ -657,13 +704,59 @@ func CleanJunkItems(items []JunkItem) (CleanResult, error) {
 			Title:   "Junk & cache cleanup",
 			Summary: summary,
 			Status:  "applied",
-			// Recycled items can be restored manually from the Recycle Bin
-			// itself; WinBGM cannot replay a mass recycle automatically.
+			// Permanently deleted junk cannot be restored by design; it is
+			// regenerable by definition (caches, temp files, dumps).
 			Restorable: false,
 		})
 	}
 
 	return result, nil
+}
+
+// permanentlyDeleteJunkTargets removes regenerable junk targets for real —
+// the only mode that frees disk space immediately (a Recycle Bin move on the
+// same volume just renames the files into $Recycle.Bin, occupying the space
+// until the bin is emptied). Every junk category this is used for holds
+// artifacts Windows or the owning app rebuilds automatically. Guards: paths
+// come from the scan cache, reparse points are never followed, sensitive
+// basenames are re-checked, and long paths get the \\?\ prefix.
+func permanentlyDeleteJunkTargets(targets []string) (freed uint64, files int, errs []string) {
+	for _, p := range targets {
+		fi, err := os.Lstat(p)
+		if err != nil {
+			continue // vanished between scan and clean: nothing to do
+		}
+		if isReparsePoint(p, fi) {
+			errs = append(errs, fmt.Sprintf("%s: skipped (symlink or junction)", p))
+			continue
+		}
+		if junkPathIsSensitive(p) {
+			errs = append(errs, fmt.Sprintf("%s: refused (sensitive path)", p))
+			continue
+		}
+		var size uint64
+		if fi.IsDir() {
+			size, _ = ComputeFolderSize(p, junkMaxChildrenPerItem)
+		} else {
+			size = uint64(fi.Size())
+		}
+		if err := os.RemoveAll(longPathSafe(p)); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", p, err))
+			continue
+		}
+		freed += size
+		files++
+	}
+	return freed, files, errs
+}
+
+// longPathSafe prefixes paths longer than the classic MAXPATH limit with the
+// Windows extended-length prefix so deep node_modules-style junk still deletes.
+func longPathSafe(p string) string {
+	if len(p) >= 248 && !strings.HasPrefix(p, `\\?\`) && filepath.IsAbs(p) {
+		return `\\?\` + p
+	}
+	return p
 }
 
 // recycleJunkPaths moves paths to the Recycle Bin in batches of 64 (one
@@ -708,29 +801,23 @@ func recycleJunkPaths(paths []string) (freed uint64, files int, errs []string) {
 // shellRecycleBatch calls SHFileOperationW with FOF_ALLOWUNDO so the shell
 // moves the paths to the Recycle Bin. All-UI-off flags mean a full Recycle
 // Bin makes the operation fail (reported as an error) rather than silently
-// permanent-deleting: WinBGM never destroys data.
+// permanent-deleting: WinBGM never destroys data the user asked to keep.
+//
+// The pFrom list is built as raw UTF-16 with NUL separators and a trailing
+// double NUL — windows.UTF16FromString / UTF16PtrFromString cannot be used
+// for the joined list because they reject embedded NULs (EINVAL "invalid
+// argument"), which silently disabled the whole recycle path once.
 func shellRecycleBatch(paths []string) error {
 	if len(paths) == 0 {
 		return nil
 	}
-	var from strings.Builder
-	for _, p := range paths {
-		abs, err := filepath.Abs(p)
-		if err != nil {
-			abs = p
-		}
-		from.WriteString(abs)
-		from.WriteByte(0)
-	}
-	from.WriteByte(0) // double-null terminator
-
-	ptr, err := windows.UTF16PtrFromString(from.String())
+	list, err := buildUTF16PathList(paths)
 	if err != nil {
 		return err
 	}
 	op := shFileOpStructW{
 		wFunc:  foDelete,
-		pFrom:  ptr,
+		pFrom:  &list[0],
 		fFlags: fofAllowUndo | fofNoConfirmation | fofSilent | fofNoErrorUI,
 	}
 	ret, _, _ := procSHFileOperationW.Call(uintptr(unsafe.Pointer(&op)))
@@ -741,6 +828,25 @@ func shellRecycleBatch(paths []string) error {
 		return fmt.Errorf("SHFileOperationW failed with code 0x%X", ret)
 	}
 	return nil
+}
+
+// buildUTF16PathList encodes each path as NUL-terminated UTF-16 and appends a
+// final NUL, producing the double-null-terminated multi-path string that
+// SHFILEOPSTRUCTW.pFrom expects.
+func buildUTF16PathList(paths []string) ([]uint16, error) {
+	var list []uint16
+	for _, p := range paths {
+		if p == "" {
+			return nil, fmt.Errorf("empty path in cleanup list")
+		}
+		enc, err := windows.UTF16FromString(filepath.Clean(p))
+		if err != nil {
+			return nil, err // real paths can't contain NULs; this is a bug guard
+		}
+		list = append(list, enc...) // UTF16FromString already NUL-terminates
+	}
+	list = append(list, 0) // final double NUL terminator
+	return list, nil
 }
 
 // ============================================================================

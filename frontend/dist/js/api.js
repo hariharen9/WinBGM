@@ -1328,15 +1328,19 @@ function executeJunkClean() {
   const admin = chosen.filter(it => it.requiresAdmin).length;
 
   pending = null; // keep the generic confirm handler inert
-  $('modal-title').textContent = 'Move junk to the Recycle Bin?';
+  $('modal-title').textContent = 'Clean junk files?';
   $('modal-confirm').style.display = '';
   $('modal-cancel').textContent = 'Cancel';
   $('modal-body').innerHTML = `
-    <p><strong>${chosen.length}</strong> location(s) · <strong>${formatRAM(total)}</strong> will be moved to the Recycle Bin.</p>
+    <p><strong>${chosen.length}</strong> location(s) · <strong>${formatRAM(total)}</strong> will be <strong>permanently deleted</strong>.</p>
+    <p style="color:#9aa4b2;font-size:12.5px;margin-top:6px">These are regenerable caches, temps and leftovers — deleting them for good is what frees the space (the Recycle Bin would keep it occupied).</p>
     ${warned ? `<p style="color:#e6c27e">${warned} selected item(s) carry a warning — check them in the list below the dialog.</p>` : ''}
     ${admin ? `<p style="color:#e6c27e">${admin} selected item(s) need administrator rights; without elevation they will be skipped.</p>` : ''}
-    <p style="margin-top:8px">You can restore cleaned files from the Recycle Bin. Emptying the Recycle Bin permanently erases them.</p>`;
-  $('modal-confirm').textContent = 'Clean selected';
+    <label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;cursor:pointer">
+      <input type="checkbox" id="junk-use-recycle-bin" style="margin-top:2px">
+      <span style="font-size:12.5px;color:#c3cad5">Move to the Recycle Bin instead — recoverable, but frees no disk space until the bin is emptied.</span>
+    </label>`;
+  $('modal-confirm').textContent = 'Delete permanently';
   $('modal-confirm').onclick = doExecuteJunkClean;
   openModal();
   refreshIcons();
@@ -1344,19 +1348,21 @@ function executeJunkClean() {
 
 async function doExecuteJunkClean() {
   if (!junkReport || selectedJunkIds.size === 0) return;
+  const useBin = !!(document.getElementById('junk-use-recycle-bin') || {}).checked;
   const itemsToClean = junkReport.items
     .filter(it => selectedJunkIds.has(it.id))
-    .map(it => Object.assign({}, it, { isSelected: true }));
+    .map(it => Object.assign({}, it, { isSelected: true, useRecycleBin: useBin }));
   const confirmBtn = $('modal-confirm');
-  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Moving to Recycle Bin…'; }
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = useBin ? 'Moving to Recycle Bin…' : 'Deleting…'; }
   try {
     const a = api();
     if (!a || !a.CleanJunkItems) throw new Error('only available in the desktop app');
     const res = await a.CleanJunkItems(itemsToClean);
+    const mode = useBin ? 'moved to the Recycle Bin (restore from there if needed)' : 'deleted permanently';
     if (res.errors && res.errors.length) {
-      toast(`Cleaned ${res.freedSizeFormatted} · ${res.errors.length} item(s) skipped (locked or access denied)`);
+      toast(`Freed ${res.freedSizeFormatted} · ${res.errors.length} item(s) skipped (locked or access denied) · rest ${mode}`);
     } else {
-      toast(`Freed ${res.freedSizeFormatted} (${res.deletedFilesCount} files, ${res.deletedKeysCount} keys) — restored to the Recycle Bin.`);
+      toast(`Freed ${res.freedSizeFormatted} (${res.deletedFilesCount} files, ${res.deletedKeysCount} keys) — ${mode}.`);
       celebrateSuccess();
     }
     closeModal();
@@ -1365,7 +1371,7 @@ async function doExecuteJunkClean() {
     loadHistory();
   } catch (e) {
     toast('Cleanup failed: ' + e);
-    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Clean selected'; }
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete permanently'; }
   }
 }
 

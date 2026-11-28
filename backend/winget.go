@@ -81,7 +81,7 @@ const (
 	wingetScanTimeout = 3 * time.Minute
 	wingetVerTimeout  = 20 * time.Second
 	wingetUpdTimeout  = 45 * time.Minute // huge installers (IDEs, runtimes) are slow
-	wingetOutputTail  = 4000              // chars kept for error reporting
+	wingetOutputTail  = 4000             // chars kept for error reporting
 )
 
 // Winget's package IDs are publisher-qualified dotted names ("Git.Git",

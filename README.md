@@ -47,7 +47,7 @@ _A fast, safe, all-in-one startup, background process, deep uninstaller, junk cl
 ### 🧽 Junk & Cache Cleaner
 
 - **Nine Cleanup Categories in One Scan**: User & system temp folders, browser caches (Chrome/Edge/Firefox/Brave/Opera profiles), Windows Update delivery & download cache, DirectX/GLSL/Vulkan shader caches, thumbnail & icon caches, crash dumps & old logs, `Windows.old` upgrade leftovers, the Recycle Bin itself, and orphaned uninstall registry entries.
-- **Recycle-Bin-Only Deletion**: Every file and folder is moved with `SHFileOperationW` + `FOF_ALLOWUNDO` — nothing is ever permanently erased, so any cleanup is fully reversible from the Recycle Bin.
+- **Permanent Deletion By Default (Optional Recycle Bin)**: Regenerable junk — temps, caches, update leftovers, dumps — is deleted **permanently**, exactly like Windows Disk Cleanup / Storage Sense. Recycling regenerable files frees no space (same-volume recycle is just a rename into `$Recycle.Bin`), so the default mode erases for good; the confirm dialog offers a **"Move to the Recycle Bin instead"** checkbox per cleanup when recoverability matters more than the space. Long paths (≥ 248 chars) are handled via `\\?\` prefixes, and multi-path `SHFileOperationW` batches are encoded manually as NUL-terminated UTF-16 lists.
 - **Sensitive Data Denylist**: Cookies, logins, saved passwords, history, sessions, bookmarks, IndexedDB and Local Storage are never offered for cleaning, even inside cache folders.
 - **Freshness & Integrity Filters**: Items younger than 24 h (temp) or 7 d (logs/dumps) are skipped, symlinks/junctions are never followed, and admin-gated locations are clearly badged instead of failing silently.
 - **Registry Orphan Sweep**: Detects uninstall entries whose target executables no longer exist (MSI products excluded), exports each key to a `.reg` backup, then removes it.
@@ -101,7 +101,7 @@ Every safety boundary is enforced in **compiled Go backend code** before any wri
 
 - **Protected Targets**: WinBGM refuses to modify Windows OS paths (`\Windows\`), critical services (`WinDefend`, `RpcSs`, `DcomLaunch`, `CryptSvc`, etc.), antivirus/security products, kernel processes (`csrss.exe`, `lsass.exe`, `svchost.exe`, `dwm.exe`), shared vendor roots, or WinBGM itself.
 - **Pre-Flight Backup & Verification**: Every toggle records its prior state to `%APPDATA%\WinBGM\history.json` **before** applying, verifies the live OS state afterward, and auto-reverts on mismatch.
-- **Junk Cleaning Is Always Reversible**: The junk cleaner only moves items to the Recycle Bin (never permanent deletes), re-verifies every path against the in-memory scan cache before touching it, refuses sensitive browser-data paths, and skips files younger than its age thresholds.
+- **Junk Cleaning Is Auditable & Guarded**: Regenerable junk is deleted permanently by default (recyclable per-clean via an explicit checkbox); the cleaner re-verifies every path against the in-memory scan cache before touching it, refuses sensitive browser-data paths, re-checks the denylist at deletion time, skips reparse points and files younger than its age thresholds, and records the mode used (permanent vs Recycle Bin) in history.
 - **Package Updates Are Guardrailed**: Winget updates validate the package ID against a strict charset *and* the last scan's cache, spawn winget directly (never through a shell), run one update at a time, and never touch WinBGM itself.
 - **System Restore Point**: 1-click native Windows `srclient.dll` restore point creation inside **Settings**.
 

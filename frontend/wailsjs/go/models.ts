@@ -658,6 +658,8 @@ export namespace backend {
 	    requiresAdmin: boolean;
 	    isRegistry: boolean;
 	    warning?: string;
+	    useRecycleBin?: boolean;
+	    deletionMode?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new JunkItem(source);
@@ -678,6 +680,8 @@ export namespace backend {
 	        this.requiresAdmin = source["requiresAdmin"];
 	        this.isRegistry = source["isRegistry"];
 	        this.warning = source["warning"];
+	        this.useRecycleBin = source["useRecycleBin"];
+	        this.deletionMode = source["deletionMode"];
 	    }
 	}
 	export class JunkReport {

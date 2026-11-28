@@ -1306,11 +1306,16 @@ function renderJunk() {
       const adminBadge = it.requiresAdmin ? '<span class="badge amber" style="font-size:10px;padding:1px 6px;margin-left:6px" title="Needs administrator rights to clean — use Restart as administrator">Admin</span>' : '';
       const warnBadge = it.warning ? `<span class="badge amber" style="font-size:10px;padding:1px 6px;margin-left:6px" title="${esc(it.warning)}">⚠ Warning</span>` : '';
       const recyclerBadge = it.isRegistry ? '<span class="badge blue" style="font-size:10px;padding:1px 6px;margin-left:6px" title="Registry key — exported to a .reg backup before removal">Registry</span>' : '';
+      const modeBadge = it.deletionMode === 'permanent'
+        ? '<span class="badge" style="font-size:10px;padding:1px 6px;margin-left:6px;background:rgba(239,68,68,.12);color:#f87171" title="Deleted permanently — frees disk space immediately. You can switch to the Recycle Bin in the confirm dialog.">Permanent</span>'
+        : it.deletionMode === 'recycle'
+          ? '<span class="badge blue" style="font-size:10px;padding:1px 6px;margin-left:6px" title="Moved to the Recycle Bin — recoverable, but frees no space until the bin is emptied.">Recycle Bin</span>'
+          : '';
       html += `
         <tr class="clickable ${sel ? 'selected' : ''}" data-junk-id="${esc(it.id)}" onclick="toggleJunkItem('${esc(it.id)}', ${!sel})" title="${esc(it.description)}${it.warning ? ' — ' + esc(it.warning) : ''}">
           <td style="text-align:center"><input type="checkbox" ${sel ? 'checked' : ''} onclick="event.stopPropagation();toggleJunkItem('${esc(it.id)}', ${!sel})" aria-label="Select ${esc(it.title)}" /></td>
           <td>
-            <div class="app-name" style="font-size:11px">${esc(it.title)}${adminBadge}${warnBadge}${recyclerBadge}</div>
+            <div class="app-name" style="font-size:11px">${esc(it.title)}${adminBadge}${warnBadge}${recyclerBadge}${modeBadge}</div>
             <div style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;font-size:10.5px;color:var(--text-dim);margin-top:2px" title="${esc(it.path)}">${esc(it.path)}</div>
             <div style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--muted);margin-top:2px">${esc(it.description)}</div>
           </td>
